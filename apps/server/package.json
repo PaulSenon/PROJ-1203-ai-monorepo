@@ -1,0 +1,32 @@
+{
+  "name": "server",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsdown",
+    "check-types": "tsc -b",
+    "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
+    "dev": "alchemy dev",
+    "deploy": "alchemy deploy",
+    "destroy": "alchemy destroy"
+  },
+  "dependencies": {
+    "hono": "catalog:",
+    "@orpc/server": "catalog:",
+    "@orpc/openapi": "catalog:",
+    "@orpc/zod": "catalog:",
+    "ai": "catalog:",
+    "@ai-sdk/google": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:",
+    "@ai-monorepo/api": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "tsdown": "catalog:",
+    "alchemy": "^0.75.1",
+    "wrangler": "^4.40.3",
+    "@types/node": "^22.13.11",
+    "@cloudflare/workers-types": "^4.20250822.0"
+  }
+}

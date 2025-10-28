@@ -1,0 +1,61 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // ===========================================================================
+  // OpenCode Project Configuration Template
+  // ===========================================================================
+  // This file provides commented examples of ALL available configuration
+  // options. Uncomment and modify sections as needed for this project.
+  // Project config overrides global config (~/.config/opencode/opencode.jsonc)
+  // ===========================================================================
+
+  // --- MCP Servers -----------------------------------------------------------
+  // Configure Model Context Protocol servers
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
+      },
+      "enabled": true
+    },
+    "firecrawl": {
+      "type": "local",
+      "command": ["npx", "-y", "firecrawl-mcp"],
+      "enabled": true,
+      "environment": {
+        "FIRECRAWL_API_KEY": "{env:FIRECRAWL_API_KEY}",
+        "FIRECRAWL_RETRY_MAX_ATTEMPTS": "3",
+        "FIRECRAWL_RETRY_INITIAL_DELAY": "2000",
+        "FIRECRAWL_RETRY_MAX_DELAY": "30000",
+        "FIRECRAWL_RETRY_BACKOFF_FACTOR": "3",
+        "FIRECRAWL_CREDIT_WARNING_THRESHOLD": "500",
+        "FIRECRAWL_CREDIT_CRITICAL_THRESHOLD": "100"
+      }
+    },
+    "shadcn": {
+      "type": "local",
+      "command": ["npx", "shadcn@latest", "mcp"],
+      "enabled": true
+    }
+  },
+
+  // --- Instructions ----------------------------------------------------------
+  // Include instruction files for the model
+  // "instructions": [
+  //   ".cursor/rules/*.md",
+  //   ".cursor/rules/**/*.mdc",
+  //   "docs/CONTRIBUTING.md",
+  //   "docs/ARCHITECTURE.md",
+  //   ".github/CODING_STANDARDS.md"
+  // ],
+
+  // --- Disabled Providers ----------------------------------------------------
+  // Disable specific providers even if credentials are available
+  "disabled_providers": [
+    "openai",
+    "anthropic",
+    "google"
+  ]
+}
