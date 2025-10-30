@@ -11,22 +11,25 @@
     "destroy": "alchemy destroy"
   },
   "dependencies": {
-    "hono": "catalog:",
-    "@orpc/server": "catalog:",
-    "@orpc/openapi": "catalog:",
-    "@orpc/zod": "catalog:",
-    "ai": "catalog:",
-    "@ai-sdk/google": "catalog:",
+    "@ai-monorepo/api": "workspace:*",
+    "@ai-sdk/google": "catalog:ai",
+    "@clerk/backend": "catalog:clerk",
+    "@hono/clerk-auth": "catalog:clerk",
+    "@orpc/contract": "catalog:orpc",
+    "@orpc/openapi": "catalog:orpc",
+    "@orpc/server": "catalog:orpc",
+    "@orpc/zod": "catalog:orpc",
+    "ai": "catalog:ai",
     "dotenv": "catalog:",
-    "zod": "catalog:",
-    "@ai-monorepo/api": "workspace:*"
+    "hono": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "typescript": "catalog:",
-    "tsdown": "catalog:",
-    "alchemy": "^0.75.1",
-    "wrangler": "^4.40.3",
+    "@cloudflare/workers-types": "^4.20250822.0",
     "@types/node": "^22.13.11",
-    "@cloudflare/workers-types": "^4.20250822.0"
+    "alchemy": "^0.75.1",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "wrangler": "^4.40.3"
   }
 }

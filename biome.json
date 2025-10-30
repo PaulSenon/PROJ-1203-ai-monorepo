@@ -19,11 +19,28 @@
       "!**/.alchemy",
       "!**/.svelte-kit",
       "!**/wrangler.jsonc",
-      "!**/.source"
+      "!**/.source",
+      "!**/_generated",
+      "!**/opencode.jsonc"
     ]
   },
-  "extends": [
-    "ultracite/core",
-    "ultracite/react"
-  ]
+  "extends": ["ultracite/core", "ultracite/react"],
+  "linter": {
+    "rules": {
+      "style": {
+        "useBlockStatements": "off",
+        "noNestedTernary": "info",
+        "useConsistentTypeDefinitions": "off",
+        "useFilenamingConvention": "info"
+      },
+      "suspicious": {
+        "useAwait": "off",
+        "noArrayIndexKey": "off",
+        "noConsole": "off"
+      },
+      "correctness": {
+        "noUnusedVariables": "warn"
+      }
+    }
+  }
 }

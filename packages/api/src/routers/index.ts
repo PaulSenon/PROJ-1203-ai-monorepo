@@ -1,10 +1,13 @@
-import { publicProcedure } from "../index";
-import type { RouterClient } from "@orpc/server";
+import { protectedProcedures, publicProcedures } from "../libs/orpc";
 
-export const appRouter = {
-	healthCheck: publicProcedure.handler(() => {
-		return "OK";
-	}),
+export const protectedRouter = {
+  greeting: protectedProcedures.greeting.handler((ctx) => ({
+    text: `Hello from private route ${ctx.context.auth.userId}`,
+  })),
 };
-export type AppRouter = typeof appRouter;
-export type AppRouterClient = RouterClient<typeof appRouter>;
+
+export const publicRouter = {
+  greeting: publicProcedures.greeting.handler(() => ({
+    text: "Hello from public endpoint",
+  })),
+};

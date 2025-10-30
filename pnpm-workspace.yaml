@@ -3,17 +3,33 @@ packages:
   - packages/*
 
 catalog:
-  '@ai-sdk/google': ^2.0.13
-  '@orpc/client': ^1.10.0
-  '@orpc/openapi': ^1.10.0
-  '@orpc/server': ^1.10.0
-  '@orpc/zod': ^1.10.0
-  ai: ^5.0.49
   dotenv: ^17.2.2
   hono: ^4.8.2
   tsdown: ^0.15.5
-  typescript: ^5.8.2
-  zod: ^4.1.11
+  typescript: 5.9.3
+  zod: 4.1.12
+
+catalogs:
+  ai:
+    '@ai-sdk/google': 2.0.25
+    '@ai-sdk/react': ^2.0.81
+    ai: 5.0.81
+  clerk:
+    '@clerk/backend': ^2.19.1
+    '@clerk/clerk-react': ^5.53.4
+    '@hono/clerk-auth': ^3.0.3
+  convex:
+    '@convex-dev/migrations': ^0.2.9
+    convex: ^1.28.0
+    convex-helpers: 0.1.104
+  orpc:
+    '@orpc/client': 1.10.2
+    '@orpc/contract': 1.10.2
+    '@orpc/openapi': 1.10.2
+    '@orpc/openapi-client': ^1.10.2
+    '@orpc/server': 1.10.2
+    '@orpc/tanstack-query': ^1.10.2
+    '@orpc/zod': 1.10.2
 
 onlyBuiltDependencies:
   - esbuild

@@ -8,6 +8,18 @@
     "./*": {
       "types": "./dist/*.d.ts",
       "default": "./src/*.ts"
+    },
+    "./contracts": {
+      "types": "./dist/*.d.ts",
+      "default": "./src/contracts/*.ts"
+    },
+    "./libs": {
+      "types": "./dist/*.d.ts",
+      "default": "./src/libs/*.ts"
+    },
+    "./router": {
+      "types": "./dist/*.d.ts",
+      "default": "./src/routers/*.ts"
     }
   },
   "type": "module",
@@ -21,14 +33,16 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@orpc/server": "catalog:",
-    "@orpc/client": "catalog:",
-    "@orpc/openapi": "catalog:",
-    "@orpc/zod": "catalog:",
-    "hono": "catalog:",
-    "ai": "catalog:",
-    "@ai-sdk/google": "catalog:",
+    "@ai-sdk/google": "catalog:ai",
+    "@clerk/backend": "catalog:clerk",
+    "@orpc/client": "catalog:orpc",
+    "@orpc/contract": "catalog:orpc",
+    "@orpc/openapi": "catalog:orpc",
+    "@orpc/server": "catalog:orpc",
+    "@orpc/zod": "catalog:orpc",
+    "ai": "catalog:ai",
     "dotenv": "catalog:",
+    "hono": "catalog:",
     "zod": "catalog:"
   }
 }

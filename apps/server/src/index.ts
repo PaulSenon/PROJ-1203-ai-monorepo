@@ -1,89 +1,124 @@
 import { env } from "cloudflare:workers";
+import { protectedRouter, publicRouter } from "@ai-monorepo/api/routers/index";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
-import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
-import { RPCHandler } from "@orpc/server/fetch";
 import { onError } from "@orpc/server";
-import { createContext } from "@ai-monorepo/api/context";
-import { appRouter } from "@ai-monorepo/api/routers/index";
+import { RPCHandler } from "@orpc/server/fetch";
+import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
+import { convertToModelMessages, streamText } from "ai";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { streamText, convertToModelMessages } from "ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 const app = new Hono();
-
 app.use(logger());
 app.use(
-	"/*",
-	cors({
-		origin: env.CORS_ORIGIN,
-		allowMethods: ["GET", "POST", "OPTIONS"],
-	}),
+  "/*",
+  clerkMiddleware({
+    // jwtKey: env.CLERK_JWT_KEY,
+    publishableKey: env.CLERK_PUBLISHABLE_KEY,
+    secretKey: env.CLERK_SECRET_KEY,
+  })
+);
+app.use(
+  "/*",
+  cors({
+    origin: env.CORS_ORIGIN,
+    allowMethods: ["GET", "POST", "OPTIONS"],
+  })
 );
 
-export const apiHandler = new OpenAPIHandler(appRouter, {
-	plugins: [
-		new OpenAPIReferencePlugin({
-			schemaConverters: [new ZodToJsonSchemaConverter()],
-		}),
-	],
-	interceptors: [
-		onError((error) => {
-			console.error(error);
-		}),
-	],
+export const apiHandler = new OpenAPIHandler(publicRouter, {
+  plugins: [
+    new OpenAPIReferencePlugin({
+      schemaConverters: [new ZodToJsonSchemaConverter()],
+    }),
+  ],
+  interceptors: [
+    onError((error) => {
+      console.error(error);
+    }),
+  ],
 });
 
-export const rpcHandler = new RPCHandler(appRouter, {
-	interceptors: [
-		onError((error) => {
-			console.error(error);
-		}),
-	],
+export const rpcHandlerPublic = new RPCHandler(publicRouter, {
+  interceptors: [
+    onError((error) => {
+      console.error(error);
+    }),
+  ],
+});
+export const rpcHandlerProtected = new RPCHandler(protectedRouter, {
+  interceptors: [
+    onError((error) => {
+      console.error(error);
+    }),
+  ],
 });
 
-app.use("/*", async (c, next) => {
-	const context = await createContext({ context: c });
+app.use("/api-reference/*", async (ctx, next) => {
+  const apiResult = await apiHandler.handle(ctx.req.raw, {
+    prefix: "/api-reference",
+    context: {},
+  });
 
-	const rpcResult = await rpcHandler.handle(c.req.raw, {
-		prefix: "/rpc",
-		context: context,
-	});
+  if (apiResult.matched) {
+    return ctx.newResponse(apiResult.response.body, apiResult.response);
+  }
 
-	if (rpcResult.matched) {
-		return c.newResponse(rpcResult.response.body, rpcResult.response);
-	}
+  await next();
+});
 
-	const apiResult = await apiHandler.handle(c.req.raw, {
-		prefix: "/api-reference",
-		context: context,
-	});
+app.use("/rpc/public/*", async (ctx, next) => {
+  const rpcResultPublic = await rpcHandlerPublic.handle(ctx.req.raw, {
+    prefix: "/rpc/public",
+    context: {},
+  });
+  if (rpcResultPublic.matched) {
+    return ctx.newResponse(
+      rpcResultPublic.response.body,
+      rpcResultPublic.response
+    );
+  }
 
-	if (apiResult.matched) {
-		return c.newResponse(apiResult.response.body, apiResult.response);
-	}
+  await next();
+});
 
-	await next();
+app.use("/rpc/private/*", async (ctx, next) => {
+  const auth = getAuth(ctx);
+  console.log(auth?.debug());
+  const rpcResultProtected = await rpcHandlerProtected.handle(ctx.req.raw, {
+    prefix: "/rpc/private",
+    context: {
+      auth,
+    },
+  });
+  if (rpcResultProtected.matched) {
+    return ctx.newResponse(
+      rpcResultProtected.response.body,
+      rpcResultProtected.response
+    );
+  }
+
+  await next();
 });
 
 app.post("/ai", async (c) => {
-	const body = await c.req.json();
-	const uiMessages = body.messages || [];
-	const google = createGoogleGenerativeAI({
-		apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
-	});
-	const result = streamText({
-		model: google("gemini-2.5-flash"),
-		messages: convertToModelMessages(uiMessages),
-	});
+  const body = await c.req.json();
+  const uiMessages = body.messages || [];
+  const google = createGoogleGenerativeAI({
+    apiKey: "",
+  });
+  const result = streamText({
+    model: google("gemini-2.5-flash"),
+    messages: convertToModelMessages(uiMessages),
+  });
 
-	return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse();
 });
 
-app.get("/", (c) => {
-	return c.text("OK");
-});
+app.get("/", (c) => c.text("OK"));
 
 export default app;

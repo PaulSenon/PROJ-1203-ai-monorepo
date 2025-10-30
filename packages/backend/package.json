@@ -1,0 +1,20 @@
+{
+  "name": "@ai-monorepo/backend",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "convex dev",
+    "setup": "convex dev --until-success"
+  },
+  "author": "",
+  "packageManager": "pnpm@10.19.0",
+  "devDependencies": {
+    "typescript": "catalog:"
+  },
+  "dependencies": {
+    "@convex-dev/migrations": "catalog:convex",
+    "@ai-monorepo/ai": "workspace:*",
+    "convex": "catalog:convex",
+    "convex-helpers": "catalog:convex"
+  }
+}
