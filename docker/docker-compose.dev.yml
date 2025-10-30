@@ -19,8 +19,9 @@ services:
 
     working_dir: /app
     ports:
-      - "3000:3000"
-      - "3001:3001" # Convex dev server
+      - "3000:3000" # apps/server
+      - "3001:3001" # apps/web
+      - "8888:8888" # vite bundler analyser
     env_file:
       - ../.env
       - ../.env.local

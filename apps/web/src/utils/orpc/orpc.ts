@@ -3,7 +3,7 @@ import { createORPCClient, DynamicLink, ORPCError } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { ContractRouterClient } from "@orpc/contract";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
-import { clerk } from "@/hooks/use-auth";
+import { asyncSession } from "@/hooks/use-auth";
 
 /**
  * Link that add authorization bearer token to request
@@ -12,8 +12,8 @@ import { clerk } from "@/hooks/use-auth";
 const linkWithAuthHeader = new RPCLink({
   url: `${import.meta.env.VITE_SERVER_URL}/rpc`,
   headers: async () => {
-    await clerk.load();
-    const token = await clerk.session?.getToken({ template: "convex" });
+    const session = await asyncSession.wait();
+    const token = await session?.getToken({ template: "convex" });
 
     /**
      * We do skip request (because useless) if we don't have the token

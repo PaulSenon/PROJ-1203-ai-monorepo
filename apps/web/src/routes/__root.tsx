@@ -10,12 +10,10 @@ import Header from "@/components/header";
 import Loader from "@/components/loader";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-// import type { orpc } from "@/utils/orpc";
 import "../index.css";
-import type { clerk } from "@/hooks/use-auth";
 
 export interface RouterAppContext {
-  clerk: typeof clerk; // OK
+  _placeholder: unknown;
 }
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
@@ -40,12 +38,23 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 });
 
 function RootComponent() {
+  // const { addListener } = useClerk();
+
+  // // biome-ignore lint/correctness/useExhaustiveDependencies: on mount
+  // useEffect(() => {
+  //   const unsubscribe = addListener(async (data) => {
+  //     if (data.session?.user.id) {
+  //       mp.resolve(data.session);
+  //     } else {
+  //       mp.resolve(null);
+  //     }
+  //   });
+  //   return unsubscribe;
+  // }, []);
+
   const isFetching = useRouterState({
     select: (s) => s.isLoading,
   });
-
-  // const [client] = useState<AppRouterClient>(() => createORPCClient(link));
-  // const [orpcUtils] = useState(() => createTanstackQueryUtils(client));
 
   return (
     <>

@@ -2,7 +2,7 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import ReactDom from "react-dom/client";
 import Loader from "./components/loader";
-import { AuthProvider, clerk } from "./hooks/use-auth";
+import { AuthProvider } from "./hooks/use-auth";
 import { routeTree } from "./routeTree.gen";
 import { TanstackQueryClientProvider } from "./utils/tanstack-query/query-client-provider";
 
@@ -11,7 +11,7 @@ const router = createRouter({
   defaultPreload: "intent",
   defaultPendingComponent: () => <Loader />,
   context: {
-    clerk, // OK
+    _placeholder: "",
   },
   Wrap({ children }) {
     /**

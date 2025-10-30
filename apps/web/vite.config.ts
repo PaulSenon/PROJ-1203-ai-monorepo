@@ -21,6 +21,10 @@ export default defineConfig({
       pwaAssets: { disabled: false, config: true },
       devOptions: { enabled: true },
     }),
+    // Inspect(),
+    // analyzer({
+    //   openAnalyzer: false,
+    // }),
   ],
   resolve: {
     alias: {

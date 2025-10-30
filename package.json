@@ -14,7 +14,7 @@
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
-    "deploy": "alchemy deploy",
+    "deploy": "NODE_ENV=production alchemy deploy",
     "destroy": "alchemy destroy"
   },
   "dependencies": {
