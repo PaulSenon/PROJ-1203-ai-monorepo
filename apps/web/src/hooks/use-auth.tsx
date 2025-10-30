@@ -1,8 +1,11 @@
 import { ClerkProvider, useAuth as useClerkAuth } from "@clerk/clerk-react";
 import type { ReactNode } from "react";
 
-const CONVEX_PUBLISHABLE_KEY = import.meta.env
+// TODO typed env
+const VITE_CLERK_PUBLISHABLE_KEY = import.meta.env
   .VITE_CLERK_PUBLISHABLE_KEY as string;
+const VITE_CLERK_SIGN_IN_URL = import.meta.env.VITE_CLERK_SIGN_IN_URL as string;
+const VITE_CLERK_SIGN_UP_URL = import.meta.env.VITE_CLERK_SIGN_UP_URL as string;
 
 export function useAuth() {
   // const { isAuthenticated, isLoading } = useConvexAuth();
@@ -17,20 +20,18 @@ export function useAuth() {
   };
 }
 
-export type AuthContext = ReturnType<typeof useAuth>;
-
-export const initialAuthContext: AuthContext = {
-  getToken: () => Promise.resolve(null),
-  signOut: () => Promise.resolve(),
-  isLoaded: false,
-  isSignedIn: false,
-  userId: undefined,
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   return (
-    <ClerkProvider publishableKey={CONVEX_PUBLISHABLE_KEY}>
+    <ClerkProvider
+      publishableKey={VITE_CLERK_PUBLISHABLE_KEY}
+      signInUrl={VITE_CLERK_SIGN_IN_URL}
+      signUpUrl={VITE_CLERK_SIGN_UP_URL}
+    >
       {children}
     </ClerkProvider>
   );
 }
+
+import { Clerk } from "@clerk/clerk-js";
+
+export const clerk = new Clerk(VITE_CLERK_PUBLISHABLE_KEY);

@@ -3,17 +3,18 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import ReactDom from "react-dom/client";
 import Loader from "./components/loader";
-import { AuthProvider, initialAuthContext, useAuth } from "./hooks/use-auth";
+import { AuthProvider, clerk } from "./hooks/use-auth";
 import { routeTree } from "./routeTree.gen";
-import { queryClient } from "./utils/orpc";
+import { orpc, queryClient } from "./utils/orpc";
 
 const router = createRouter({
   routeTree,
   defaultPreload: "intent",
   defaultPendingComponent: () => <Loader />,
   context: {
-    queryClient,
-    auth: initialAuthContext,
+    queryClient, // WHY ???
+    orpc, // WHY ???
+    clerk, // OK
   },
   Wrap({ children }) {
     /**
@@ -27,7 +28,11 @@ const router = createRouter({
      *   - I18N provider
      */
     return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      </AuthProvider>
     );
   },
   InnerWrap({ children }) {
@@ -41,7 +46,7 @@ const router = createRouter({
      *   - Layout or state derived from useRouter() / useSearch()
      *   - Router-aware suspense / loading UI providers
      */
-    return <> {children}</>;
+    return <>{children}</>;
   },
 });
 
@@ -55,12 +60,22 @@ const router = createRouter({
  *   - Auth provider (if needed at router context level)
  */
 function RouterWrapper({ children }: { children: ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return <>{children}</>;
 }
 
+/**
+ * Wire up some hooks to router context
+ *
+ * This is where you can use hook before injecting them in
+ * RouterProvider context. It might. Because sometimes react
+ * libs don't have easy hook alternatives, and you can't
+ * call hook outside component. So here is a spot ready for that
+ *
+ * (remember that tanstack RouterContext is not reactive)
+ */
 function RouterWithContext() {
-  const auth = useAuth();
-  return <RouterProvider context={{ auth }} router={router} />;
+  // const example = useExample();
+  return <RouterProvider context={{}} router={router} />;
 }
 
 function App() {
@@ -70,19 +85,6 @@ function App() {
     </RouterWrapper>
   );
 }
-
-// function InnerApp() {
-//   const auth = useAuth();
-//   return <RouterProvider context={{ auth }} router={router} />;
-// }
-
-// function App() {
-//   return (
-//     <AuthProvider>
-//       <InnerApp />
-//     </AuthProvider>
-//   );
-// }
 
 declare module "@tanstack/react-router" {
   interface Register {

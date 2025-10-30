@@ -31,6 +31,8 @@ export const web = await Vite("web", {
   bindings: {
     VITE_SERVER_URL: process.env.VITE_SERVER_URL || "",
     VITE_CLERK_PUBLISHABLE_KEY: process.env.VITE_CLERK_PUBLISHABLE_KEY || "",
+    VITE_CLERK_SIGN_IN_URL: process.env.VITE_CLERK_SIGN_IN_URL || "",
+    VITE_CLERK_SIGN_UP_URL: process.env.VITE_CLERK_SIGN_UP_URL || "",
   },
   dev: {
     command: "pnpm run dev",

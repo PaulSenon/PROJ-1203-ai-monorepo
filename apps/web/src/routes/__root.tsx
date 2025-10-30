@@ -13,12 +13,13 @@ import { Toaster } from "@/components/ui/sonner";
 // import type { orpc } from "@/utils/orpc";
 import "../index.css";
 import type { QueryClient } from "@tanstack/react-query";
-import type { AuthContext } from "@/hooks/use-auth";
+import type { clerk } from "@/hooks/use-auth";
+import type { orpc } from "@/utils/orpc";
 
 export interface RouterAppContext {
-  // orpc: typeof orpc;
-  queryClient: QueryClient;
-  auth: AuthContext;
+  orpc: typeof orpc; // WHY ??
+  queryClient: QueryClient; // WHY ??
+  clerk: typeof clerk; // OK
 }
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
