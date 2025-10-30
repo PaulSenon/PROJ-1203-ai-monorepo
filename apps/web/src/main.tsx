@@ -1,19 +1,16 @@
-import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import ReactDom from "react-dom/client";
 import Loader from "./components/loader";
 import { AuthProvider, clerk } from "./hooks/use-auth";
 import { routeTree } from "./routeTree.gen";
-import { orpc, queryClient } from "./utils/orpc";
+import { TanstackQueryClientProvider } from "./utils/tanstack-query/query-client-provider";
 
 const router = createRouter({
   routeTree,
   defaultPreload: "intent",
   defaultPendingComponent: () => <Loader />,
   context: {
-    queryClient, // WHY ???
-    orpc, // WHY ???
     clerk, // OK
   },
   Wrap({ children }) {
@@ -29,9 +26,7 @@ const router = createRouter({
      */
     return (
       <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
+        <TanstackQueryClientProvider>{children}</TanstackQueryClientProvider>
       </AuthProvider>
     );
   },

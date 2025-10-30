@@ -12,13 +12,9 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 // import type { orpc } from "@/utils/orpc";
 import "../index.css";
-import type { QueryClient } from "@tanstack/react-query";
 import type { clerk } from "@/hooks/use-auth";
-import type { orpc } from "@/utils/orpc";
 
 export interface RouterAppContext {
-  orpc: typeof orpc; // WHY ??
-  queryClient: QueryClient; // WHY ??
   clerk: typeof clerk; // OK
 }
 

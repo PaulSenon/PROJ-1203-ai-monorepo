@@ -7,7 +7,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
-import { orpc } from "@/utils/orpc";
+import { orpc } from "@/utils/orpc/orpc";
 // import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/")({
@@ -32,17 +32,8 @@ const TITLE_TEXT = `
 
 function HomeComponent() {
   const auth = useAuth();
-  const publicCheck = useQuery(
-    orpc.public.greeting.queryOptions({
-      context: { getToken: auth.getToken },
-    })
-  );
-  const protectedCheck = useQuery(
-    orpc.private.greeting.queryOptions({
-      enabled: auth.isLoaded,
-      context: { getToken: auth.getToken },
-    })
-  );
+  const publicCheck = useQuery(orpc.public.greeting.queryOptions());
+  const protectedCheck = useQuery(orpc.private.greeting.queryOptions());
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-2">

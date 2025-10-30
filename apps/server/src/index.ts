@@ -17,7 +17,7 @@ app.use(logger());
 app.use(
   "/*",
   clerkMiddleware({
-    // jwtKey: env.CLERK_JWT_KEY,
+    jwtKey: env.CLERK_JWT_KEY,
     publishableKey: env.CLERK_PUBLISHABLE_KEY,
     secretKey: env.CLERK_SECRET_KEY,
   })
@@ -88,7 +88,6 @@ app.use("/rpc/public/*", async (ctx, next) => {
 
 app.use("/rpc/private/*", async (ctx, next) => {
   const auth = getAuth(ctx);
-  console.log(auth?.debug());
   const rpcResultProtected = await rpcHandlerProtected.handle(ctx.req.raw, {
     prefix: "/rpc/private",
     context: {
