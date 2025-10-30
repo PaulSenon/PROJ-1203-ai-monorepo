@@ -1,5 +1,5 @@
 import { useChat } from "@ai-sdk/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { DefaultChatTransport } from "ai";
 import { Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/ai")({
   component: RouteComponent,
+  beforeLoad: ({ context }) => {
+    console.log(context);
+    if (!context.auth.isSignedIn) {
+      throw redirect({
+        to: "/",
+      });
+    }
+  },
 });
 
 function RouteComponent() {
