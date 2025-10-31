@@ -1,5 +1,6 @@
+import type { env as cfEnv } from "cloudflare:workers";
 import { createEnv } from "@t3-oss/env-core";
-import { z } from "zod";
+import z from "zod";
 
 export const env = createEnv({
   clientPrefix: "VITE_",
@@ -11,6 +12,5 @@ export const env = createEnv({
     VITE_CONVEX_URL: z.string(),
   },
   runtimeEnv: import.meta.env,
-});
-
-export type WebEnv = typeof env;
+}) satisfies Omit<typeof cfEnv, "ASSETS">;
+// N.B. if satisfy error, go change bindings in alchemy.run.ts

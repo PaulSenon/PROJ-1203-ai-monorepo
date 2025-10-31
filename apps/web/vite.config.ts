@@ -11,6 +11,7 @@ export default defineConfig({
     tailwindcss(),
     tanstackRouter({}),
     react(),
+    alchemy(),
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
@@ -22,7 +23,6 @@ export default defineConfig({
       pwaAssets: { disabled: false, config: true },
       devOptions: { enabled: true },
     }),
-    alchemy(),
     // Inspect(),
     // analyzer({
     //   openAnalyzer: false,

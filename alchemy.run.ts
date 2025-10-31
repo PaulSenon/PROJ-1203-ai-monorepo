@@ -1,11 +1,10 @@
 import alchemy from "alchemy";
 import { Vite, Worker } from "alchemy/cloudflare";
-import type { WebEnv } from "./apps/web/src/env";
 import { env } from "./env";
 
 const app = await alchemy("ai-monorepo");
 
-export const web = await Vite<WebEnv>("web", {
+export const web = await Vite("web", {
   cwd: "apps/web",
   assets: "dist",
   bindings: {
@@ -19,9 +18,6 @@ export const web = await Vite<WebEnv>("web", {
   },
   dev: {
     command: "pnpm run dev",
-  },
-  bundle: {
-    sourcemap: "both",
   },
 });
 
@@ -42,9 +38,6 @@ export const server = await Worker("server", {
   },
   dev: {
     port: 3000,
-  },
-  bundle: {
-    sourcemap: "both",
   },
 });
 
