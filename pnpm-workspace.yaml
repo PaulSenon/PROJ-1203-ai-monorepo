@@ -3,6 +3,7 @@ packages:
   - packages/*
 
 catalog:
+  alchemy: ^0.75.1
   dotenv: ^17.2.2
   hono: ^4.8.2
   tsdown: ^0.15.5
