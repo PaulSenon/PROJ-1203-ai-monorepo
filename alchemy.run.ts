@@ -1,38 +1,21 @@
 import alchemy from "alchemy";
 import { Vite, Worker } from "alchemy/cloudflare";
-import { config } from "dotenv";
-
-const isProd = process.env.NODE_ENV === "production";
-console.log("MODE", isProd ? "PRODUCTION" : "DEVELOPMENT");
-
-if (isProd) {
-  config({ path: "./.env.local" });
-  config({ path: "./apps/web/.env.local" });
-  config({ path: "./apps/server/.env.local" });
-} else {
-  config({ path: "./apps/web/.env.development.local" });
-  config({ path: "./apps/server/.env.development.local" });
-  config({ path: "./apps/web/.env.development" });
-  config({ path: "./apps/server/.env.development" });
-}
-config({ path: "./.env" });
-config({ path: "./apps/web/.env" });
-config({ path: "./apps/server/.env" });
-
-if (!isProd) {
-  console.log(process.env.VITE_SERVER_URL);
-}
+import type { WebEnv } from "./apps/web/src/env";
+import { env } from "./env";
 
 const app = await alchemy("ai-monorepo");
 
-export const web = await Vite("web", {
+export const web = await Vite<WebEnv>("web", {
   cwd: "apps/web",
   assets: "dist",
   bindings: {
-    VITE_SERVER_URL: process.env.VITE_SERVER_URL || "",
-    VITE_CLERK_PUBLISHABLE_KEY: process.env.VITE_CLERK_PUBLISHABLE_KEY || "",
-    VITE_CLERK_SIGN_IN_URL: process.env.VITE_CLERK_SIGN_IN_URL || "",
-    VITE_CLERK_SIGN_UP_URL: process.env.VITE_CLERK_SIGN_UP_URL || "",
+    // Envs
+    VITE_SERVER_URL: env.PUBLIC_SERVER_ORIGIN,
+    VITE_CLERK_PUBLISHABLE_KEY: env.PUBLIC_CLERK_PUBLISHABLE_KEY,
+    VITE_CLERK_SIGN_IN_URL: env.PUBLIC_CLERK_SIGN_IN_URL,
+    VITE_CLERK_SIGN_UP_URL: env.PUBLIC_CLERK_SIGN_UP_URL,
+    VITE_CONVEX_URL: env.PUBLIC_CONVEX_URL,
+    // No secrets because static app
   },
   dev: {
     command: "pnpm run dev",
@@ -50,10 +33,12 @@ export const server = await Worker("server", {
     mode: "smart",
   },
   bindings: {
-    CORS_ORIGIN: process.env.CORS_ORIGIN || "",
-    CLERK_SECRET_KEY: alchemy.secret(process.env.CLERK_SECRET_KEY),
-    CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY || "",
-    CLERK_JWT_KEY: process.env.CLERK_JWT_KEY || "",
+    // Envs
+    PUBLIC_CORS_ORIGIN: env.PUBLIC_WEB_ORIGIN,
+    PUBLIC_CLERK_PUBLISHABLE_KEY: env.PUBLIC_CLERK_PUBLISHABLE_KEY,
+    PUBLIC_CLERK_JWT_KEY: env.PUBLIC_CLERK_JWT_KEY,
+    // Secrets
+    CLERK_SECRET_KEY: alchemy.secret(env.CLERK_SECRET_KEY),
   },
   dev: {
     port: 3000,

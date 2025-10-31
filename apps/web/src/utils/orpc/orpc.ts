@@ -3,6 +3,7 @@ import { createORPCClient, DynamicLink, ORPCError } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { ContractRouterClient } from "@orpc/contract";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { env } from "@/env";
 import { asyncSession } from "@/hooks/use-auth";
 
 /**
@@ -10,7 +11,7 @@ import { asyncSession } from "@/hooks/use-auth";
  * (slower because wait for auth)
  */
 const linkWithAuthHeader = new RPCLink({
-  url: `${import.meta.env.VITE_SERVER_URL}/rpc`,
+  url: `${env.VITE_SERVER_URL}/rpc`,
   headers: async () => {
     const session = await asyncSession.wait();
     const token = await session?.getToken({ template: "convex" });
@@ -33,7 +34,7 @@ const linkWithAuthHeader = new RPCLink({
  * (fast !)
  */
 const linkDefault = new RPCLink({
-  url: `${import.meta.env.VITE_SERVER_URL}/rpc`,
+  url: `${env.VITE_SERVER_URL}/rpc`,
 });
 
 // TODO: perhaps we might route on tags ? might be better

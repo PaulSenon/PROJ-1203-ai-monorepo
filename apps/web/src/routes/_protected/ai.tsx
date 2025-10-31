@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Response } from "@/components/response";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { env } from "@/env";
 
 export const Route = createFileRoute("/_protected/ai")({
   component: RouteComponent,
@@ -15,7 +16,7 @@ function RouteComponent() {
   const [input, setInput] = useState("");
   const { messages, sendMessage } = useChat({
     transport: new DefaultChatTransport({
-      api: `${import.meta.env.VITE_SERVER_URL}/ai`,
+      api: `${env.VITE_SERVER_URL}/ai`,
     }),
   });
 

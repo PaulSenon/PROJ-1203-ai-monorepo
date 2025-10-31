@@ -1,4 +1,3 @@
-import { env } from "cloudflare:workers";
 import { protectedRouter, publicRouter } from "@ai-monorepo/api/routers/index";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
@@ -11,21 +10,22 @@ import { convertToModelMessages, streamText } from "ai";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { env } from "./env";
 
 const app = new Hono();
 app.use(logger());
 app.use(
   "/*",
   clerkMiddleware({
-    jwtKey: env.CLERK_JWT_KEY,
-    publishableKey: env.CLERK_PUBLISHABLE_KEY,
+    jwtKey: env.PUBLIC_CLERK_JWT_KEY,
+    publishableKey: env.PUBLIC_CLERK_PUBLISHABLE_KEY,
     secretKey: env.CLERK_SECRET_KEY,
   })
 );
 app.use(
   "/*",
   cors({
-    origin: env.CORS_ORIGIN,
+    origin: env.PUBLIC_CORS_ORIGIN,
     allowMethods: ["GET", "POST", "OPTIONS"],
   })
 );

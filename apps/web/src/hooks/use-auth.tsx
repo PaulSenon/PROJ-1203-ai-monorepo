@@ -5,13 +5,12 @@ import {
   type useSession,
 } from "@clerk/clerk-react";
 import { type ReactNode, useEffect } from "react";
+import { env } from "@/env";
 import { createControllablePromise } from "@/helpers/controllable-promise-helper";
 
-// TODO typed env
-const VITE_CLERK_PUBLISHABLE_KEY = import.meta.env
-  .VITE_CLERK_PUBLISHABLE_KEY as string;
-const VITE_CLERK_SIGN_IN_URL = import.meta.env.VITE_CLERK_SIGN_IN_URL as string;
-const VITE_CLERK_SIGN_UP_URL = import.meta.env.VITE_CLERK_SIGN_UP_URL as string;
+const VITE_CLERK_PUBLISHABLE_KEY = env.VITE_CLERK_PUBLISHABLE_KEY;
+const VITE_CLERK_SIGN_IN_URL = env.VITE_CLERK_SIGN_IN_URL;
+const VITE_CLERK_SIGN_UP_URL = env.VITE_CLERK_SIGN_UP_URL;
 
 export function useAuth() {
   // const { isAuthenticated, isLoading } = useConvexAuth();

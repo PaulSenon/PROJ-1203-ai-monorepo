@@ -7,17 +7,22 @@
     "packages/*"
   ],
   "scripts": {
+    "with-envs": "dotenvx run --convention=nextjs --",
     "check": "biome check --write .",
-    "dev": "alchemy dev",
-    "build": "turbo build",
-    "check-types": "turbo check-types",
-    "dev:native": "turbo -F native dev",
-    "dev:web": "turbo -F web dev",
-    "dev:server": "turbo -F server dev",
-    "deploy": "NODE_ENV=production alchemy deploy",
+    "dev": "pnpm run dev:convex & pnpm run dev:alchemy",
+    "dev:alchemy": "pnpm with-envs alchemy dev",
+    "dev:convex": "pnpm --filter='@ai-monorepo/backend' exec convex dev ",
+    "build": "pnpm with-envs pnpm turbo build",
+    "check-types": "pnpm with-envs turbo check-types",
+    "dev:web": "pnpm with-envs turbo -F web dev",
+    "dev:server": "pnpm with-envs turbo -F server dev",
+    "deploy": "cross-env NODE_ENV=production pnpm with-envs pnpm alchemy deploy",
     "destroy": "alchemy destroy"
   },
   "dependencies": {
+    "@dotenvx/dotenvx": "^1.51.0",
+    "@t3-oss/env-core": "catalog:env",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.2.2",
     "zod": "^4.1.11"
   },

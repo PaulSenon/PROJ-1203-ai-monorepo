@@ -22,10 +22,10 @@ services:
       - "3000:3000" # apps/server
       - "3001:3001" # apps/web
       - "8888:8888" # vite bundler analyser
-    env_file:
-      - ../.env
-      - ../.env.local
-      - ../.env.development
+    # env_file:
+    #   - ../.env
+    #   - ../.env.local
+    #   - ../.env.development
     command: pnpm dev
   #   depends_on:
   #     - convex

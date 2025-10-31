@@ -19,6 +19,7 @@
     "@orpc/openapi": "catalog:orpc",
     "@orpc/server": "catalog:orpc",
     "@orpc/zod": "catalog:orpc",
+    "@t3-oss/env-core": "catalog:env",
     "ai": "catalog:ai",
     "dotenv": "catalog:",
     "hono": "catalog:",
