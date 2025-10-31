@@ -4,7 +4,7 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 import type { ReactNode } from "react";
 import { env } from "@/env";
 
-const convex = new ConvexReactClient(env.VITE_CONVEX_URL as string);
+const convex = new ConvexReactClient(env.VITE_CONVEX_URL);
 
 export function ConvexProvider({ children }: { children: ReactNode }) {
   return (

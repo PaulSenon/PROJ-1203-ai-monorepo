@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import ReactDom from "react-dom/client";
 import Loader from "./components/loader";
 import { AuthProvider } from "./hooks/use-auth";
+import { ConvexProvider } from "./hooks/use-convex";
 import { routeTree } from "./routeTree.gen";
 import { TanstackQueryClientProvider } from "./utils/tanstack-query/query-client-provider";
 
@@ -26,7 +27,9 @@ const router = createRouter({
      */
     return (
       <AuthProvider>
-        <TanstackQueryClientProvider>{children}</TanstackQueryClientProvider>
+        <ConvexProvider>
+          <TanstackQueryClientProvider>{children}</TanstackQueryClientProvider>
+        </ConvexProvider>
       </AuthProvider>
     );
   },

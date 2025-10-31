@@ -11,6 +11,8 @@ import Loader from "@/components/loader";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "../index.css";
+import { ChatSidebar } from "@/components/chat/chat-sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export interface RouterAppContext {
   _placeholder: unknown;
@@ -38,26 +40,12 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 });
 
 function RootComponent() {
-  // const { addListener } = useClerk();
-
-  // // biome-ignore lint/correctness/useExhaustiveDependencies: on mount
-  // useEffect(() => {
-  //   const unsubscribe = addListener(async (data) => {
-  //     if (data.session?.user.id) {
-  //       mp.resolve(data.session);
-  //     } else {
-  //       mp.resolve(null);
-  //     }
-  //   });
-  //   return unsubscribe;
-  // }, []);
-
   const isFetching = useRouterState({
     select: (s) => s.isLoading,
   });
 
   return (
-    <>
+    <SidebarProvider>
       <HeadContent />
       <ThemeProvider
         attribute="class"
@@ -65,14 +53,17 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <div className="grid h-svh grid-rows-[auto_1fr]">
+        <ChatSidebar />
+        <main className="group/sidebar-wrapper relative w-full min-w-0 flex-1">
+          <SidebarTrigger className="fixed top-3 top-safe-offset-2 left-3 z-50 flex bg-background-transparent p-4" />
           <Header />
           {isFetching ? <Loader /> : <Outlet />}
-        </div>
+        </main>
+
         <Toaster richColors />
       </ThemeProvider>
       <TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
-    </>
+    </SidebarProvider>
   );
 }

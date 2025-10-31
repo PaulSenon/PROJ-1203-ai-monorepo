@@ -1,11 +1,6 @@
-import {
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  UserButton,
-} from "@clerk/clerk-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { UserProfileButton } from "@/components/auth/user-avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { orpc } from "@/utils/orpc/orpc";
 // import { orpc } from "@/utils/orpc";
@@ -38,17 +33,12 @@ function HomeComponent() {
   return (
     <div className="container mx-auto max-w-3xl px-4 py-2">
       <header className="min-h-10">
-        <SignedOut>
-          <SignInButton />
-        </SignedOut>
-        <SignedIn>
-          <UserButton />
-        </SignedIn>
+        <UserProfileButton />
       </header>
       <pre className="overflow-x-auto font-mono text-sm">{TITLE_TEXT}</pre>
       <div className="grid gap-6">
         <section className="rounded-lg border p-4">
-          <p> {auth.isLoaded ? "LOADED" : "Loading..."}</p>
+          <p> {auth.state}</p>
           <h2 className="mb-2 font-medium">API Status</h2>
           <div className="flex items-center gap-2">
             <div
