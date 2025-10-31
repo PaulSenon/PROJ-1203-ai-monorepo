@@ -21,7 +21,9 @@
       "!**/wrangler.jsonc",
       "!**/.source",
       "!**/_generated",
-      "!**/opencode.jsonc"
+      "!**/opencode.jsonc",
+      "!**/components/ui",
+      "!**/components/ai-elements"
     ]
   },
   "extends": ["ultracite/core", "ultracite/react"],
