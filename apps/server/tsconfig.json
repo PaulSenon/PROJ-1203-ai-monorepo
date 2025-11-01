@@ -4,10 +4,11 @@
     "composite": true,
     "outDir": "dist",
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
     "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
-  }
+    "jsxImportSource": "hono/jsx",
+    "paths": {
+      "@ai-monorepo/api/*": ["../../packages/api/src/*"]
+    }
+  },
+  "references": [{ "path": "../../packages/api" }]
 }

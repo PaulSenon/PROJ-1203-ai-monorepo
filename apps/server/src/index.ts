@@ -1,6 +1,5 @@
 import { protectedRouter, publicRouter } from "@ai-monorepo/api/routers/index";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
@@ -14,14 +13,6 @@ import { env } from "./env";
 
 const app = new Hono();
 app.use(logger());
-app.use(
-  "/*",
-  clerkMiddleware({
-    jwtKey: env.PUBLIC_CLERK_JWT_KEY,
-    publishableKey: env.PUBLIC_CLERK_PUBLISHABLE_KEY,
-    secretKey: env.CLERK_SECRET_KEY,
-  })
-);
 app.use(
   "/*",
   cors({
@@ -87,11 +78,10 @@ app.use("/rpc/public/*", async (ctx, next) => {
 });
 
 app.use("/rpc/private/*", async (ctx, next) => {
-  const auth = getAuth(ctx);
   const rpcResultProtected = await rpcHandlerProtected.handle(ctx.req.raw, {
     prefix: "/rpc/private",
     context: {
-      auth,
+      request: ctx.req.raw.clone(),
     },
   });
   if (rpcResultProtected.matched) {

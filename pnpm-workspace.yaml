@@ -12,27 +12,27 @@ catalog:
 
 catalogs:
   ai:
-    '@ai-sdk/google': 2.0.25
-    '@ai-sdk/react': ^2.0.81
+    "@ai-sdk/google": 2.0.25
+    "@ai-sdk/react": ^2.0.81
     ai: 5.0.81
   clerk:
-    '@clerk/backend': ^2.19.1
-    '@clerk/clerk-react': ^5.53.4
-    '@hono/clerk-auth': ^3.0.3
+    "@clerk/backend": ^2.19.1
+    "@clerk/clerk-react": ^5.53.4
+    "@hono/clerk-auth": ^3.0.3
   convex:
-    '@convex-dev/migrations': ^0.2.9
+    "@convex-dev/migrations": ^0.2.9
     convex: ^1.28.0
     convex-helpers: 0.1.104
   env:
-    '@t3-oss/env-core': 0.13.8
+    "@t3-oss/env-core": 0.13.8
   orpc:
-    '@orpc/client': 1.10.2
-    '@orpc/contract': 1.10.2
-    '@orpc/openapi': 1.10.2
-    '@orpc/openapi-client': ^1.10.2
-    '@orpc/server': 1.10.2
-    '@orpc/tanstack-query': ^1.10.2
-    '@orpc/zod': 1.10.2
+    "@orpc/client": 1.10.2
+    "@orpc/contract": 1.10.2
+    "@orpc/openapi": 1.10.2
+    "@orpc/openapi-client": ^1.10.2
+    "@orpc/server": 1.10.2
+    "@orpc/tanstack-query": ^1.10.2
+    "@orpc/zod": 1.10.2
 
 onlyBuiltDependencies:
   - esbuild

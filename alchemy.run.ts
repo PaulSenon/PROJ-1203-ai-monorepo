@@ -33,6 +33,7 @@ export const server = await Worker("server", {
     PUBLIC_CORS_ORIGIN: env.PUBLIC_WEB_ORIGIN,
     PUBLIC_CLERK_PUBLISHABLE_KEY: env.PUBLIC_CLERK_PUBLISHABLE_KEY,
     PUBLIC_CLERK_JWT_KEY: env.PUBLIC_CLERK_JWT_KEY,
+    PUBLIC_CONVEX_URL: env.PUBLIC_CONVEX_URL,
     // Secrets
     CLERK_SECRET_KEY: alchemy.secret(env.CLERK_SECRET_KEY),
   },

@@ -33,6 +33,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@ai-monorepo/convex": "workspace:^",
     "@ai-sdk/google": "catalog:ai",
     "@clerk/backend": "catalog:clerk",
     "@orpc/client": "catalog:orpc",
@@ -41,6 +42,7 @@
     "@orpc/server": "catalog:orpc",
     "@orpc/zod": "catalog:orpc",
     "ai": "catalog:ai",
+    "convex": "catalog:convex",
     "dotenv": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"

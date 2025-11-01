@@ -30,7 +30,7 @@ catalogs:
       specifier: ^0.2.9
       version: 0.2.9
     convex:
-      specifier: ^1.28.0
+      specifier: 1.28.0
       version: 1.28.0
     convex-helpers:
       specifier: 0.1.104
@@ -473,6 +473,9 @@ importers:
 
   packages/api:
     dependencies:
+      '@ai-monorepo/convex':
+        specifier: workspace:^
+        version: link:../backend
       '@ai-sdk/google':
         specifier: catalog:ai
         version: 2.0.25(zod@4.1.12)
@@ -497,6 +500,9 @@ importers:
       ai:
         specifier: catalog:ai
         version: 5.0.81(zod@4.1.12)
+      convex:
+        specifier: catalog:convex
+        version: 1.28.0(@clerk/clerk-react@5.53.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)
       dotenv:
         specifier: 'catalog:'
         version: 17.2.3

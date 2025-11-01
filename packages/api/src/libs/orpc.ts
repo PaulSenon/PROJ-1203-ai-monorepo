@@ -1,36 +1,22 @@
 // apps/server/src/lib/orpc.ts
-
-import type { SessionAuthObject } from "@clerk/backend";
-import { implement, type MiddlewareResult, ORPCError } from "@orpc/server";
+import { implement } from "@orpc/server";
 import { exampleContract } from "../contracts/exampleContract";
+// import { clerkAuthMiddleware } from "./middlewares/clerk-auth";
 
-type Context = Record<never, never>;
+export type RequestContext = {
+  request: Request;
+};
 
-type ClerkAuthContext = Context & {
-  auth: SessionAuthObject | null;
+export type ClerkAuthContext = {
+  auth: {
+    getToken: (params?: { template: string }) => Promise<string | null>;
+  };
 };
 
 export const os = implement(exampleContract);
-export const baseContext = os.$context<Context>();
-export const clerkAuthContext = os.$context<ClerkAuthContext>();
 
-const authMiddleware = clerkAuthContext.middleware(
-  ({
-    context,
-    next,
-  }): MiddlewareResult<{ auth: SessionAuthObject }, unknown> => {
-    if (!context.auth?.userId) {
-      throw new ORPCError("UNAUTHORIZED");
-    }
+const emptyContext = os.$context();
+const requestContext = os.$context<RequestContext>();
 
-    return next({
-      context: {
-        ...context,
-        auth: context.auth,
-      },
-    });
-  }
-);
-
-export const publicProcedures = baseContext.public;
-export const protectedProcedures = clerkAuthContext.use(authMiddleware).private;
+export const publicProcedures = emptyContext.public;
+export const protectedProcedures = requestContext.private;

@@ -48,7 +48,7 @@ function HomeComponent() {
               {publicCheck.isLoading
                 ? "Checking..."
                 : publicCheck.data
-                  ? "Connected"
+                  ? publicCheck.data.text
                   : "Disconnected"}
             </span>
           </div>
@@ -60,7 +60,7 @@ function HomeComponent() {
               {protectedCheck.isLoading
                 ? "Checking..."
                 : protectedCheck.data
-                  ? "Connected"
+                  ? protectedCheck.data.text
                   : "Disconnected"}
             </span>
           </div>

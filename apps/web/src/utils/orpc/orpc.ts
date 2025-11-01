@@ -14,7 +14,7 @@ const linkWithAuthHeader = new RPCLink({
   url: `${env.VITE_SERVER_URL}/rpc`,
   headers: async () => {
     const session = await asyncSession.wait();
-    const token = await session?.getToken({ template: "convex" });
+    const token = await session?.getToken();
 
     /**
      * We do skip request (because useless) if we don't have the token
