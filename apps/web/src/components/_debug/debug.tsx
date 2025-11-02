@@ -6,6 +6,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useMemo,
   useState,
 } from "react";
 import z from "zod";
@@ -27,7 +28,7 @@ export function DebugContextProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const params = useParams({ strict: false });
   const isNew = !params.id;
-  const id = params.id ?? nanoid();
+  const id = useMemo(() => params.id ?? nanoid(), [params.id]);
 
   const { scope } = useUserCache();
   const cacheKey = `${scope}-messages-${id}`;
