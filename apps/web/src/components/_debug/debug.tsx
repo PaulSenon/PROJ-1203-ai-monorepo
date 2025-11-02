@@ -1,3 +1,4 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "@tanstack/react-router";
 import { nanoid } from "nanoid";
 import {
@@ -7,6 +8,8 @@ import {
   useContext,
   useState,
 } from "react";
+import z from "zod";
+import { useUserCacheEntry } from "@/hooks/use-user-cache";
 import { Button } from "../ui/button";
 
 export type DebugContextType = {
@@ -25,22 +28,39 @@ export function DebugContextProvider({ children }: { children: ReactNode }) {
   const params = useParams({ strict: false });
   const isNew = !params.id;
   const id = params.id ?? nanoid();
-  const [messages, setMessages] = useState<string[]>(
-    isNew ? [] : ["old message"]
-  );
+
+  const cacheKey = `messages-${id}`;
+  const userCache = useUserCacheEntry(cacheKey, z.array(z.string()));
+
+  const queryClient = useQueryClient();
+  const { data: messages } = useQuery({
+    queryKey: [cacheKey],
+    initialData: [],
+    queryFn: async () => {
+      const data = await userCache.get();
+      return data ?? [];
+    },
+  });
+
+  const setMessages = useMutation({
+    mutationFn: (m: string[]) => userCache.set(m),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [cacheKey] });
+    },
+  });
 
   const sendMessage = useCallback(
     (message: string) => {
       if (isNew) {
         router.navigate({
-          // replace: true,
+          replace: true,
           to: "/chat/{-$id}",
           params: { id },
         });
       }
-      setMessages((m) => [...m, message]);
+      setMessages.mutate([...messages, message]);
     },
-    [setMessages, id, isNew, router]
+    [setMessages, id, isNew, router, messages]
   );
 
   const openNew = useCallback(() => {
@@ -48,7 +68,6 @@ export function DebugContextProvider({ children }: { children: ReactNode }) {
       to: "/chat/{-$id}",
       params: { id: undefined },
     });
-    setMessages([]);
   }, [router]);
 
   const openExisting = useCallback(
@@ -57,7 +76,6 @@ export function DebugContextProvider({ children }: { children: ReactNode }) {
         to: "/chat/{-$id}",
         params: { id: targetId },
       });
-      setMessages(["this is a demo", `with message ${id}`]);
     },
     [router]
   );
@@ -87,6 +105,7 @@ export function useDebug() {
 }
 
 export function Debug() {
+  // const maybeUserId = use(lastLoggedInUserId.get());
   const { id, isNew, messages, openExisting, openNew } = useDebug();
   return (
     <div className="flex flex-col">

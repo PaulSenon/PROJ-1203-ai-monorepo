@@ -33,7 +33,8 @@
         "useBlockStatements": "off",
         "noNestedTernary": "info",
         "useConsistentTypeDefinitions": "off",
-        "useFilenamingConvention": "off"
+        "useFilenamingConvention": "off",
+        "noMagicNumbers": "info"
       },
       "suspicious": {
         "useAwait": "off",
@@ -46,6 +47,9 @@
       },
       "nursery": {
         "noShadow": "warn"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "warn"
       }
     }
   }

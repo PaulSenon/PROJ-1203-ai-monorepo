@@ -1,5 +1,4 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import type { Prettify } from "../utils";
 import type { ICacheAdapter } from "./ICacheAdapter";
 
 /**
@@ -17,7 +16,7 @@ import type { ICacheAdapter } from "./ICacheAdapter";
  */
 
 /**
- * @example
+ * @usage
  *  const localCacheAdapter: ICacheAdapter = {
  *     get: async (key) => localStorage.getItem(key as string),
  *     set: async (key, value) =>
@@ -36,19 +35,19 @@ import type { ICacheAdapter } from "./ICacheAdapter";
  *     console.log(value);
  *   }
  */
-export class Cache<TKeyBase extends string, TValueBase> {
-  private readonly cacheAdapter: ICacheAdapter<TKeyBase, TValueBase>;
+export class Cache<TKeyBase extends string> {
+  private readonly cacheAdapter: ICacheAdapter<TKeyBase>;
 
-  constructor(adapter: ICacheAdapter<TKeyBase, TValueBase>) {
+  constructor(adapter: ICacheAdapter<TKeyBase>) {
     this.cacheAdapter = adapter;
   }
 
-  entry<TKey extends TKeyBase, TValue extends TValueBase>(
+  entry<TKey extends TKeyBase, TValue>(
     key: TKey,
     schema: StandardSchemaV1<TValue>
-  ): Prettify<ValidatedCacheEntry<TKey, TValue>> {
+  ) {
     return new ValidatedCacheEntry({
-      adapter: this.cacheAdapter as ICacheAdapter<string, unknown>,
+      adapter: this.cacheAdapter,
       schema,
       key,
     });
@@ -60,7 +59,7 @@ export class Cache<TKeyBase extends string, TValueBase> {
 }
 
 class ValidatedCacheEntry<TKey extends string, TValue> {
-  private readonly cacheAdapter: ICacheAdapter;
+  private readonly cacheAdapter: ICacheAdapter<TKey>;
   private readonly schema: StandardSchemaV1<TValue>;
   private readonly key: TKey;
 
@@ -69,7 +68,7 @@ class ValidatedCacheEntry<TKey extends string, TValue> {
     schema,
     key,
   }: {
-    adapter: ICacheAdapter;
+    adapter: ICacheAdapter<TKey>;
     schema: StandardSchemaV1<TValue>;
     key: TKey;
   }) {
@@ -78,11 +77,11 @@ class ValidatedCacheEntry<TKey extends string, TValue> {
     this.key = key;
   }
 
-  del = async () => {
+  async del() {
     await this.cacheAdapter.del(this.key);
-  };
+  }
 
-  get = async () => {
+  async get() {
     const value = await this.cacheAdapter.get(this.key);
     if (!value) return;
     const result = await this.schema["~standard"].validate(value);
@@ -91,13 +90,13 @@ class ValidatedCacheEntry<TKey extends string, TValue> {
       return;
     }
     return result.value;
-  };
+  }
 
-  set = async (value: TValue) => {
+  async set(value: TValue) {
     const validatedValue = await this.schema["~standard"].validate(value);
     if (validatedValue.issues) {
       throw new Error("Invalid value", { cause: validatedValue.issues });
     }
     await this.cacheAdapter.set(this.key, validatedValue.value);
-  };
+  }
 }

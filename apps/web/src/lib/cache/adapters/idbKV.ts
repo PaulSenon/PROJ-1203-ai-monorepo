@@ -1,11 +1,15 @@
-import { type IDBPDatabase, openDB } from "idb";
+import { deleteDB, type IDBPDatabase, openDB } from "idb";
 import type { ICacheAdapter } from "../ICacheAdapter";
 
 /**
  * Simple scoped IndexedDB key-value store wrapper.
  * Each instance manages its own database with a single keyval store.
  */
-export class IdbKv<TKey extends string = string, TValue = unknown>
+
+export function idbKvAdapter(dbName: string): ICacheAdapter {
+  return new IdbKv(dbName);
+}
+class IdbKv<TKey extends string = string, TValue = unknown>
   implements ICacheAdapter<TKey, TValue>
 {
   private readonly dbName: string;
@@ -46,7 +50,6 @@ export class IdbKv<TKey extends string = string, TValue = unknown>
   }
 
   async clear(): Promise<void> {
-    const db = await this.getDB();
-    await db.clear(IdbKv.storeName);
+    await deleteDB(this.dbName);
   }
 }
