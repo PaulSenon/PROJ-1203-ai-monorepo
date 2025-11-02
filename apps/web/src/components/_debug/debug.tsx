@@ -25,7 +25,9 @@ export function DebugContextProvider({ children }: { children: ReactNode }) {
   const params = useParams({ strict: false });
   const isNew = !params.id;
   const id = params.id ?? nanoid();
-  const [messages, setMessages] = useState<string[]>(isNew ? [] : ['old message']);
+  const [messages, setMessages] = useState<string[]>(
+    isNew ? [] : ["old message"]
+  );
 
   const sendMessage = useCallback(
     (message: string) => {
@@ -49,13 +51,16 @@ export function DebugContextProvider({ children }: { children: ReactNode }) {
     setMessages([]);
   }, [router]);
 
-  const openExisting = useCallback((id: string) => {
-    router.navigate({
-      to: "/chat/{-$id}",
-      params: { id },
-    });
-    setMessages(['this is a demo', `with message ${id}`]);
-  }, [router, id]);
+  const openExisting = useCallback(
+    (targetId: string) => {
+      router.navigate({
+        to: "/chat/{-$id}",
+        params: { id: targetId },
+      });
+      setMessages(["this is a demo", `with message ${id}`]);
+    },
+    [router]
+  );
 
   return (
     <DebugContext.Provider
