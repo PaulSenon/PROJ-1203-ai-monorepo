@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ChatChar123IdChar125RouteImport } from './routes/chat.{-$id}'
 import { Route as ProtectedAiRouteImport } from './routes/_protected/ai'
 import { Route as AuthSignUpSplatRouteImport } from './routes/_auth/sign-up.$'
 import { Route as AuthSignInSplatRouteImport } from './routes/_auth/sign-in.$'
@@ -27,6 +28,11 @@ const AuthRoute = AuthRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatChar123IdChar125Route = ChatChar123IdChar125RouteImport.update({
+  id: '/chat/{-$id}',
+  path: '/chat/{-$id}',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProtectedAiRoute = ProtectedAiRouteImport.update({
@@ -48,12 +54,14 @@ const AuthSignInSplatRoute = AuthSignInSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai': typeof ProtectedAiRoute
+  '/chat/{-$id}': typeof ChatChar123IdChar125Route
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai': typeof ProtectedAiRoute
+  '/chat/{-$id}': typeof ChatChar123IdChar125Route
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
 }
@@ -63,20 +71,22 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/_protected': typeof ProtectedRouteWithChildren
   '/_protected/ai': typeof ProtectedAiRoute
+  '/chat/{-$id}': typeof ChatChar123IdChar125Route
   '/_auth/sign-in/$': typeof AuthSignInSplatRoute
   '/_auth/sign-up/$': typeof AuthSignUpSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ai' | '/sign-in/$' | '/sign-up/$'
+  fullPaths: '/' | '/ai' | '/chat/{-$id}' | '/sign-in/$' | '/sign-up/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ai' | '/sign-in/$' | '/sign-up/$'
+  to: '/' | '/ai' | '/chat/{-$id}' | '/sign-in/$' | '/sign-up/$'
   id:
     | '__root__'
     | '/'
     | '/_auth'
     | '/_protected'
     | '/_protected/ai'
+    | '/chat/{-$id}'
     | '/_auth/sign-in/$'
     | '/_auth/sign-up/$'
   fileRoutesById: FileRoutesById
@@ -85,6 +95,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
   ProtectedRoute: typeof ProtectedRouteWithChildren
+  ChatChar123IdChar125Route: typeof ChatChar123IdChar125Route
 }
 
 declare module '@tanstack/react-router' {
@@ -108,6 +119,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat/{-$id}': {
+      id: '/chat/{-$id}'
+      path: '/chat/{-$id}'
+      fullPath: '/chat/{-$id}'
+      preLoaderRoute: typeof ChatChar123IdChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_protected/ai': {
@@ -162,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
   ProtectedRoute: ProtectedRouteWithChildren,
+  ChatChar123IdChar125Route: ChatChar123IdChar125Route,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

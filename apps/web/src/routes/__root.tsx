@@ -3,11 +3,9 @@ import {
   createRootRouteWithContext,
   HeadContent,
   Outlet,
-  useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import Header from "@/components/header";
-import Loader from "@/components/loader";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "../index.css";
@@ -40,9 +38,6 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 });
 
 function RootComponent() {
-  const isFetching = useRouterState({
-    select: (s) => s.isLoading,
-  });
 
   return (
     <SidebarProvider>
@@ -57,7 +52,7 @@ function RootComponent() {
         <main className="group/sidebar-wrapper relative w-full min-w-0 flex-1">
           <SidebarTrigger className="fixed top-3 top-safe-offset-2 left-3 z-50 flex bg-background-transparent p-4" />
           <Header />
-          {isFetching ? <Loader /> : <Outlet />}
+          <Outlet />
         </main>
 
         <Toaster richColors />

@@ -1,0 +1,130 @@
+import { useParams, useRouter } from "@tanstack/react-router";
+import { nanoid } from "nanoid";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useState,
+} from "react";
+import { Button } from "../ui/button";
+
+export type DebugContextType = {
+  messages: string[];
+  id: string;
+  isNew: boolean;
+  sendMessage: (message: string) => void;
+  openExisting: (id: string) => void;
+  openNew: () => void;
+};
+
+export const DebugContext = createContext<DebugContextType | null>(null);
+
+export function DebugContextProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const params = useParams({ strict: false });
+  const isNew = !params.id;
+  const id = params.id ?? nanoid();
+  const [messages, setMessages] = useState<string[]>(isNew ? [] : ['old message']);
+
+  const sendMessage = useCallback(
+    (message: string) => {
+      if (isNew) {
+        router.navigate({
+          // replace: true,
+          to: "/chat/{-$id}",
+          params: { id },
+        });
+      }
+      setMessages((m) => [...m, message]);
+    },
+    [setMessages, id, isNew, router]
+  );
+
+  const openNew = useCallback(() => {
+    router.navigate({
+      to: "/chat/{-$id}",
+      params: { id: undefined },
+    });
+    setMessages([]);
+  }, [router]);
+
+  const openExisting = useCallback((id: string) => {
+    router.navigate({
+      to: "/chat/{-$id}",
+      params: { id },
+    });
+    setMessages(['this is a demo', `with message ${id}`]);
+  }, [router, id]);
+
+  return (
+    <DebugContext.Provider
+      value={{
+        messages,
+        sendMessage,
+        openExisting,
+        openNew,
+        id,
+        isNew,
+      }}
+    >
+      {children}
+    </DebugContext.Provider>
+  );
+}
+
+export function useDebug() {
+  const context = useContext(DebugContext);
+  if (!context) {
+    throw new Error("useDebug must be used within DebugContextProvider");
+  }
+  return context;
+}
+
+export function Debug() {
+  const { id, isNew, messages, openExisting, openNew } = useDebug();
+  return (
+    <div className="flex flex-col">
+      <div>
+        "{id}" {isNew ? "NEW" : "existing"}
+        <Button onClick={() => openExisting(nanoid())}>exiting</Button>
+        <Button onClick={() => openNew()}>new</Button>
+      </div>
+      <Messages messages={messages} />
+      <Input />
+    </div>
+  );
+}
+
+function Message({ message }: { message: string }) {
+  return <span className="border-2 border-amber-500 p-5">{message}</span>;
+}
+
+function Messages({ messages }: { messages: string[] }) {
+  return (
+    <div className="flex flex-col">
+      {messages.map((m) => (
+        <Message key={m} message={m} />
+      ))}
+    </div>
+  );
+}
+
+function Input() {
+  const { sendMessage } = useDebug();
+  const [value, setValue] = useState("");
+  const handleSubmit = () => {
+    sendMessage(value);
+    setValue("");
+  };
+  return (
+    <div className="bg-amber-950">
+      <input
+        onChange={(e) => setValue(e.target.value)}
+        type="text"
+        value={value}
+      />
+      <Button onClick={handleSubmit}>submit</Button>
+    </div>
+  );
+}

@@ -43,6 +43,9 @@
       "correctness": {
         "noUnusedVariables": "warn",
         "useExhaustiveDependencies": "warn"
+      },
+      "nursery": {
+        "noShadow": "warn"
       }
     }
   }

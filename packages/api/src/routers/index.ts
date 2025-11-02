@@ -1,18 +1,14 @@
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
 import { ORPCError } from "@orpc/client";
-
-import { convexContextMiddleware } from "../libs/middlewares/convex-helpers";
-import {
-  protectedProcedures,
-  publicProcedures,
-} from "../libs/orpc";
 import { clerkAuthMiddleware } from "../libs/middlewares/clerk-auth";
+import { convexContextMiddleware } from "../libs/middlewares/convex-helpers";
+import { protectedProcedures, publicProcedures } from "../libs/orpc";
 
 export const protectedRouter = {
   greeting: protectedProcedures.greeting
     .use(clerkAuthMiddleware)
     .use(convexContextMiddleware)
-    .handler(async ({ context: {fetchQuery} }) => {
+    .handler(async ({ context: { fetchQuery } }) => {
       // 1. Authentication
       const user = await fetchQuery(api.users.getCurrentUser);
       if (!user) throw new ORPCError("UNAUTHORIZED");
