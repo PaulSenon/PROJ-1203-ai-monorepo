@@ -7,7 +7,7 @@ import { sizeLimitedAdapter } from "@/lib/cache/adapters/sizeLimitedAdapter";
 import { Cache } from "@/lib/cache/LocalCache";
 import { useAuth } from "./use-auth";
 
-const lastLoggedInUserIdCache = {
+export const lastLoggedInUserIdCache = {
   get: () => localStorage.getItem("lastLoggedInUserId"),
   set: (userId: string) => localStorage.setItem("lastLoggedInUserId", userId),
 };
@@ -42,10 +42,10 @@ export function useUserCache() {
     }
   }, [clerkUser, isLoadingClerk, cache]);
 
-  return cache;
+  return { cache, scope: cacheScope };
 }
 
 export function useUserCacheEntry<T>(key: string, schema: StandardSchemaV1<T>) {
-  const userCache = useUserCache();
-  return userCache.entry(key, schema);
+  const { cache } = useUserCache();
+  return cache.entry(key, schema);
 }

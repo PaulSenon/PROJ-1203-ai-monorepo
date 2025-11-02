@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import z from "zod";
-import { useUserCacheEntry } from "@/hooks/use-user-cache";
+import { useUserCache, useUserCacheEntry } from "@/hooks/use-user-cache";
 import { Button } from "../ui/button";
 
 export type DebugContextType = {
@@ -29,7 +29,8 @@ export function DebugContextProvider({ children }: { children: ReactNode }) {
   const isNew = !params.id;
   const id = params.id ?? nanoid();
 
-  const cacheKey = `messages-${id}`;
+  const { scope } = useUserCache();
+  const cacheKey = `${scope}-messages-${id}`;
   const userCache = useUserCacheEntry(cacheKey, z.array(z.string()));
 
   const queryClient = useQueryClient();
