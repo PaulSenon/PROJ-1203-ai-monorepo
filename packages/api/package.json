@@ -33,8 +33,11 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@ai-monorepo/ai": "workspace:^",
     "@ai-monorepo/convex": "workspace:^",
+    "@ai-sdk/anthropic": "catalog:ai",
     "@ai-sdk/google": "catalog:ai",
+    "@ai-sdk/openai": "catalog:ai",
     "@clerk/backend": "catalog:clerk",
     "@orpc/client": "catalog:orpc",
     "@orpc/contract": "catalog:orpc",
@@ -45,6 +48,7 @@
     "convex": "catalog:convex",
     "dotenv": "catalog:",
     "hono": "catalog:",
+    "nanoid": "catalog:",
     "zod": "catalog:"
   }
 }

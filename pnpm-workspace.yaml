@@ -6,13 +6,16 @@ catalog:
   alchemy: ^0.75.1
   dotenv: ^17.2.2
   hono: ^4.8.2
+  nanoid: ^5.1.6
   tsdown: ^0.15.5
   typescript: 5.9.3
   zod: 4.1.12
 
 catalogs:
   ai:
+    '@ai-sdk/anthropic': ^2.0.40
     '@ai-sdk/google': 2.0.25
+    '@ai-sdk/openai': ^2.0.60
     '@ai-sdk/react': ^2.0.81
     ai: 5.0.81
   clerk:
@@ -20,6 +23,7 @@ catalogs:
     '@clerk/clerk-react': ^5.53.4
     '@hono/clerk-auth': ^3.0.3
   convex:
+    '@convex-dev/agent': ^0.2.12
     '@convex-dev/migrations': ^0.2.9
     convex: ^1.28.0
     convex-helpers: 0.1.104

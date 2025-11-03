@@ -1,3 +1,4 @@
+import type { ChatRouterContract } from "@ai-monorepo/api/contracts/chat.contract";
 import type { ExampleContract } from "@ai-monorepo/api/contracts/exampleContract";
 import { createORPCClient, DynamicLink, ORPCError } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
@@ -48,3 +49,7 @@ const client =
   createORPCClient<ContractRouterClient<ExampleContract>>(autoLink);
 
 export const orpc = createTanstackQueryUtils(client);
+
+type ChatRouterClientContract = ContractRouterClient<ChatRouterContract>;
+export const chatRpc =
+  createORPCClient<ChatRouterClientContract>(linkWithAuthHeader);

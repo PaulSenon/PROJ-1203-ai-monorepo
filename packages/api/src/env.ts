@@ -7,6 +7,9 @@ export const env = createEnv({
   server: {
     // Clerk
     CLERK_SECRET_KEY: z.string(),
+    // AI
+    GOOGLE_API_KEY: z.string(),
+    OPENAI_API_KEY: z.string(),
   },
   client: {
     // Clerk

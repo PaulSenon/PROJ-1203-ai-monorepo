@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Debug, DebugContextProvider } from "@/components/_debug/debug";
+import { Chat } from "@/components/chat/chat";
+import { ActiveThreadProvider } from "@/hooks/use-chat-active";
 
 export const Route = createFileRoute("/_chat/chat/{-$id}")({
   component: RouteComponent,
@@ -13,8 +14,8 @@ function RouteComponent() {
   }, []);
 
   return (
-    <DebugContextProvider>
-      <Debug />
-    </DebugContextProvider>
+    <ActiveThreadProvider>
+      <Chat />
+    </ActiveThreadProvider>
   );
 }

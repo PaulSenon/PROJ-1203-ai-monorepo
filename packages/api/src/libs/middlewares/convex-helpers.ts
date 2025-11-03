@@ -1,11 +1,12 @@
 import { ORPCError } from "@orpc/client";
+import { os } from "@orpc/server";
 import {
   fetchMutation as fetchConvexMutation,
   fetchQuery as fetchConvexQuery,
 } from "convex/nextjs";
 import type { FunctionReference, OptionalRestArgs } from "convex/server";
 import { env } from "../../env";
-import { type ClerkAuthContext, os } from "../orpc";
+import type { ClerkAuthContext } from "../orpc.context";
 
 export const convexContextMiddleware = os
   .$context<ClerkAuthContext>()

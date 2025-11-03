@@ -1,4 +1,7 @@
-import { type MyUIMessage, validateMyUIMessages } from "@ai-monorepo/ai";
+import {
+  type MyUIMessage,
+  validateMyUIMessages,
+} from "@ai-monorepo/ai/types/uiMessage";
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -40,7 +43,7 @@ async function InternalUpsertDraft(
   }
 
   await ctx.db.patch(existingDraft._id, {
-    data: patch?.data,
+    ...patch,
     updatedAt: now,
   });
 
@@ -86,21 +89,11 @@ async function InternalUpsertThread(
   }
 
   await ctx.db.patch(existingThread._id, {
-    lifecycleState: patch?.lifecycleState,
-    liveStatus: patch?.liveStatus,
-    lastUsedModelId: patch?.lastUsedModelId,
-    title: patch?.title,
+    ...patch,
     updatedAt: now,
   });
 
   return existingThread._id;
-
-  //  const thread = await ctx.db.get(threadId);
-  //  if (!thread) {
-  //    throw new ConvexError("Failed creating new thread");
-  //  }
-
-  //  return thread;
 }
 
 async function encodeMessageParts(
@@ -215,10 +208,7 @@ async function InternalUpsertMessageWithParts(
     return messageId;
   }
   await ctx.db.patch(message._id, {
-    lifecycleState: patch?.lifecycleState,
-    liveStatus: patch?.liveStatus,
-    modelId: patch?.modelId ?? uiMessage.metadata?.modelId,
-    role: patch?.role ?? uiMessage.role,
+    ...patch,
     updatedAt: now,
   });
   await InternalUpsertMessageParts(ctx, {
@@ -312,7 +302,9 @@ export const getAllThreadMessagesAsc = queryWithRLS({
         q.eq("userId", user._id).eq("uuid", args.threadUuid)
       )
       .unique();
-    if (!thread) throw new ConvexError("thread not found");
+
+    // TODO: error or nothing ?
+    if (!thread) return [];
 
     const threadId = thread._id;
     const messages = await InternalGetAllThreadMessagesAsc(ctx, {
@@ -394,13 +386,16 @@ export const updateMessage = mutationWithRLS({
       args;
     const [validUiMessage] = await validateMyUIMessages([uiMessage]);
 
-    // TODO: ensure RLS cover this case because we don't check ownership here
-    const patchMessagePromise = ctx.db.patch(messageId, {
+    const messagePatch = {
       role: role ?? validUiMessage.role,
       lifecycleState:
         lifecycleState ?? validUiMessage?.metadata?.lifecycleState,
       liveStatus: liveStatus ?? validUiMessage?.metadata?.liveStatus,
       modelId: modelId ?? validUiMessage?.metadata?.modelId,
+    };
+    // TODO: ensure RLS cover this case because we don't check ownership here
+    const patchMessagePromise = ctx.db.patch(messageId, {
+      ...messagePatch,
       updatedAt: Date.now(),
     });
 
@@ -464,6 +459,42 @@ export const upsertDraft = mutationWithRLS({
         data,
       },
     });
+
+    return;
+  },
+});
+
+// DONE
+// for frontend
+export const deleteDraft = mutationWithRLS({
+  args: {
+    threadUuid: v.string(),
+  },
+  async handler(ctx, args) {
+    const user = await INTERNAL_getCurrentUserOrThrow(ctx);
+    const { threadUuid } = args;
+
+    const thread = await ctx.db
+      .query("threads")
+      .withIndex("byUserIdUuid", (q) =>
+        q.eq("userId", user._id).eq("uuid", threadUuid)
+      )
+      .unique();
+
+    if (!thread)
+      throw new ConvexError("Cannot delete draft for non existing thread");
+
+    const draft = await ctx.db
+      .query("drafts")
+      .withIndex("byUserIdThreadId", (q) =>
+        q.eq("userId", user._id).eq("threadId", thread._id)
+      )
+      .unique();
+
+    if (!draft)
+      throw new ConvexError("Cannot delete draft for non existing draft");
+
+    await ctx.db.delete(draft._id);
 
     return;
   },
@@ -557,15 +588,11 @@ export const updateThread = mutationWithRLS({
   },
   async handler(ctx, args) {
     await INTERNAL_getCurrentUserOrThrow(ctx);
-    const { threadId, lastUsedModelId, lifecycleState, liveStatus, title } =
-      args;
+    const { threadId, ...patch } = args;
 
     // TODO: ensure RLS cover this case because we don't check ownership here
     await ctx.db.patch(threadId, {
-      lastUsedModelId,
-      lifecycleState,
-      liveStatus,
-      title,
+      ...patch,
       updatedAt: Date.now(),
     });
 
@@ -617,7 +644,7 @@ export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
       liveStatus,
       title,
     } = args;
-    const threadPromise = InternalUpsertThread(ctx, {
+    const threadIdPromise = InternalUpsertThread(ctx, {
       threadUuid,
       userId: user._id,
       patch: {
@@ -627,14 +654,14 @@ export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
         title,
       },
     });
-    const validatedMessagesPromise = validateMyUIMessages({
-      messages: uiMessages,
-    });
+    const validatedMessagesPromise = validateMyUIMessages(uiMessages);
 
     const [threadId, validatedMessages] = await Promise.all([
-      threadPromise,
+      threadIdPromise,
       validatedMessagesPromise,
     ]);
+
+    const threadPromise = ctx.db.get(threadId);
     const insertPromises: Promise<unknown>[] = [];
 
     let now = Date.now();
@@ -650,9 +677,17 @@ export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
     }
     await Promise.all(insertPromises);
 
-    return InternalGetAllThreadMessagesAsc(ctx, {
+    const messages = await InternalGetAllThreadMessagesAsc(ctx, {
       userId: user._id,
       threadId,
     });
+
+    const thread = await threadPromise;
+    if (!thread) throw new ConvexError("FATAL: thread not found");
+
+    return {
+      thread,
+      messages,
+    };
   },
 });

@@ -9,12 +9,14 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
 } from "@/components/ui/sidebar";
+import { useChatNav } from "@/hooks/use-chat-nav";
 import { UserProfileButton } from "../auth/user-avatar";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 
 export function ChatSidebar() {
-  const handleNewChat = () => console.log("TODO: new chat");
+  const { openNewChat } = useChatNav();
+  const handleNewChat = () => openNewChat();
 
   return (
     <Sidebar>

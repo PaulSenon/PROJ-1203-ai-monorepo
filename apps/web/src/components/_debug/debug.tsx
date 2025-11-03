@@ -1,4 +1,3 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "@tanstack/react-router";
 import { nanoid } from "nanoid";
 import {
@@ -10,7 +9,7 @@ import {
   useState,
 } from "react";
 import z from "zod";
-import { useUserCache, useUserCacheEntry } from "@/hooks/use-user-cache";
+import { useUserCacheEntry } from "@/hooks/use-user-cache";
 import { Button } from "../ui/button";
 
 export type DebugContextType = {
@@ -30,26 +29,10 @@ export function DebugContextProvider({ children }: { children: ReactNode }) {
   const isNew = !params.id;
   const id = useMemo(() => params.id ?? nanoid(), [params.id]);
 
-  const { scope } = useUserCache();
-  const cacheKey = `${scope}-messages-${id}`;
-  const userCache = useUserCacheEntry(cacheKey, z.array(z.string()));
-
-  const queryClient = useQueryClient();
-  const { data: messages } = useQuery({
-    queryKey: [cacheKey],
-    initialData: [],
-    queryFn: async () => {
-      const data = await userCache.get();
-      return data ?? [];
-    },
-  });
-
-  const setMessages = useMutation({
-    mutationFn: (m: string[]) => userCache.set(m),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [cacheKey] });
-    },
-  });
+  const messagesCache = useUserCacheEntry(
+    `messages-${id}`,
+    z.array(z.string())
+  );
 
   const sendMessage = useCallback(
     (message: string) => {
@@ -60,9 +43,9 @@ export function DebugContextProvider({ children }: { children: ReactNode }) {
           params: { id },
         });
       }
-      setMessages.mutate([...messages, message]);
+      messagesCache.set([...(messagesCache.data ?? []), message]);
     },
-    [setMessages, id, isNew, router, messages]
+    [id, isNew, router, messagesCache.data, messagesCache.set]
   );
 
   const openNew = useCallback(() => {
@@ -85,7 +68,7 @@ export function DebugContextProvider({ children }: { children: ReactNode }) {
   return (
     <DebugContext.Provider
       value={{
-        messages,
+        messages: messagesCache.data ?? [],
         sendMessage,
         openExisting,
         openNew,

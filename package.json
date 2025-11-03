@@ -11,7 +11,7 @@
     "check": "biome check --write .",
     "dev": "pnpm run dev:convex & pnpm run dev:alchemy",
     "dev:alchemy": "pnpm with-envs alchemy dev",
-    "dev:convex": "pnpm --filter='@ai-monorepo/backend' exec convex dev ",
+    "dev:convex": "pnpm --filter='@ai-monorepo/convex' exec convex dev ",
     "build": "pnpm with-envs pnpm turbo build",
     "check-types": "pnpm with-envs turbo check-types",
     "dev:web": "pnpm with-envs turbo -F web dev",

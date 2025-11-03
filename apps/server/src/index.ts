@@ -1,4 +1,8 @@
-import { protectedRouter, publicRouter } from "@ai-monorepo/api/routers/index";
+import {
+  chatRouter,
+  protectedRouter,
+  publicRouter,
+} from "@ai-monorepo/api/routers/index";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
@@ -20,6 +24,28 @@ app.use(
     allowMethods: ["GET", "POST", "OPTIONS"],
   })
 );
+
+export const rpcChat = new RPCHandler(chatRouter, {
+  interceptors: [
+    onError((error) => {
+      console.error(error);
+    }),
+  ],
+});
+
+app.use("/rpc/*", async (ctx, next) => {
+  const result = await rpcChat.handle(ctx.req.raw, {
+    prefix: "/rpc",
+    context: {
+      request: ctx.req.raw.clone(),
+    },
+  });
+  if (result.matched) {
+    return ctx.newResponse(result.response.body, result.response);
+  }
+
+  await next();
+});
 
 export const apiHandler = new OpenAPIHandler(publicRouter, {
   plugins: [

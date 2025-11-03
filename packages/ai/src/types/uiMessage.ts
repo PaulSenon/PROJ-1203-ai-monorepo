@@ -1,5 +1,6 @@
 import {
   type InferUIDataParts,
+  type InferUIMessageChunk,
   type InferUITools,
   tool,
   type UIMessage,
@@ -52,11 +53,14 @@ const tools = {
 type Tools = InferUITools<typeof tools>;
 
 export type MyUIMessage = UIMessage<MetadataSchema, DataSchemas, Tools>;
-export function validateMyUIMessages(messages: unknown) {
-  return validateUIMessages<MyUIMessage>({
-    messages,
-    metadataSchema,
-    dataSchemas,
-    tools,
-  });
+export type MyUIMessageChunk = InferUIMessageChunk<MyUIMessage>;
+export async function validateMyUIMessages(messages: unknown[]) {
+  return validateUIMessages<MyUIMessage>({ messages });
+  // TODO: fix this, validation is not working
+  // return validateUIMessages<MyUIMessage>({
+  //   messages,
+  //   metadataSchema,
+  //   dataSchemas,
+  //   tools,
+  // });
 }

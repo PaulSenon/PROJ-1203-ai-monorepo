@@ -36,6 +36,8 @@ export const server = await Worker("server", {
     PUBLIC_CONVEX_URL: env.PUBLIC_CONVEX_URL,
     // Secrets
     CLERK_SECRET_KEY: alchemy.secret(env.CLERK_SECRET_KEY),
+    GOOGLE_API_KEY: alchemy.secret(env.GOOGLE_API_KEY),
+    OPENAI_API_KEY: alchemy.secret(env.OPENAI_API_KEY),
   },
   dev: {
     port: 3000,

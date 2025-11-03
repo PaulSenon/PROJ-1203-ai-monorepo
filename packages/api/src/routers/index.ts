@@ -1,5 +1,6 @@
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
 import { ORPCError } from "@orpc/client";
+import { chatProcedure } from "../handlers/chat.handler";
 import { clerkAuthMiddleware } from "../libs/middlewares/clerk-auth";
 import { convexContextMiddleware } from "../libs/middlewares/convex-helpers";
 import { protectedProcedures, publicProcedures } from "../libs/orpc";
@@ -23,4 +24,8 @@ export const publicRouter = {
   greeting: publicProcedures.greeting.handler(() => ({
     text: "Hello from public endpoint",
   })),
+};
+
+export const chatRouter = {
+  chat: chatProcedure,
 };

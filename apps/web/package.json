@@ -12,10 +12,12 @@
     "generate-pwa-assets": "pwa-assets-generator"
   },
   "dependencies": {
+    "@ai-monorepo/ai": "workspace:^",
     "@ai-monorepo/api": "workspace:*",
     "@ai-monorepo/convex": "workspace:^",
     "@ai-sdk/react": "catalog:ai",
     "@clerk/clerk-react": "catalog:clerk",
+    "@convex-dev/agent": "catalog:convex",
     "@hookform/resolvers": "^5.2.2",
     "@orpc/client": "catalog:orpc",
     "@orpc/contract": "catalog:orpc",
