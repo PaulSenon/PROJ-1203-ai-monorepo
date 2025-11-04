@@ -11,12 +11,14 @@
     "check": "biome check --write .",
     "dev": "pnpm run dev:convex & pnpm run dev:alchemy",
     "dev:alchemy": "pnpm with-envs alchemy dev",
-    "dev:convex": "pnpm --filter='@ai-monorepo/convex' exec convex dev ",
+    "dev:convex": "pnpm --filter='@ai-monorepo/convex' exec convex dev",
     "build": "pnpm with-envs pnpm turbo build",
     "check-types": "pnpm with-envs turbo check-types",
     "dev:web": "pnpm with-envs turbo -F web dev",
     "dev:server": "pnpm with-envs turbo -F server dev",
-    "deploy": "cross-env NODE_ENV=production pnpm with-envs pnpm alchemy deploy",
+    "deploy": "pnpm deploy:convex && pnpm deploy:alchemy",
+    "deploy:alchemy": "cross-env NODE_ENV=production pnpm with-envs pnpm alchemy deploy",
+    "deploy:convex": "pnpm --filter='@ai-monorepo/convex' exec convex deploy",
     "destroy": "alchemy destroy"
   },
   "dependencies": {

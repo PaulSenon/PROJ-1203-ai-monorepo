@@ -38,6 +38,8 @@ export const chatProcedure = chatProcedures.chat
     // 1. Get user
     const user = await fetchQuery(api.users.getCurrentUser);
     if (!user) throw new ORPCError("UNAUTHORIZED");
+    // TODO: tmp only allow premium to test in prod. To delete and implement under 3. below
+    if (user.tier !== "premium-level-1") throw new ORPCError("FORBIDDEN");
 
     // 2. Validate inputs
     const validatedUiMessages = await validateMyUIMessages([input.message]);

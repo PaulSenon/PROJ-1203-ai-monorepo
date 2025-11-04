@@ -1,7 +1,7 @@
 import type { AllowedModelIds } from "@ai-monorepo/ai/model.registry";
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
-import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
-import { useMutation, useQuery } from "convex/react";
+import { skipToken, useQuery } from "@tanstack/react-query";
+import { useConvex, useMutation } from "convex/react";
 import {
   createContext,
   type RefObject,
@@ -9,7 +9,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -73,9 +72,10 @@ function _ChatInputProvider({ children }: { children: React.ReactNode }) {
     console.log("draft", draft);
     if (!inputRef.current) return;
     if (inputRef.current.value.length > 0) return;
+    if (isPendingDraft) return;
     // TODO: we could detect when draft but already inputs not avoid override but prompt user to overwrite
     _setInput(draft ?? "");
-  }, [inputRef, draft]);
+  }, [inputRef, draft, isPendingDraft]);
 
   // TODO
   const [selectedModelId, setSelectedModelId] =
@@ -83,11 +83,16 @@ function _ChatInputProvider({ children }: { children: React.ReactNode }) {
 
   const setInput = useCallback(
     (value: string) => {
-      if (input === value) return;
+      // never alter input reactivity
       _setInput(value);
+
+      // only skip draft save when no change or is already saving
+      // this avoid looping back set() while del() when clear() is called
+      if (input === value) return;
+      if (isSavePending) return;
       setDraft(value);
     },
-    [input, setDraft]
+    [input, setDraft, isSavePending]
   );
 
   const clear = useCallback(() => {
@@ -166,6 +171,7 @@ const ChatDraftContext = createContext<
 >(null);
 
 function _ChatDraftProvider({ children }: { children: React.ReactNode }) {
+  const convex = useConvex();
   const saveToClipboard = useSaveToClipboard();
   const { isNew, id } = useChatNav();
   const [isSavePending, setIsSavePending] = useState(false);
@@ -173,23 +179,21 @@ function _ChatDraftProvider({ children }: { children: React.ReactNode }) {
   // TODO: Move this block to cached useQuery hook
   const { isFullyReady } = useAuth();
   const isSkip = !isFullyReady || isNew;
-  const draftFromDb = useQuery(
-    api.chat.getDraft,
-    isSkip
-      ? "skip"
-      : {
-          threadUuid: id,
-        }
-  );
+
+  // non reactive but always refreshed when id changes (no stale time)
+  const draftFromDb = useQuery({
+    queryKey: ["draft", id],
+    queryFn: isSkip
+      ? skipToken
+      : () => convex.query(api.chat.getDraft, { threadUuid: id }),
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
+  });
   // ------------------------------------------------------------
-  const isPendingDb = draftFromDb === undefined;
+  const isPendingDb = draftFromDb.isPending;
   const setDraftDb = useMutation(api.chat.upsertDraft);
   const deleteDraftDb = useMutation(api.chat.deleteDraft);
-
-  const draftSnapshot = useRef<Doc<"drafts">["data"] | null>(null);
-  if (draftFromDb !== undefined) {
-    draftSnapshot.current = draftFromDb?.data;
-  }
 
   const {
     isPending: isPendingCache,
@@ -199,11 +203,13 @@ function _ChatDraftProvider({ children }: { children: React.ReactNode }) {
   } = useUserCacheEntry("draft:new", z.string());
 
   const isPending = isNew ? isPendingCache : isPendingDb;
-  const draft = isNew ? draftFromCache : draftSnapshot.current;
+  const draft = isNew ? draftFromCache : draftFromDb.data?.data;
 
   const [setDraft, flushSetDraft] = useDebouncedCallback(
     async (data: string) => {
-      console.log("setDraft", { data, isNew, id });
+      // skip if draft is already the same
+      if (draft === data) return;
+      console.log("saving draft", { data, isNew, id });
       setIsSavePending(true);
       try {
         if (isNew) {
@@ -251,7 +257,7 @@ function _ChatDraftProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [isNew, delDraftCache, deleteDraftDb, id],
-    { delay: 2000 }
+    { delay: 2000, immediate: true }
   );
 
   const value = {
