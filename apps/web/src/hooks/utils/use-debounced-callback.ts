@@ -20,7 +20,7 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   deps: React.DependencyList,
   options: DebounceOptions
-): [T, () => ReturnType<T>] {
+): { debounced: T; commit: () => ReturnType<T>; cancel: () => void } {
   const { delay, immediate = false } = options;
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,5 +68,5 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   // flush on unmount
   useEffect(() => flush, [flush]);
 
-  return [debounced, flush] as const;
+  return { debounced, commit: flush, cancel: cancelTimeout };
 }
