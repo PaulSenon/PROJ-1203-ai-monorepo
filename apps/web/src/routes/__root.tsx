@@ -5,12 +5,10 @@ import {
   Outlet,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import Header from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "../index.css";
-import { ChatSidebar } from "@/components/chat/chat-sidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export interface RouterAppContext {
   _placeholder: unknown;
@@ -47,12 +45,12 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <ChatSidebar />
-        <main className="group/sidebar-wrapper relative w-full min-w-0 flex-1">
-          <SidebarTrigger className="fixed top-3 top-safe-offset-2 left-3 z-50 flex bg-background-transparent p-4" />
-          <Header />
-          <Outlet />
-        </main>
+        {/* <ChatSidebar /> */}
+        {/* <main className="group/sidebar-wrapper relative w-full min-w-0 flex-1"> */}
+        {/* <SidebarTrigger className="fixed top-3 top-safe-offset-2 left-3 z-50 flex bg-background-transparent p-4" /> */}
+        {/* <Header /> */}
+        <Outlet />
+        {/* </main> */}
 
         <Toaster richColors />
       </ThemeProvider>

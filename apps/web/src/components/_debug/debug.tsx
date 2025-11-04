@@ -1,10 +1,11 @@
-import { useParams, useRouter } from "@tanstack/react-router";
+import { useMatchRoute, useParams, useRouter } from "@tanstack/react-router";
 import { nanoid } from "nanoid";
 import {
   createContext,
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -33,6 +34,20 @@ export function DebugContextProvider({ children }: { children: ReactNode }) {
     `messages-${id}`,
     z.array(z.string())
   );
+
+  // const params2 = ChatRoute.useParams();
+  const match = useMatchRoute();
+
+  // TODO: This is weird, when transitioning from / to /id there is like two renders where match is false
+  const paramsBroken = match({ to: "/chat/{-$id}" });
+  const paramsBroken2 = match({ to: "/chat/{-$id}", pending: true });
+  useEffect(() => {
+    console.log("--------------------------------");
+    // console.log("paramsFromRoute", params2);
+    console.log("paramsFromMatch", paramsBroken);
+    console.log("paramsFromMatchPending", paramsBroken2);
+    console.log("--------------------------------");
+  }, [paramsBroken, paramsBroken2]);
 
   const sendMessage = useCallback(
     (message: string) => {

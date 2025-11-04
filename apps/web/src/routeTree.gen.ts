@@ -10,16 +10,22 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProtectedRouteImport } from './routes/_protected'
+import { Route as DebugRouteImport } from './routes/_debug'
 import { Route as ChatRouteImport } from './routes/_chat'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProtectedAiRouteImport } from './routes/_protected/ai'
+import { Route as DebugDebugChar123IdChar125RouteImport } from './routes/_debug/debug.{-$id}'
 import { Route as ChatChatChar123IdChar125RouteImport } from './routes/_chat/chat.{-$id}'
 import { Route as AuthSignUpSplatRouteImport } from './routes/_auth/sign-up.$'
 import { Route as AuthSignInSplatRouteImport } from './routes/_auth/sign-in.$'
 
 const ProtectedRoute = ProtectedRouteImport.update({
   id: '/_protected',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DebugRoute = DebugRouteImport.update({
+  id: '/_debug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatRoute = ChatRouteImport.update({
@@ -40,6 +46,12 @@ const ProtectedAiRoute = ProtectedAiRouteImport.update({
   path: '/ai',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const DebugDebugChar123IdChar125Route =
+  DebugDebugChar123IdChar125RouteImport.update({
+    id: '/debug/{-$id}',
+    path: '/debug/{-$id}',
+    getParentRoute: () => DebugRoute,
+  } as any)
 const ChatChatChar123IdChar125Route =
   ChatChatChar123IdChar125RouteImport.update({
     id: '/chat/{-$id}',
@@ -63,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
   '/chat/{-$id}': typeof ChatChatChar123IdChar125Route
+  '/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,39 +83,57 @@ export interface FileRoutesByTo {
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
   '/chat/{-$id}': typeof ChatChatChar123IdChar125Route
+  '/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
   '/_chat': typeof ChatRouteWithChildren
+  '/_debug': typeof DebugRouteWithChildren
   '/_protected': typeof ProtectedRouteWithChildren
   '/_protected/ai': typeof ProtectedAiRoute
   '/_auth/sign-in/$': typeof AuthSignInSplatRoute
   '/_auth/sign-up/$': typeof AuthSignUpSplatRoute
   '/_chat/chat/{-$id}': typeof ChatChatChar123IdChar125Route
+  '/_debug/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ai' | '/sign-in/$' | '/sign-up/$' | '/chat/{-$id}'
+  fullPaths:
+    | '/'
+    | '/ai'
+    | '/sign-in/$'
+    | '/sign-up/$'
+    | '/chat/{-$id}'
+    | '/debug/{-$id}'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ai' | '/sign-in/$' | '/sign-up/$' | '/chat/{-$id}'
+  to:
+    | '/'
+    | '/ai'
+    | '/sign-in/$'
+    | '/sign-up/$'
+    | '/chat/{-$id}'
+    | '/debug/{-$id}'
   id:
     | '__root__'
     | '/'
     | '/_auth'
     | '/_chat'
+    | '/_debug'
     | '/_protected'
     | '/_protected/ai'
     | '/_auth/sign-in/$'
     | '/_auth/sign-up/$'
     | '/_chat/chat/{-$id}'
+    | '/_debug/debug/{-$id}'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
   ChatRoute: typeof ChatRouteWithChildren
+  DebugRoute: typeof DebugRouteWithChildren
   ProtectedRoute: typeof ProtectedRouteWithChildren
 }
 
@@ -113,6 +144,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: ''
       preLoaderRoute: typeof ProtectedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_debug': {
+      id: '/_debug'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof DebugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_chat': {
@@ -142,6 +180,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ai'
       preLoaderRoute: typeof ProtectedAiRouteImport
       parentRoute: typeof ProtectedRoute
+    }
+    '/_debug/debug/{-$id}': {
+      id: '/_debug/debug/{-$id}'
+      path: '/debug/{-$id}'
+      fullPath: '/debug/{-$id}'
+      preLoaderRoute: typeof DebugDebugChar123IdChar125RouteImport
+      parentRoute: typeof DebugRoute
     }
     '/_chat/chat/{-$id}': {
       id: '/_chat/chat/{-$id}'
@@ -189,6 +234,16 @@ const ChatRouteChildren: ChatRouteChildren = {
 
 const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren)
 
+interface DebugRouteChildren {
+  DebugDebugChar123IdChar125Route: typeof DebugDebugChar123IdChar125Route
+}
+
+const DebugRouteChildren: DebugRouteChildren = {
+  DebugDebugChar123IdChar125Route: DebugDebugChar123IdChar125Route,
+}
+
+const DebugRouteWithChildren = DebugRoute._addFileChildren(DebugRouteChildren)
+
 interface ProtectedRouteChildren {
   ProtectedAiRoute: typeof ProtectedAiRoute
 }
@@ -205,6 +260,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
   ChatRoute: ChatRouteWithChildren,
+  DebugRoute: DebugRouteWithChildren,
   ProtectedRoute: ProtectedRouteWithChildren,
 }
 export const routeTree = rootRouteImport
