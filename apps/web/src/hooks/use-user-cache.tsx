@@ -106,7 +106,7 @@ export function useUserCacheEntry<T>(key: string, schema: StandardSchemaV1<T>) {
   return {
     isPending,
     data,
-    set: set.mutate,
-    del: del.mutate,
+    set: set.mutateAsync,
+    del: del.mutateAsync,
   };
 }

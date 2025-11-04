@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Loader2Icon, Plus } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -9,6 +9,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
 } from "@/components/ui/sidebar";
+import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
 import { useChatNav } from "@/hooks/use-chat-nav";
 import { UserProfileButton } from "../auth/user-avatar";
 import { Button } from "../ui/button";
@@ -17,6 +18,9 @@ import { Separator } from "../ui/separator";
 export function ChatSidebar() {
   const { openNewChat } = useChatNav();
   const handleNewChat = () => openNewChat();
+  // TODO: debug
+  const inputActions = useChatInputActions();
+  const inputState = useChatInputState();
 
   return (
     <Sidebar>
@@ -30,6 +34,21 @@ export function ChatSidebar() {
         <Button className="w-full" onClick={handleNewChat} size="sm">
           <Plus className="h-4 w-4" />
           New Chat
+        </Button>
+        <Button className="w-full" onClick={inputActions.focus} size="sm">
+          Focus Input
+        </Button>
+        <Button
+          className="w-full"
+          disabled={inputState.isSaveDraftPending}
+          onClick={inputActions.saveDraft}
+          size="sm"
+        >
+          {inputState.isSaveDraftPending ? (
+            <Loader2Icon className="h-4 w-4 animate-spin" />
+          ) : (
+            "Save Draft"
+          )}
         </Button>
         <Separator />
       </SidebarHeader>

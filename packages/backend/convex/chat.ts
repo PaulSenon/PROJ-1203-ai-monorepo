@@ -481,8 +481,10 @@ export const deleteDraft = mutationWithRLS({
       )
       .unique();
 
-    if (!thread)
-      throw new ConvexError("Cannot delete draft for non existing thread");
+    if (!thread) {
+      console.log(`deleteDraft: thread not found: ${threadUuid}`);
+      return;
+    }
 
     const draft = await ctx.db
       .query("drafts")
@@ -491,8 +493,10 @@ export const deleteDraft = mutationWithRLS({
       )
       .unique();
 
-    if (!draft)
-      throw new ConvexError("Cannot delete draft for non existing draft");
+    if (!draft) {
+      console.log(`deleteDraft: draft not found: ${threadUuid}`);
+      return;
+    }
 
     await ctx.db.delete(draft._id);
 

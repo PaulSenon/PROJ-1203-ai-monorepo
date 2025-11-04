@@ -7,11 +7,11 @@ type DebounceOptions = { delay: number };
  * Returns stable wrapper that schedules calls and flushes on unmount.
  */
 // biome-ignore lint/suspicious/noExplicitAny: I know what I'm doing
-export function useDebouncedCallback<T extends (...args: any[]) => void>(
+export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   deps: React.DependencyList,
   options: DebounceOptions
-): T {
+): [T, () => ReturnType<T>] {
   const { delay } = options;
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,7 +30,7 @@ export function useDebouncedCallback<T extends (...args: any[]) => void>(
 
     cancelTimeout();
     pendingCallRef.current = null;
-    pending.fn(...pending.args);
+    return pending.fn(...pending.args);
   }, [cancelTimeout]);
 
   const debounced = useCallback(
@@ -46,12 +46,10 @@ export function useDebouncedCallback<T extends (...args: any[]) => void>(
     [callback, delay, cancelTimeout, invokePending, ...deps]
   ) as T;
 
-  const flush = useCallback(() => {
-    invokePending();
-  }, [invokePending]);
+  const flush = useCallback(() => invokePending(), [invokePending]);
 
   // flush on unmount
   useEffect(() => flush, [flush]);
 
-  return debounced;
+  return [debounced, flush] as const;
 }

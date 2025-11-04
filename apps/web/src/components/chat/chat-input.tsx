@@ -3,7 +3,7 @@ import {
   allowedModelIds,
 } from "@ai-monorepo/ai/model.registry";
 import { useActiveThreadActions } from "@/hooks/use-chat-active";
-import { useChatInput } from "@/hooks/use-chat-input";
+import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
 import {
   PromptInput,
   PromptInputAttachment,
@@ -23,7 +23,8 @@ import {
 } from "../ai-elements/prompt-input";
 
 export function ChatInput() {
-  const inputState = useChatInput();
+  const inputState = useChatInputState();
+  const inputActions = useChatInputActions();
   const { sendMessage } = useActiveThreadActions();
   const handleSubmit: PromptInputProps["onSubmit"] = (message, event) => {
     if (!message.text || message.text.trim() === "") return;
@@ -46,7 +47,8 @@ export function ChatInput() {
       </PromptInputHeader>
       <PromptInputBody>
         <PromptInputTextarea
-          onChange={(e) => inputState.setInput(e.target.value)}
+          onChange={(e) => inputActions.setInput(e.target.value)}
+          ref={inputState.inputRef}
           value={inputState.input}
         />
       </PromptInputBody>
@@ -65,7 +67,7 @@ export function ChatInput() {
           </PromptInputButton> */}
           <PromptInputModelSelect
             onValueChange={(value) =>
-              inputState.setSelectedModelId(value as AllowedModelIds)
+              inputActions.setSelectedModelId(value as AllowedModelIds)
             }
             value={inputState.selectedModelId}
           >

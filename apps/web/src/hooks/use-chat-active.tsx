@@ -18,7 +18,7 @@ import {
 import type { MaybePromise } from "@/lib/utils";
 import { chatRpc } from "@/utils/orpc/orpc";
 import { useAuth } from "./use-auth";
-import { useChatInput } from "./use-chat-input";
+import { useChatInputActions } from "./use-chat-input";
 import { useChatNav } from "./use-chat-nav";
 
 type ActiveThreadState = {
@@ -85,7 +85,7 @@ export function useActiveThreadActions() {
 }
 
 export function ActiveThreadProvider({ children }: { children: ReactNode }) {
-  const inputState = useChatInput();
+  const inputActions = useChatInputActions();
   const { isFullyReady } = useAuth();
   const chatNav = useChatNav();
   const isSkip = !isFullyReady || chatNav.isNew;
@@ -168,10 +168,15 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     (uiMessage: MyUIMessage) => {
       lastSentMessageIdRef.current = uiMessage.id;
       if (chatNav.isNew) chatNav.persistNewChatIdToUrl();
-      inputState.clear();
+      inputActions.clear();
       return sdkSendMessage(uiMessage);
     },
-    [sdkSendMessage, chatNav.isNew, chatNav.persistNewChatIdToUrl]
+    [
+      sdkSendMessage,
+      chatNav.isNew,
+      chatNav.persistNewChatIdToUrl,
+      inputActions.clear,
+    ]
   );
 
   const trySendNextQueuedMessage = useCallback(() => {
@@ -217,9 +222,9 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     [sdkRegenerate]
   );
 
-  useEffect(() => {
-    console.log("messagesStreamed", messagesStreamed);
-  }, [messagesStreamed]);
+  // useEffect(() => {
+  //   console.log("messagesStreamed", messagesStreamed);
+  // }, [messagesStreamed]);
 
   const actions = {
     sendMessage,
