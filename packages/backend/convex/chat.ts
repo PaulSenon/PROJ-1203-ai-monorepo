@@ -3,7 +3,7 @@ import {
   validateMyUIMessages,
 } from "@ai-monorepo/ai/types/uiMessage";
 import { paginationOptsValidator } from "convex/server";
-import { ConvexError, v } from "convex/values";
+import { ConvexError, type Validator, v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { INTERNAL_getCurrentUserOrThrow } from "./lib";
@@ -194,11 +194,11 @@ async function InternalUpsertMessageWithParts(
       createdAt: uiMessage.metadata?.createdAt ?? now,
       role: patch?.role ?? uiMessage.role,
       modelId: patch?.modelId ?? uiMessage.metadata?.modelId,
-      lifecycleState: patch?.lifecycleState ?? "active",
+      lifecycleState:
+        patch?.lifecycleState ?? uiMessage.metadata?.lifecycleState ?? "active",
       liveStatus:
-        (patch?.liveStatus ?? uiMessage.role === "assistant")
-          ? "pending"
-          : "completed",
+        patch?.liveStatus ?? uiMessage.metadata?.liveStatus ?? "pending",
+      error: uiMessage.metadata?.error,
     });
     await InternalUpsertMessageParts(ctx, {
       userId,
@@ -207,8 +207,20 @@ async function InternalUpsertMessageWithParts(
     });
     return messageId;
   }
-  await ctx.db.patch(message._id, {
+
+  // TODO; make this better. Was to fix patching but without using message metadata.
+  const patch2 = {
     ...patch,
+    role: patch?.role ?? uiMessage.role,
+    modelId: patch?.modelId ?? uiMessage.metadata?.modelId,
+    lifecycleState:
+      patch?.lifecycleState ?? uiMessage.metadata?.lifecycleState ?? "active",
+    liveStatus:
+      patch?.liveStatus ?? uiMessage.metadata?.liveStatus ?? "pending",
+    error: uiMessage.metadata?.error,
+  };
+  await ctx.db.patch(message._id, {
+    ...patch2,
     updatedAt: now,
   });
   await InternalUpsertMessageParts(ctx, {
@@ -277,6 +289,7 @@ async function InternalGetAllThreadMessagesAsc(
           updatedAt: message.updatedAt,
           lifecycleState: message.lifecycleState,
           liveStatus: message.liveStatus,
+          error: message.error,
         },
       } satisfies MyUIMessage;
     })
@@ -341,7 +354,7 @@ export const getThreadsForListing = queryWithRLS({
 export const upsertMessage = mutationWithRLS({
   args: {
     threadId: v.id("threads"),
-    uiMessage: v.any(),
+    uiMessage: v.any() as Validator<MyUIMessage>,
     role: v.optional(v.string()),
     lifecycleState: v.optional(lifecycleStates),
     liveStatus: v.optional(liveStatuses),
@@ -695,3 +708,5 @@ export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
     };
   },
 });
+
+// TODO: create a big meta mutation to handle regenerate message case ()

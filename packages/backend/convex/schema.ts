@@ -6,12 +6,14 @@ export const subscriptionTiers = v.union(
   v.literal("free"),
   v.literal("premium-level-1")
 );
+export type SubscriptionTier = typeof subscriptionTiers.type;
 
 export const lifecycleStates = v.union(
   v.literal("active"),
   v.literal("archived"),
   v.literal("deleted")
 );
+export type LifecycleState = typeof lifecycleStates.type;
 
 export const liveStatuses = v.union(
   v.literal("pending"),
@@ -20,6 +22,28 @@ export const liveStatuses = v.union(
   v.literal("error"),
   v.literal("cancelled")
 );
+export type LiveStatus = typeof liveStatuses.type;
+
+export const chatErrorMetadata = v.union(
+  v.object({
+    kind: v.literal("AI_API_ERROR"),
+    message: v.optional(v.string()),
+  }),
+  v.object({
+    kind: v.literal("UNKNOWN_ERROR"),
+    message: v.optional(v.string()),
+  }),
+  v.object({
+    kind: v.literal("MAX_OUTPUT_TOKENS_EXCEEDED"),
+    params: v.object({
+      maxOutputTokens: v.optional(v.number()),
+      retryWithSuggestedModelIds: v.optional(v.array(v.string())),
+    }),
+    message: v.optional(v.string()),
+  })
+);
+export type ChatErrorMetadata = typeof chatErrorMetadata.type;
+export type ChatErrorKind = ChatErrorMetadata["kind"];
 
 export const flexibleMetadata = v.record(v.string(), v.any());
 
@@ -71,6 +95,7 @@ const schema = defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     modelId: v.optional(v.string()),
+    error: v.optional(chatErrorMetadata),
   })
     .index("byUserIdThreadIdUuid", ["userId", "threadId", "uuid"])
     .index("byUserIdThreadIdCreatedAt", ["userId", "threadId", "createdAt"]),

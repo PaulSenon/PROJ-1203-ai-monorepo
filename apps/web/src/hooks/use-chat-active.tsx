@@ -98,6 +98,9 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     isSkip ? "skip" : { threadUuid: chatNav.id }
   );
 
+  // console.log("messagesPersisted", messagesPersisted);
+  // console.log("thread", thread);
+
   const [messagesQueue, setMessagesQueue] = useState<MyUIMessage[]>([]);
 
   const {
@@ -115,8 +118,10 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         return eventIteratorToUnproxiedDataStream(
           await chatRpc.chat(
             {
-              uuid: options.chatId,
+              threadUuid: options.chatId,
+              messageUuid: options.messageId,
               message: lastMessage,
+              trigger: options.trigger,
               // TODO: type safety
               selectedModelId: lastMessage.metadata?.modelId as AllowedModelIds,
             },
@@ -137,10 +142,12 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    if (thread?.liveStatus !== "completed") return;
+    // TOTO this is fully broken. We need to clarify when to set messages
+    // if (sdkStatus === "streaming") return;
+    // if (thread?.liveStatus !== "completed") return;
     if (!messagesPersisted) return;
     sdkSetMessages(messagesPersisted);
-  }, [thread?.liveStatus, messagesPersisted, sdkSetMessages]);
+  }, [messagesPersisted, sdkSetMessages]);
 
   const lastSentMessageIdRef = useRef<string | null>(null);
   // TODO: rewrite this, it's not working (don't show streaming messages)

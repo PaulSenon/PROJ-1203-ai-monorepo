@@ -1,8 +1,10 @@
 import type { MyUIMessage } from "./types/uiMessage";
 
-export function createOptimisticStepStartMessage(): MyUIMessage {
+export function createOptimisticStepStartMessage(
+  messageUuid: string
+): MyUIMessage {
   return {
-    id: Date.now().toString(),
+    id: messageUuid,
     role: "assistant",
     parts: [
       {

@@ -1,3 +1,10 @@
+import type {
+  ChatErrorKind,
+  ChatErrorMetadata,
+  LifecycleState as ConvexLifecycleState,
+  LiveStatus as ConvexLiveStatus,
+} from "@ai-monorepo/convex/convex/schema";
+import type { StandardSchemaV1 } from "@t3-oss/env-core";
 import {
   type InferUIDataParts,
   type InferUIMessageChunk,
@@ -8,26 +15,55 @@ import {
 } from "ai";
 import z from "zod";
 
-// helper ts function for type first zod schema definition
-// it simply check that the schema is matching out type
-// function validatorFor<TIn, TOut = TIn>(schema: StandardSchemaV1<TIn, TOut>) {
-//   return schema;
-// }
+export const AIErrorKind = z.enum([
+  "AI_API_ERROR",
+  "UNKNOWN_ERROR",
+  "MAX_OUTPUT_TOKENS_EXCEEDED",
+]) satisfies StandardSchemaV1<ChatErrorKind>;
+
+export const AIErrorMetadata = z.union([
+  z.object({
+    kind: z.literal("AI_API_ERROR"),
+    message: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal("UNKNOWN_ERROR"),
+    message: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal("MAX_OUTPUT_TOKENS_EXCEEDED"),
+    params: z.object({
+      maxOutputTokens: z.number().optional(),
+      retryWithSuggestedModelIds: z.array(z.string()).optional(),
+    }),
+    message: z.string().optional(),
+  }),
+]) satisfies StandardSchemaV1<ChatErrorMetadata>;
+
+export const LiveStatus = z.enum([
+  "pending",
+  "streaming",
+  "completed",
+  "cancelled",
+  "error",
+]) satisfies StandardSchemaV1<ConvexLiveStatus>;
+
+export const LifecycleState = z.enum([
+  "active",
+  "archived",
+  "deleted",
+]) satisfies StandardSchemaV1<ConvexLifecycleState>;
 
 const metadataSchema = z.object({
   modelId: z.string().optional(),
   updatedAt: z.number(),
   createdAt: z.number(),
-  liveStatus: z.enum([
-    "pending",
-    "streaming",
-    "completed",
-    "error",
-    "cancelled",
-  ]),
-  lifecycleState: z.enum(["active", "archived", "deleted"]),
+  liveStatus: LiveStatus,
+  lifecycleState: LifecycleState,
+  error: AIErrorMetadata.optional(),
 });
-type MetadataSchema = z.infer<typeof metadataSchema>;
+
+export type MetadataSchema = z.infer<typeof metadataSchema>;
 
 const dataSchemas = {
   chart: z.object({

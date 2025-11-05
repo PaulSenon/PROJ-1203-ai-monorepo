@@ -1,11 +1,24 @@
+import { createOptimisticStepStartMessage } from "@ai-monorepo/ai/helpers";
 import {
   createMyProviderRegistry,
   modelIdValidator,
 } from "@ai-monorepo/ai/model.registry";
 import { validateMyUIMessages } from "@ai-monorepo/ai/types/uiMessage";
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
+import type {
+  ChatErrorMetadata,
+  LiveStatus,
+} from "@ai-monorepo/convex/convex/schema";
+import type { LanguageModelV2FinishReason } from "@ai-sdk/provider";
 import { implement, ORPCError, streamToEventIterator } from "@orpc/server";
-import { convertToModelMessages, streamText } from "ai";
+import {
+  AISDKError,
+  APICallError,
+  convertToModelMessages,
+  streamText,
+  type TextStreamPart,
+  type ToolSet,
+} from "ai";
 import { nanoid } from "nanoid";
 import { chatRouterContract } from "../contracts/chat.contract";
 import { env } from "../env";
@@ -29,6 +42,99 @@ function generateTitleMock() {
   });
 }
 
+// TODO: move to utils packages (we can latter publish or add as a shadcn registry)
+function assertNever(x: never): never {
+  throw new Error(`Unhandled case: ${JSON.stringify(x)}`);
+}
+
+function reduceFinishReasonToLiveStatus(
+  finishReason: LanguageModelV2FinishReason
+): LiveStatus {
+  switch (finishReason) {
+    case "tool-calls":
+      return "streaming";
+    case "stop":
+      return "completed";
+    case "content-filter":
+    case "unknown":
+    case "length":
+    case "other":
+    case "error":
+      return "error";
+    default: {
+      return assertNever(finishReason);
+    }
+  }
+}
+
+function reducePartTypeToLiveStatus<T extends ToolSet>(
+  type: TextStreamPart<T>["type"]
+): LiveStatus {
+  switch (type) {
+    case "error":
+      return "error";
+    case "finish":
+      return "completed";
+    case "abort":
+      return "cancelled";
+    case "start":
+      return "pending";
+
+    case "text-end":
+    case "source":
+    case "tool-call":
+    case "tool-result":
+    case "tool-error":
+    case "text-start":
+    case "text-delta":
+    case "reasoning-start":
+    case "reasoning-end":
+    case "reasoning-delta":
+    case "tool-input-start":
+    case "tool-input-end":
+    case "tool-input-delta":
+    case "file":
+    case "start-step":
+    case "finish-step":
+    case "raw":
+      return "streaming";
+    default: {
+      return assertNever(type);
+    }
+  }
+}
+
+function reducePartTypeToErrorMetadata(error: unknown): ChatErrorMetadata {
+  // specific AI SDK error
+  if (error instanceof APICallError) {
+    return {
+      kind: "AI_API_ERROR",
+      message: error.message,
+    };
+  }
+  // generic AI SDK error
+  if (error instanceof AISDKError) {
+    return {
+      kind: "AI_API_ERROR",
+      message: error.message,
+    };
+  }
+
+  // generic Error
+  if (error instanceof Error) {
+    return {
+      kind: "UNKNOWN_ERROR",
+      message: error.message,
+    };
+  }
+
+  // unknown error
+  return {
+    kind: "UNKNOWN_ERROR",
+    message: "Unknown error",
+  };
+}
+
 export const chatProcedure = chatProcedures.chat
   .use(clerkAuthMiddleware)
   .use(convexContextMiddleware)
@@ -45,20 +151,29 @@ export const chatProcedure = chatProcedures.chat
     const validatedUiMessages = await validateMyUIMessages([input.message]);
 
     // 3. Build data
+    const startedAt = Date.now();
     const modelId = modelIdValidator.parse(input.selectedModelId);
+    const isRegenerate = input.trigger === "regenerate-message";
+    const newMessageUuid = isRegenerate
+      ? (input.messageUuid ?? nanoid())
+      : nanoid();
+
+    console.log("modelId", modelId);
     // TODO: check if user has access to the model
 
     // 4. Load data
-    const messagesWithOptimisticStepStart = [
-      ...validatedUiMessages,
-      // createOptimisticStepStartMessage(),
-    ];
+    // TODO: regenerate is broken
     const { thread, messages: messagesFromBackend } = await fetchMutation(
       api.chat.upsertThreadWithNewMessagesAndReturnHistory,
       {
-        threadUuid: input.uuid,
-        uiMessages: messagesWithOptimisticStepStart,
-        lastUsedModelId: input.selectedModelId,
+        threadUuid: input.threadUuid,
+        uiMessages: isRegenerate
+          ? validatedUiMessages
+          : [
+              ...validatedUiMessages,
+              createOptimisticStepStartMessage(newMessageUuid),
+            ],
+        lastUsedModelId: modelId,
         lifecycleState: "active",
         liveStatus: "streaming",
       }
@@ -90,11 +205,13 @@ export const chatProcedure = chatProcedures.chat
     // 8. Create returned stream
     const stream = result.toUIMessageStream({
       originalMessages: messages,
-      generateMessageId: () => nanoid(),
+      // Important: reuse same id as optimistic part
+      generateMessageId: () => newMessageUuid,
       sendSources: true,
       sendReasoning: true,
       sendFinish: true,
       sendStart: true,
+
       onFinish: async ({ responseMessage, isAborted, isContinuation }) => {
         console.log("on Stream Finish", {
           responseMessage,
@@ -105,16 +222,45 @@ export const chatProcedure = chatProcedures.chat
         // make sure all deferred promises are settled
         await Promise.allSettled(__deferredPromises);
 
-        await fetchMutation(api.chat.upsertMessage, {
-          threadId: thread._id,
-          uiMessage: responseMessage,
-          liveStatus: isAborted ? "cancelled" : "completed",
-        });
+        const lastMessageStatus = isAborted
+          ? "cancelled"
+          : (responseMessage.metadata?.liveStatus ?? "completed");
 
         await fetchMutation(api.chat.updateThread, {
           threadId: thread._id,
-          liveStatus: isAborted ? "cancelled" : "completed",
+          liveStatus: lastMessageStatus,
         });
+
+        await fetchMutation(api.chat.upsertMessage, {
+          threadId: thread._id,
+          uiMessage: responseMessage,
+          liveStatus: lastMessageStatus,
+        });
+      },
+      messageMetadata({ part }) {
+        // console.log("messageMetadata", part);
+
+        const baseMetadata = {
+          updatedAt: Date.now(),
+          createdAt: startedAt,
+          lifecycleState: "active" as const,
+          modelId,
+        } as const;
+
+        if (part.type === "error") {
+          const errorMetadata = reducePartTypeToErrorMetadata(part.error);
+          return {
+            ...baseMetadata,
+            error: errorMetadata,
+            liveStatus: "error" as const,
+          };
+        }
+
+        const liveStatus = reducePartTypeToLiveStatus(part.type);
+        return {
+          ...baseMetadata,
+          liveStatus,
+        };
       },
     });
 

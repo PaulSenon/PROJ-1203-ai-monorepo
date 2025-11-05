@@ -10,8 +10,10 @@ export const chatRouterContract = oc.router({
   chat: oc
     .input(
       type<{
-        uuid: string;
+        threadUuid: string;
+        messageUuid?: string;
         message: MyUIMessage;
+        trigger: "regenerate-message" | "submit-message";
         selectedModelId: AllowedModelIds;
       }>()
     )

@@ -8,8 +8,7 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "../ai-elements/conversation";
-import { Message, MessageContent } from "../ai-elements/message";
-import { SmoothResponse } from "./smooth-response";
+import { ChatMessage } from "./chat-messages/chat-message";
 
 // TODO: this is a bit hacky I think, to test again later
 function ScrollInitialPosition() {
@@ -35,25 +34,7 @@ export function ChatFeed() {
             />
           ) : (
             messages.map((message) => (
-              <Message from={message.role} key={message.id}>
-                <MessageContent>
-                  {message.parts.map((part, i) => {
-                    switch (part.type) {
-                      case "text": // we don't use any reasoning or tool calls in this example
-                        return (
-                          <SmoothResponse key={`${message.id}-${i}`}>
-                            {part.text}
-                          </SmoothResponse>
-                          // <Response key={`${message.id}-${i}`}>
-                          //   {part.text}
-                          // </Response>
-                        );
-                      default:
-                        return null;
-                    }
-                  })}
-                </MessageContent>
-              </Message>
+              <ChatMessage key={message.id} message={message} />
             ))
           )}
           {messages.length > 0 && <ScrollInitialPosition />}
