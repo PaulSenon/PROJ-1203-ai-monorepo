@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import { usePageUnload } from "./use-page-unload";
 
 type DebounceOptions = {
   delay: number;
@@ -69,6 +70,9 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
 
   // flush on unmount
   useEffect(() => flush, [flush]);
+
+  // flush on page unload
+  usePageUnload(() => flush());
 
   return { debounced, commit: flush };
 }
