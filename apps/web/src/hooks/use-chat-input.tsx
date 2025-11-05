@@ -9,6 +9,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -205,11 +206,9 @@ function _ChatDraftProvider({ children }: { children: React.ReactNode }) {
   const isPending = isNew ? isPendingCache : isPendingDb;
   const draft = isNew ? draftFromCache : draftFromDb.data?.data;
 
-  const {
-    debounced: setDraft,
-    commit: commitSetDraft,
-    cancel: cancelSetDraft,
-  } = useDebouncedCallback(
+  const abortController = useRef<AbortController>(new AbortController());
+
+  const { debounced: setDraft, commit: commitSetDraft } = useDebouncedCallback(
     async (data: string) => {
       // skip if draft is already the same
       if (draft === data) return;
@@ -241,13 +240,13 @@ function _ChatDraftProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [isNew, setDraftCache, setDraftDb, id],
-    { delay: 2000 }
+    { delay: 2000, abortController: abortController.current }
   );
 
   const { debounced: delDraft } = useDebouncedCallback(
     async () => {
+      abortController.current.abort();
       console.log("delDraft", { isNew, id });
-      cancelSetDraft();
       try {
         if (isNew) {
           await delDraftCache();
@@ -261,7 +260,7 @@ function _ChatDraftProvider({ children }: { children: React.ReactNode }) {
         console.error("Delete draft failed", error);
       }
     },
-    [isNew, delDraftCache, deleteDraftDb, id, cancelSetDraft],
+    [isNew, delDraftCache, deleteDraftDb, id, abortController],
     { delay: 2000, immediate: true }
   );
 

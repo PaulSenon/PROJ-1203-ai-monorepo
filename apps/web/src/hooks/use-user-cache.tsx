@@ -92,7 +92,7 @@ export function useUserCacheEntry<T>(key: string, schema: StandardSchemaV1<T>) {
     onMutate: async (_next, context) => {
       await context.client.cancelQueries({ queryKey });
       const prev = context.client.getQueryData<T>(queryKey);
-      context.client.setQueryData(queryKey, undefined);
+      context.client.setQueryData(queryKey, null);
       return { prev };
     },
     onError: (error, _vars, onMutateResult, context) => {
@@ -100,7 +100,7 @@ export function useUserCacheEntry<T>(key: string, schema: StandardSchemaV1<T>) {
       context.client.setQueryData(queryKey, onMutateResult?.prev);
     },
     onSuccess: (_saved, _vars, _onMutateResult, context) => {
-      context.client.setQueryData(queryKey, undefined);
+      context.client.setQueryData(queryKey, null);
     },
   });
 

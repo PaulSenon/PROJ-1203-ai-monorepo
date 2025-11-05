@@ -9,6 +9,7 @@ type DebounceOptions = {
    * Default is false. (normal debouncing)
    */
   immediate?: boolean;
+  abortController?: AbortController;
 };
 
 /**
@@ -20,8 +21,8 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   deps: React.DependencyList,
   options: DebounceOptions
-): { debounced: T; commit: () => ReturnType<T>; cancel: () => void } {
-  const { delay, immediate = false } = options;
+): { debounced: T; commit: () => ReturnType<T> } {
+  const { delay, immediate = false, abortController } = options;
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingCallRef = useRef<{ fn: T; args: Parameters<T> } | null>(null);
@@ -39,8 +40,9 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
 
     cancelTimeout();
     pendingCallRef.current = null;
+    if (abortController?.signal.aborted) return;
     return pending.fn(...pending.args);
-  }, [cancelTimeout]);
+  }, [cancelTimeout, abortController]);
 
   const debounced = useCallback(
     (...args: Parameters<T>) => {
@@ -68,5 +70,5 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   // flush on unmount
   useEffect(() => flush, [flush]);
 
-  return { debounced, commit: flush, cancel: cancelTimeout };
+  return { debounced, commit: flush };
 }
