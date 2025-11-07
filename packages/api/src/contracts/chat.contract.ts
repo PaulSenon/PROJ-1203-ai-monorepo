@@ -12,7 +12,9 @@ export const chatRouterContract = oc.router({
       type<{
         threadUuid: string;
         messageUuid?: string;
-        message: MyUIMessage;
+        // when regenerating, it's the previous user message
+        // when resubmitting, it's the same as the one pointed by messageUuid
+        lastMessageToKeep: MyUIMessage;
         trigger: "regenerate-message" | "submit-message";
         selectedModelId: AllowedModelIds;
       }>()

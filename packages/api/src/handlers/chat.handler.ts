@@ -143,36 +143,64 @@ export const chatProcedure = chatProcedures.chat
 
     // 1. Get user
     const user = await fetchQuery(api.users.getCurrentUser);
-    if (!user) throw new ORPCError("UNAUTHORIZED");
+    if (!user)
+      throw new ORPCError("UNAUTHORIZED", {
+        message: "User not found",
+      });
     // TODO: tmp only allow premium to test in prod. To delete and implement under 3. below
-    if (user.tier !== "premium-level-1") throw new ORPCError("FORBIDDEN");
+    // TODO: check if user has access to the model
+    if (user.tier !== "premium-level-1")
+      throw new ORPCError("FORBIDDEN", {
+        message: "Only premium users can test regenerate",
+        data: {
+          userTier: user.tier,
+        },
+      });
 
     // 2. Validate inputs
-    const validatedUiMessages = await validateMyUIMessages([input.message]);
+    const validatedUiMessages = await validateMyUIMessages([
+      input.lastMessageToKeep,
+    ]);
+    const modelId = modelIdValidator.parse(input.selectedModelId);
+    const isRegenerate = input.trigger === "regenerate-message";
+    if (isRegenerate && !input.messageUuid)
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Message UUID is required for regenerate",
+        data: {
+          messageUuid: input.messageUuid,
+        },
+      });
+    const newMessageUuid = nanoid();
 
     // 3. Build data
     const startedAt = Date.now();
-    const modelId = modelIdValidator.parse(input.selectedModelId);
-    const isRegenerate = input.trigger === "regenerate-message";
-    const newMessageUuid = isRegenerate
-      ? (input.messageUuid ?? nanoid())
-      : nanoid();
-
-    console.log("modelId", modelId);
-    // TODO: check if user has access to the model
 
     // 4. Load data
-    // TODO: regenerate is broken
+    // only when regenerating, we need to delete all messages after the last message to keep
+    if (isRegenerate) {
+      const lastMessageUuid = validatedUiMessages.at(-1)?.id;
+      if (!lastMessageUuid)
+        throw new ORPCError("BAD_REQUEST", {
+          message: "Last message to keep is required",
+          data: {
+            lastMessageToKeep: input.lastMessageToKeep,
+          },
+        });
+      await fetchMutation(api.chat.deleteAllMessagesAfter, {
+        threadUuid: input.threadUuid,
+        messageUuid: lastMessageUuid,
+      });
+    }
+
+    const optimisticUiMessages = [
+      ...validatedUiMessages,
+      createOptimisticStepStartMessage(newMessageUuid),
+    ];
     const { thread, messages: messagesFromBackend } = await fetchMutation(
       api.chat.upsertThreadWithNewMessagesAndReturnHistory,
       {
         threadUuid: input.threadUuid,
-        uiMessages: isRegenerate
-          ? validatedUiMessages
-          : [
-              ...validatedUiMessages,
-              createOptimisticStepStartMessage(newMessageUuid),
-            ],
+        uiMessages: optimisticUiMessages,
         lastUsedModelId: modelId,
         lifecycleState: "active",
         liveStatus: "streaming",

@@ -69,9 +69,9 @@ const schema = defineSchema({
     liveStatus: liveStatuses,
     createdAt: v.number(),
     updatedAt: v.number(),
+    deletedAt: v.optional(v.number()),
     lastUsedModelId: v.optional(v.string()),
   })
-    .index("byUserId", ["userId"])
     .index("byUserIdStateUpdatedAt", ["userId", "lifecycleState", "updatedAt"])
     .index("byUserIdUuid", ["userId", "uuid"]),
 
@@ -93,15 +93,25 @@ const schema = defineSchema({
     lifecycleState: lifecycleStates,
     liveStatus: liveStatuses,
     createdAt: v.number(),
+    createdAtBulkOrder: v.number(), // to user with created at as the sorting filter
     updatedAt: v.number(),
+    deletedAt: v.optional(v.number()),
     modelId: v.optional(v.string()),
     error: v.optional(chatErrorMetadata),
   })
     .index("byUserIdThreadIdUuid", ["userId", "threadId", "uuid"])
-    .index("byUserIdThreadIdCreatedAt", ["userId", "threadId", "createdAt"]),
+    .index("byUserIdThreadIdStateOrdered", [
+      "userId",
+      "threadId",
+      "lifecycleState",
+      "createdAt",
+      "createdAtBulkOrder",
+    ]),
 
   // 'json' => string => JSON.parse / JSON.stringify
-  // 'msgpack' => bytes => pack / unpack
+  // NO LONGER RELEVANT:'msgpack' => bytes => pack / unpack
+  // => gzip would be better but no access to CompressionStream API in mutations runtime
+  // => only viable alternative is to use cvxstorage and store the compressed data there
   // 'cvxstorage' =>
   messageParts: defineTable({
     userId: v.id("users"),
@@ -111,11 +121,6 @@ const schema = defineSchema({
         source: v.literal("inline"),
         encoding: v.literal("json"),
         data: v.string(),
-      }),
-      v.object({
-        source: v.literal("inline"),
-        encoding: v.literal("msgpack"),
-        data: v.bytes(),
       }),
       v.object({
         source: v.literal("cvxstorage"),

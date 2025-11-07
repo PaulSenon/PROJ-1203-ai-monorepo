@@ -1,21 +1,47 @@
 import { Migrations } from "@convex-dev/migrations";
-import { components } from "./_generated/api.js";
+import { components, internal } from "./_generated/api.js";
 import type { DataModel } from "./_generated/dataModel.js";
 
 export const migrations = new Migrations<DataModel>(components.migrations);
 
-// pnpm dlx convex run migrations:run
-export const run = migrations.runner([
-  // internal.migrations._1_2025_06_16_add_live_state_to_threads,
-]);
+/**
+ * Total migrations:
+ *
+ *
+ * Many migrations
+ * pnpm dlx convex run migrations:runAll
+ * @example
+ * ```ts
+ * export const runAll = migrations.runner([
+ *   internal.migrations.toto,
+ * ]);
+ * ```
+ * assuming: `export const toto = migrations.define({...})`
+ *
+ * Single migration
+ * pnpm dlx convex run migrations:toto
+ * @example
+ * ```ts
+ * export const toto = migrations.runner(
+ *   internal.migrations.toto
+ * );
+ * ```
+ * assuming: `export const toto = migrations.define({...})`
+ */
 
-// export const _1_2025_06_16_add_live_state_to_threads = migrations.define({
-//   table: "threads",
-//   migrateOne(_ctx, doc) {
-//     if (doc.liveState) return doc;
-//     return {
-//       liveState: "completed" as const,
-//     };
-//   },
-//   parallelize: true,
-// });
+// DEV: DONE
+// PROD: DONE
+export const _1_2025_11_07_add_created_at_bulk_order_to_messages =
+  migrations.define({
+    table: "messages",
+    migrateOne(_ctx, doc) {
+      if (doc.createdAtBulkOrder) return doc;
+      return {
+        createdAtBulkOrder: 0,
+      };
+    },
+  });
+// pnpm dlx convex run migrations:runAddCreatedAtBulkOrder
+export const runAddCreatedAtBulkOrder = migrations.runner(
+  internal.migrations._1_2025_11_07_add_created_at_bulk_order_to_messages
+);

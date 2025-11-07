@@ -10,6 +10,65 @@ import { INTERNAL_getCurrentUserOrThrow } from "./lib";
 import { mutationWithRLS, queryWithRLS } from "./rls";
 import { lifecycleStates, liveStatuses, vv } from "./schema";
 
+async function InternalDeleteMessageWithParts(
+  ctx: MutationCtx,
+  args: {
+    userId: Id<"users">;
+    messageId: Id<"messages">;
+  }
+) {
+  const { userId, messageId } = args;
+  // TODO: ensure RLS cover this case because we don't check ownership here. (I think it does)
+  // Soft delete message metadata
+  await ctx.db.patch(messageId, {
+    lifecycleState: "deleted",
+    deletedAt: Date.now(),
+    updatedAt: Date.now(),
+  });
+
+  // Hard delete real message content
+  const messageParts = await ctx.db
+    .query("messageParts")
+    .withIndex("byUserIdMessageId", (q) =>
+      q.eq("userId", userId).eq("messageId", messageId)
+    )
+    .collect();
+
+  await Promise.all(
+    messageParts.map((messagePart) => ctx.db.delete(messagePart._id))
+  );
+}
+
+async function InternalDeleteThreadWithMessages(
+  ctx: MutationCtx,
+  args: {
+    userId: Id<"users">;
+    threadId: Id<"threads">;
+  }
+) {
+  const { userId, threadId } = args;
+  // TODO: ensure RLS cover this case because we don't check ownership here. (I think it does)
+  // Soft delete thread metadata
+  await ctx.db.patch(threadId, {
+    lifecycleState: "deleted",
+    deletedAt: Date.now(),
+    updatedAt: Date.now(),
+  });
+
+  // Soft delete all messages
+  const messages = await ctx.db
+    .query("messages")
+    .withIndex("byUserIdThreadIdStateOrdered", (q) =>
+      q.eq("userId", userId).eq("threadId", threadId)
+    )
+    .collect();
+  await Promise.all(
+    messages.map((message) =>
+      InternalDeleteMessageWithParts(ctx, { userId, messageId: message._id })
+    )
+  );
+}
+
 // DONE
 async function InternalUpsertDraft(
   ctx: MutationCtx,
@@ -114,9 +173,6 @@ async function decodeMessageParts(
   if (encodedParts.source === "cvxstorage")
     throw new ConvexError("Convex storage not yet implemented");
 
-  if (encodedParts.encoding === "msgpack")
-    throw new ConvexError("msgpack not yet supported");
-
   if (encodedParts.encoding === "json") {
     const decoded = JSON.parse(encodedParts.data) as unknown;
     if (!Array.isArray(decoded))
@@ -172,7 +228,8 @@ async function InternalUpsertMessageWithParts(
       liveStatus?: Doc<"messages">["liveStatus"];
       modelId?: Doc<"messages">["modelId"];
     };
-    now?: number;
+    now: number;
+    bulkOrder: number;
   }
 ) {
   const { uiMessage, threadId, patch, userId } = args;
@@ -184,13 +241,14 @@ async function InternalUpsertMessageWithParts(
     )
     .unique();
 
-  const now = args.now ?? Date.now();
+  const now = args.now;
   if (!message) {
     const messageId = await ctx.db.insert("messages", {
       userId,
       threadId,
       uuid: uiMessage.id,
       updatedAt: now,
+      createdAtBulkOrder: args.bulkOrder,
       createdAt: uiMessage.metadata?.createdAt ?? now,
       role: patch?.role ?? uiMessage.role,
       modelId: patch?.modelId ?? uiMessage.metadata?.modelId,
@@ -265,8 +323,11 @@ async function InternalGetAllThreadMessagesAsc(
 ) {
   const messages = await ctx.db
     .query("messages")
-    .withIndex("byUserIdThreadIdCreatedAt", (q) =>
-      q.eq("userId", args.userId).eq("threadId", args.threadId)
+    .withIndex("byUserIdThreadIdStateOrdered", (q) =>
+      q
+        .eq("userId", args.userId)
+        .eq("threadId", args.threadId)
+        .eq("lifecycleState", "active")
     )
     .order("asc")
     .collect();
@@ -370,6 +431,7 @@ export const upsertMessage = mutationWithRLS({
       userId: user._id,
       uiMessage: validUiMessage,
       now: Date.now(),
+      bulkOrder: 0,
       patch: {
         lifecycleState,
         liveStatus,
@@ -431,14 +493,10 @@ export const deleteMessage = mutationWithRLS({
     messageId: v.id("messages"),
   },
   async handler(ctx, args) {
-    await INTERNAL_getCurrentUserOrThrow(ctx);
+    const user = await INTERNAL_getCurrentUserOrThrow(ctx);
     const { messageId } = args;
 
-    // TODO: ensure RLS cover this case because we don't check ownership here
-    await ctx.db.patch(messageId, {
-      lifecycleState: "deleted",
-      updatedAt: Date.now(),
-    });
+    await InternalDeleteMessageWithParts(ctx, { userId: user._id, messageId });
 
     return;
   },
@@ -624,27 +682,23 @@ export const deleteThread = mutationWithRLS({
     threadId: v.id("threads"),
   },
   async handler(ctx, args) {
-    await INTERNAL_getCurrentUserOrThrow(ctx);
+    const user = await INTERNAL_getCurrentUserOrThrow(ctx);
     const { threadId } = args;
 
-    // TODO: ensure RLS cover this case because we don't check ownership here
-    await ctx.db.patch(threadId, {
-      lifecycleState: "deleted",
-      updatedAt: Date.now(),
-    });
+    await InternalDeleteThreadWithMessages(ctx, { userId: user._id, threadId });
 
     return;
   },
 });
 
 // DONE
-// for backend to do everything in one go
+// for backend to do everything in one go (new message)
 // 1. get or create thread
 // 2. set new/fist messages
 // 3. collect all messages for this thread.
 export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
   args: {
-    threadUuid: v.string(),
+    threadUuid: vv.doc("threads").fields.uuid,
     uiMessages: v.array(v.any()),
     title: v.optional(v.string()),
     lifecycleState: v.optional(lifecycleStates),
@@ -681,14 +735,16 @@ export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
     const threadPromise = ctx.db.get(threadId);
     const insertPromises: Promise<unknown>[] = [];
 
-    let now = Date.now();
+    const now = Date.now();
+    let bulkOrder = 0;
     for (const uiMessage of validatedMessages) {
       insertPromises.push(
         InternalUpsertMessageWithParts(ctx, {
           userId: user._id,
           threadId,
           uiMessage,
-          now: now++,
+          now,
+          bulkOrder: bulkOrder++,
         })
       );
     }
@@ -709,4 +765,108 @@ export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
   },
 });
 
-// TODO: create a big meta mutation to handle regenerate message case ()
+export const deleteAllMessagesAfter = mutationWithRLS({
+  args: {
+    threadUuid: vv.doc("threads").fields.uuid,
+    messageUuid: vv.doc("messages").fields.uuid,
+  },
+  async handler(ctx, args) {
+    const user = await INTERNAL_getCurrentUserOrThrow(ctx);
+    const { threadUuid, messageUuid } = args;
+    const thread = await ctx.db
+      .query("threads")
+      .withIndex("byUserIdUuid", (q) =>
+        q.eq("userId", user._id).eq("uuid", threadUuid)
+      )
+      .unique();
+    if (!thread) throw new ConvexError("Thread not found");
+
+    const message = await ctx.db
+      .query("messages")
+      .withIndex("byUserIdThreadIdUuid", (q) =>
+        q
+          .eq("userId", user._id)
+          .eq("threadId", thread._id)
+          .eq("uuid", messageUuid)
+      )
+      .unique();
+    if (!message) throw new ConvexError("Message not found");
+
+    // all messages with createdAt after the message to delete after
+    const messagesCreatedAfter1 = await ctx.db
+      .query("messages")
+      .withIndex("byUserIdThreadIdStateOrdered", (q) =>
+        q
+          .eq("userId", user._id)
+          .eq("threadId", thread._id)
+          .eq("lifecycleState", "active")
+          .gt("createdAt", message.createdAt)
+      )
+      .order("asc")
+      .collect();
+
+    // all messages within same createdAt chunk, but with higher bulk order
+    const messagesCreatedAfter2 = await ctx.db
+      .query("messages")
+      .withIndex("byUserIdThreadIdStateOrdered", (q) =>
+        q
+          .eq("userId", user._id)
+          .eq("threadId", thread._id)
+          .eq("lifecycleState", "active")
+          .eq("createdAt", message.createdAt)
+          .gt("createdAtBulkOrder", message.createdAtBulkOrder)
+      )
+      .order("asc")
+      .collect();
+    const messagesToDelete = [
+      ...messagesCreatedAfter1,
+      ...messagesCreatedAfter2,
+    ];
+    await Promise.all(
+      messagesToDelete.map((m) =>
+        ctx.db.patch(m._id, {
+          lifecycleState: "deleted",
+          deletedAt: Date.now(),
+          updatedAt: Date.now(),
+        })
+      )
+    );
+    return;
+  },
+});
+
+// TODO: (when branching support): we will have to handle this initial intent (regenerate or rewrite) when we support branching because this will change the behavior (different forking point)
+// Current state of regeneration (destructive):
+
+/**
+ * Continue
+ * DB: U1 -> A1
+ * REQ: U2
+ *
+ * case: regenerate A1:
+ *  1. Add U2 to DB
+ *      DB: U1 -> A1 -> U2
+ *  2. Add empty A2 placeholder in DB
+ *      DB: U1 -> A1 -> U2 -> A2(empty)
+ *  3. Return all history
+ *      => U1, A1, U2, A2
+ *  (4. generate A2 Response)
+ *  5. Update A2 in DB
+ *      DB: U1 -> A1 -> U2 -> A2(complete)
+ *  6. Update Thread live status
+ */
+
+/**
+ * Regenerate
+ * DB: U1 -> A1 -> U2 -> A2
+ *
+ * case: regenerate A1:
+ * REQ: U1 + intent = 'regenerate'
+ *  1. Deduce reset point to be after U1 (because regenerate)
+ *  2. Get every messages after U1
+ *      => A1, U2, A2
+ *  3. Mark all as deleted
+ *      DB: U1
+ *
+ * then call upsertThreadWithNewMessagesAndReturnHistory
+ */

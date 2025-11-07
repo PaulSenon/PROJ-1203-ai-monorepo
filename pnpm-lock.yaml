@@ -15,16 +15,90 @@ catalogs:
     '@ai-sdk/openai':
       specifier: ^2.0.60
       version: 2.0.60
+    '@ai-sdk/provider':
+      specifier: ^2.0.0
+      version: 2.0.0
+    '@ai-sdk/react':
+      specifier: ^2.0.81
+      version: 2.0.81
     ai:
       specifier: 5.0.81
       version: 5.0.81
+  clerk:
+    '@clerk/backend':
+      specifier: ^2.19.1
+      version: 2.19.1
+    '@clerk/clerk-react':
+      specifier: ^5.53.4
+      version: 5.53.4
+    '@hono/clerk-auth':
+      specifier: ^3.0.3
+      version: 3.0.3
+  convex:
+    '@convex-dev/agent':
+      specifier: ^0.2.12
+      version: 0.2.12
+    '@convex-dev/migrations':
+      specifier: ^0.2.9
+      version: 0.2.9
+    convex:
+      specifier: ^1.28.0
+      version: 1.28.0
+    convex-helpers:
+      specifier: 0.1.104
+      version: 0.1.104
   default:
+    alchemy:
+      specifier: ^0.75.1
+      version: 0.75.1
+    dotenv:
+      specifier: ^17.2.2
+      version: 17.2.3
+    hono:
+      specifier: ^4.8.2
+      version: 4.10.3
+    nanoid:
+      specifier: 5.1.6
+      version: 5.1.6
     tsdown:
       specifier: ^0.15.5
       version: 0.15.10
+    typescript:
+      specifier: 5.9.3
+      version: 5.9.3
     zod:
       specifier: 4.1.12
       version: 4.1.12
+  env:
+    '@t3-oss/env-core':
+      specifier: 0.13.8
+      version: 0.13.8
+  orpc:
+    '@orpc/client':
+      specifier: 1.10.2
+      version: 1.10.2
+    '@orpc/contract':
+      specifier: 1.10.2
+      version: 1.10.2
+    '@orpc/openapi':
+      specifier: 1.10.2
+      version: 1.10.2
+    '@orpc/openapi-client':
+      specifier: ^1.10.2
+      version: 1.10.2
+    '@orpc/server':
+      specifier: 1.10.2
+      version: 1.10.2
+    '@orpc/tanstack-query':
+      specifier: ^1.10.2
+      version: 1.10.2
+    '@orpc/zod':
+      specifier: 1.10.2
+      version: 1.10.2
+  schema:
+    '@standard-schema/spec':
+      specifier: ^1.0.0
+      version: 1.0.0
 
 importers:
 

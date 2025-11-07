@@ -1,4 +1,7 @@
-import type { AllowedModelIds } from "@ai-monorepo/ai/model.registry";
+import {
+  type AllowedModelIds,
+  allowedModelIds,
+} from "@ai-monorepo/ai/model.registry";
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
 import { useChat } from "@ai-sdk/react";
@@ -37,11 +40,22 @@ type SendMessageParams = {
   };
 };
 
+type RegenerateMessageOptions = {
+  selectedModelId?: string;
+};
+
 type ActiveThreadActions = {
   sendMessage: (params: SendMessageParams) => MaybePromise<void>;
   cancel: () => MaybePromise<void>;
-  regenerate: (messageId: string) => MaybePromise<void>;
+  regenerate: (
+    messageId: string,
+    options?: RegenerateMessageOptions
+  ) => MaybePromise<void>;
 };
+
+const isAllowedModelId = (id: unknown): id is AllowedModelIds =>
+  typeof id === "string" &&
+  allowedModelIds.some((allowedId) => allowedId === id);
 
 const ActiveTheadMessagesContext = createContext<
   ActiveThreadState["messages"] | null
@@ -113,17 +127,26 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     id: chatNav.id,
     transport: {
       async sendMessages(options) {
+        const optionsMetadata = options.metadata as
+          | {
+              selectedModelId?: string;
+            }
+          | undefined;
+        console.log("sendMessages", options);
         const lastMessage = options.messages.at(-1);
         if (!lastMessage) throw new Error("No message to send");
+        const selectedModelId =
+          optionsMetadata?.selectedModelId ?? lastMessage.metadata?.modelId;
+        if (!isAllowedModelId(selectedModelId))
+          throw new Error("Invalid model ID");
         return eventIteratorToUnproxiedDataStream(
           await chatRpc.chat(
             {
               threadUuid: options.chatId,
               messageUuid: options.messageId,
-              message: lastMessage,
+              lastMessageToKeep: lastMessage,
               trigger: options.trigger,
-              // TODO: type safety
-              selectedModelId: lastMessage.metadata?.modelId as AllowedModelIds,
+              selectedModelId,
             },
             { signal: options.abortSignal }
           )
@@ -225,7 +248,13 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const regenerate = useCallback(
-    (messageId: string) => sdkRegenerate({ messageId }),
+    (messageId: string, options?: RegenerateMessageOptions) =>
+      sdkRegenerate({
+        messageId,
+        metadata: {
+          selectedModelId: options?.selectedModelId,
+        },
+      }),
     [sdkRegenerate]
   );
 
