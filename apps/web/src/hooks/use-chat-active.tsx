@@ -18,6 +18,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { cvx } from "@/lib/convex/queries";
 import type { MaybePromise } from "@/lib/utils";
 import { chatRpc } from "@/utils/orpc/orpc";
 import { useAuth } from "./use-auth";
@@ -112,6 +113,8 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     isSkip ? "skip" : { threadUuid: chatNav.id }
   );
 
+  const upsertThread = cvx.mutations.upsertThread();
+
   // console.log("messagesPersisted", messagesPersisted);
   // console.log("thread", thread);
 
@@ -199,6 +202,12 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       lastSentMessageIdRef.current = uiMessage.id;
       if (chatNav.isNew) chatNav.persistNewChatIdToUrl();
       inputActions.clear();
+      upsertThread({
+        threadUuid: chatNav.id,
+        patch: {
+          liveStatus: "streaming",
+        },
+      });
       return sdkSendMessage(uiMessage);
     },
     [
@@ -206,6 +215,8 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       chatNav.isNew,
       chatNav.persistNewChatIdToUrl,
       inputActions.clear,
+      upsertThread,
+      chatNav.id,
     ]
   );
 
@@ -248,14 +259,21 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const regenerate = useCallback(
-    (messageId: string, options?: RegenerateMessageOptions) =>
+    (messageId: string, options?: RegenerateMessageOptions) => {
+      upsertThread({
+        threadUuid: chatNav.id,
+        patch: {
+          liveStatus: "streaming",
+        },
+      });
       sdkRegenerate({
         messageId,
         metadata: {
           selectedModelId: options?.selectedModelId,
         },
-      }),
-    [sdkRegenerate]
+      });
+    },
+    [sdkRegenerate, upsertThread, chatNav.id]
   );
 
   // useEffect(() => {

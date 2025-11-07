@@ -3,3 +3,4 @@
  * e.g. when a query is used during session, even if unmounted, it stays in sync
  *      in the background for instant fresh data when re-mounted
  */
+export const tmp = {};

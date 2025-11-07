@@ -11,13 +11,15 @@ export const Route = createFileRoute("/_chat")({
 
 function RouteComponent() {
   return (
-    <ChatInputProvider>
+    <>
       <ChatSidebar />
       <main className="group/sidebar-wrapper relative w-full min-w-0 flex-1">
         <SidebarTrigger className="fixed top-3 top-safe-offset-2 left-3 z-50 flex bg-background-transparent p-4" />
         <h1>Chat Layout</h1>
-        <Outlet />
+        <ChatInputProvider>
+          <Outlet />
+        </ChatInputProvider>
       </main>
-    </ChatInputProvider>
+    </>
   );
 }

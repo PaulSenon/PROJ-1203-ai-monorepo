@@ -34,10 +34,10 @@ const registry = createMyProviderRegistry({
   OPENAI_API_KEY: env.OPENAI_API_KEY,
 });
 
-function generateTitleMock() {
+function generateTitleMock(id: string) {
   return new Promise<string>((resolve) => {
     setTimeout(() => {
-      resolve("Title Mock");
+      resolve(`Title Mock ${id}`);
     }, 1000);
   });
 }
@@ -201,16 +201,19 @@ export const chatProcedure = chatProcedures.chat
       {
         threadUuid: input.threadUuid,
         uiMessages: optimisticUiMessages,
-        lastUsedModelId: modelId,
-        lifecycleState: "active",
-        liveStatus: "streaming",
+        threadPatch: {
+          lastUsedModelId: modelId,
+          lifecycleState: "active",
+          liveStatus: "streaming",
+        },
       }
     );
 
     // 5. Generate title in background
     if (!thread.title || thread.title.trim() === "") {
+      console.log("REGENERATE TITLE", { thread });
       __deferredPromises.push(
-        generateTitleMock().then((title) => {
+        generateTitleMock(thread.uuid).then((title) => {
           fetchMutation(api.chat.updateThread, {
             threadId: thread._id,
             title,
@@ -220,7 +223,7 @@ export const chatProcedure = chatProcedures.chat
     }
 
     // 6. Start streaming
-    const messages = [...messagesFromBackend, ...validatedUiMessages];
+    const messages = [...messagesFromBackend];
     const modelMessages = convertToModelMessages(messages);
     const result = streamText({
       model: registry.languageModel(modelId),

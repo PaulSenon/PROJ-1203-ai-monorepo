@@ -1,13 +1,9 @@
-import { api } from "@ai-monorepo/convex/convex/_generated/api";
-import { usePaginatedQuery } from "convex/react";
+import { cvx } from "@/lib/convex/queries";
+import { usePaginatedQueryStable } from "./queries/convex/utils/use-convex-query-1-stable";
 
 export function usePreviousThreadHistory() {
-  const { isLoading, loadMore, results, status } = usePaginatedQuery(
-    api.chat.getThreadsForListing,
-    {},
-    {
-      initialNumItems: 50,
-    }
+  const { isLoading, loadMore, results, status } = usePaginatedQueryStable(
+    ...cvx.query.threadHistoryPaginated.options.neverSkip()
   );
 
   return {

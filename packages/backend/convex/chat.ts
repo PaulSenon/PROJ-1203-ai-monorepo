@@ -4,6 +4,7 @@ import {
 } from "@ai-monorepo/ai/types/uiMessage";
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, type Validator, v } from "convex/values";
+import { partial } from "convex-helpers/validators";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { INTERNAL_getCurrentUserOrThrow } from "./lib";
@@ -115,12 +116,7 @@ async function InternalUpsertThread(
   args: {
     userId: Id<"users">;
     threadUuid: string;
-    patch?: {
-      title?: Doc<"threads">["title"];
-      lifecycleState?: Doc<"threads">["lifecycleState"];
-      liveStatus?: Doc<"threads">["liveStatus"];
-      lastUsedModelId?: Doc<"threads">["lastUsedModelId"];
-    };
+    patch: Partial<Doc<"threads">>;
   }
 ) {
   const { threadUuid, userId, patch } = args;
@@ -135,14 +131,13 @@ async function InternalUpsertThread(
   const now = Date.now();
   if (!existingThread) {
     const threadId = await ctx.db.insert("threads", {
+      ...patch,
+      lifecycleState: patch?.lifecycleState ?? "active",
+      liveStatus: patch?.liveStatus ?? "pending",
       uuid: threadUuid,
       createdAt: now,
       updatedAt: now,
       userId,
-      lifecycleState: patch?.lifecycleState ?? "active",
-      liveStatus: patch?.liveStatus ?? "pending",
-      lastUsedModelId: patch?.lastUsedModelId,
-      title: patch?.title,
     });
     return threadId;
   }
@@ -608,25 +603,23 @@ export const getDraft = queryWithRLS({
 // for frontend: upsert thread for optimistic update paginated thread listings
 export const upsertThread = mutationWithRLS({
   args: {
-    threadUuid: v.string(),
-    title: v.optional(v.string()),
-    lifecycleState: v.optional(lifecycleStates),
-    liveStatus: v.optional(liveStatuses),
-    lastUsedModelId: v.optional(v.string()),
+    threadUuid: vv.doc("threads").fields.uuid,
+    patch: partial(
+      vv.object({
+        title: vv.optional(vv.doc("threads").fields.title),
+        lifecycleState: vv.optional(vv.doc("threads").fields.lifecycleState),
+        liveStatus: vv.optional(vv.doc("threads").fields.liveStatus),
+        lastUsedModelId: vv.optional(vv.doc("threads").fields.lastUsedModelId),
+      })
+    ),
   },
   async handler(ctx, args) {
     const user = await INTERNAL_getCurrentUserOrThrow(ctx);
-    const { threadUuid, lastUsedModelId, lifecycleState, liveStatus, title } =
-      args;
+    const { threadUuid, patch } = args;
     const threadId = await InternalUpsertThread(ctx, {
       threadUuid,
       userId: user._id,
-      patch: {
-        title,
-        lastUsedModelId,
-        lifecycleState,
-        liveStatus,
-      },
+      patch,
     });
     return threadId;
   },
@@ -700,30 +693,22 @@ export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
   args: {
     threadUuid: vv.doc("threads").fields.uuid,
     uiMessages: v.array(v.any()),
-    title: v.optional(v.string()),
-    lifecycleState: v.optional(lifecycleStates),
-    liveStatus: v.optional(liveStatuses),
-    lastUsedModelId: v.optional(v.string()),
+    threadPatch: partial(
+      vv.object({
+        title: vv.optional(vv.doc("threads").fields.title),
+        lifecycleState: vv.optional(vv.doc("threads").fields.lifecycleState),
+        liveStatus: vv.optional(vv.doc("threads").fields.liveStatus),
+        lastUsedModelId: vv.optional(vv.doc("threads").fields.lastUsedModelId),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     const user = await INTERNAL_getCurrentUserOrThrow(ctx);
-    const {
-      threadUuid,
-      uiMessages,
-      lastUsedModelId,
-      lifecycleState,
-      liveStatus,
-      title,
-    } = args;
+    const { threadUuid, uiMessages, threadPatch } = args;
     const threadIdPromise = InternalUpsertThread(ctx, {
       threadUuid,
       userId: user._id,
-      patch: {
-        lastUsedModelId,
-        lifecycleState,
-        liveStatus,
-        title,
-      },
+      patch: threadPatch,
     });
     const validatedMessagesPromise = validateMyUIMessages(uiMessages);
 
