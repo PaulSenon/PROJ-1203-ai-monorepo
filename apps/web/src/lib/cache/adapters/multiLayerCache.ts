@@ -20,19 +20,38 @@ export function multiLayerCache<TKey extends string = string, TValue = unknown>(
   return {
     async get(key: TKey): Promise<TValue | undefined> {
       const missedLayers: ICacheAdapter<TKey, TValue>[] = [];
+      // let i = 0;
       for (const adapter of adapters) {
         const value = await adapter.get(key);
+        // console.log(`getting from layer ${i}`, {
+        //   key,
+        //   value,
+        // });
+        // i++;
+
         if (value === undefined) {
           missedLayers.push(adapter);
           continue;
         }
-        if (missedLayers.length > 0) {
+
+        // only persist to missed layers if not all layers have been tried
+        // it means we found a value in a deeper layer so we can persist to the shallower layers
+        // otherwise it means it's missing from all layers so no need to persist
+        if (missedLayers.length > 0 && missedLayers.length < adapters.length) {
           Promise.allSettled(
             missedLayers.map((a) => a.set(key, value))
           ).finally(() =>
-            console.log("persisted to missed layers", missedLayers)
+            console.log("persisted to missed layers", {
+              key,
+              value,
+              missedLayersCount: missedLayers.length,
+              adaptersCount: adapters.length,
+            })
           );
         }
+
+        // return first found value without waiting for persistence to all layers
+        // (no await, they will be persisted in the background)
         return value;
       }
       return;

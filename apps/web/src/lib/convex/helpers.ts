@@ -76,10 +76,10 @@ type QueryOptionsOrSkip<TQuery extends FunctionReference<"query">> = [
   ...OptionalRestArgsOrSkip<TQuery>,
 ];
 
-export function queryBuilder<const TQuery extends FunctionReference<"query">>(
-  ...[query, ...args]: QueryOptions<TQuery>
+export function queryBuilder<TQuery extends FunctionReference<"query">>(
+  query: TQuery
 ) {
-  return {
+  return (...args: OptionalRestArgs<TQuery>) => ({
     // options(skip?: "skip" | undefined): QueryOptionsOrSkip<TQuery> {
     //   return [query, ...(skip ? ["skip"] : args)] as QueryOptionsOrSkip<TQuery>;
     // },
@@ -98,7 +98,7 @@ export function queryBuilder<const TQuery extends FunctionReference<"query">>(
     },
     query,
     args,
-  };
+  });
 }
 
 type PaginatedQueryOptions<TQuery extends PaginatedQueryReference> = [
@@ -119,8 +119,13 @@ type PaginatedQueryOptionsOrSkip<TQuery extends PaginatedQueryReference> = [
 ];
 export function paginatedQueryBuilder<
   const TQuery extends PaginatedQueryReference,
->(...[query, args, paginationArgs]: PaginatedQueryOptions<TQuery>) {
-  return {
+>(
+  ...[query, paginationArgs]: [
+    PaginatedQueryOptions<TQuery>[0],
+    PaginatedQueryOptions<TQuery>[2],
+  ]
+) {
+  return (args: PaginatedQueryOptions<TQuery>[1]) => ({
     options: {
       skipWhen(
         doSkipUnknown: (() => boolean) | boolean
@@ -152,7 +157,7 @@ export function paginatedQueryBuilder<
         cursor: null,
       },
     },
-  };
+  });
 }
 
 //{ paginationOpts: { id?: number | undefined; endCursor?: string | null | undefined; maximumRowsRead?: number | undefined; maximumBytesRead?: number | undefined; numItems: number; cursor: string | null; }; }'

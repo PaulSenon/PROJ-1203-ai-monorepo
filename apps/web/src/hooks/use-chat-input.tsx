@@ -68,7 +68,6 @@ function _ChatInputProvider({ children }: { children: React.ReactNode }) {
 
   // goal: only set input state once first when draft ready and ignore further changes
   // const draftReadySnapshot = useStateSnapshotWhenReady(draft, !isPendingDraft);
-  // TODO: we now already receive stable snapshot so perhaps this should re refactored
   useEffect(() => {
     console.log("draft", draft);
     if (!inputRef.current) return;
@@ -191,6 +190,20 @@ function _ChatDraftProvider({ children }: { children: React.ReactNode }) {
   // TODO: set/delete should mutate useTsQueryInitialValue cached data (delete)
   const setDraftDb = useMutation(api.chat.upsertDraft);
   const deleteDraftDb = useMutation(api.chat.deleteDraft);
+
+  // TODO: create a useEmergencyMutation that replay cancelled mutation on next page load
+  // useEmergencySave({
+  //   key: ["draft", id].join(":"),
+  //   data: {
+  //     threadUuid: id,
+  //     data: draftFromDb.data,
+  //   },
+  //   restoreCallback: (data) => {
+  //     if (!data.data) return;
+  //     setDraftDb({ threadUuid: data.threadUuid, data: data.data });
+  //   },
+  //   isInEmergencyState: () => setDraftDb,
+  // });
 
   const {
     isPending: isPendingCache,

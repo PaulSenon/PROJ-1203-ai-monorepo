@@ -2,6 +2,7 @@ import { MessageSquare } from "lucide-react";
 import { useLayoutEffect } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { useActiveThreadMessages } from "@/hooks/use-chat-active";
+import { cn } from "@/lib/utils";
 import {
   Conversation,
   ConversationContent,
@@ -21,9 +22,9 @@ function ScrollInitialPosition() {
 }
 
 export function ChatFeed() {
-  const messages = useActiveThreadMessages();
+  const { messages, isPending } = useActiveThreadMessages();
   return (
-    <div>
+    <div className={cn(isPending && "opacity-0")}>
       <Conversation className="relative w-full" style={{ height: "500px" }}>
         <ConversationContent>
           {messages.length === 0 ? (

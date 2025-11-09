@@ -3,7 +3,6 @@ import {
   allowedModelIds,
 } from "@ai-monorepo/ai/model.registry";
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import { api } from "@ai-monorepo/convex/convex/_generated/api";
 import { useChat } from "@ai-sdk/react";
 import { eventIteratorToUnproxiedDataStream } from "@orpc/client";
 import { nanoid } from "nanoid";
@@ -20,7 +19,10 @@ import {
 import { cvx } from "@/lib/convex/queries";
 import type { MaybePromise } from "@/lib/utils";
 import { chatRpc } from "@/utils/orpc/orpc";
-import { useCvxQueryCached } from "./queries/convex/utils/use-convex-query-2-cached";
+import {
+  useActiveThreadMessagesQuery,
+  useActiveThreadQuery,
+} from "./queries/use-chat-active-queries";
 import { useChatInputActions } from "./use-chat-input";
 import { useChatNav } from "./use-chat-nav";
 
@@ -29,6 +31,7 @@ type ActiveThreadState = {
   streamStatus: "error" | "cancelled" | "pending" | "streaming" | "completed";
   dataStatus: "pending" | "stale" | "fresh" | "error";
   messages: MyUIMessage[];
+  isPending: boolean;
   messagesQueue: MyUIMessage[];
 };
 
@@ -57,12 +60,13 @@ const isAllowedModelId = (id: unknown): id is AllowedModelIds =>
   typeof id === "string" &&
   allowedModelIds.some((allowedId) => allowedId === id);
 
-const ActiveTheadMessagesContext = createContext<
-  ActiveThreadState["messages"] | null
->(null);
+const ActiveTheadMessagesContext = createContext<Pick<
+  ActiveThreadState,
+  "messages" | "isPending"
+> | null>(null);
 const ActiveTheadStateContext = createContext<Pick<
   ActiveThreadState,
-  "messagesQueue" | "dataStatus" | "streamStatus" | "uuid"
+  "messagesQueue" | "dataStatus" | "streamStatus" | "uuid" | "isPending"
 > | null>(null);
 const ActiveTheadActionsContext = createContext<ActiveThreadActions | null>(
   null
@@ -79,13 +83,13 @@ export function useActiveThreadState() {
 }
 
 export function useActiveThreadMessages() {
-  const messages = useContext(ActiveTheadMessagesContext);
-  if (!messages) {
+  const state = useContext(ActiveTheadMessagesContext);
+  if (!state) {
     throw new Error(
       "useActiveThreadMessages must be used within ActiveThreadProvider"
     );
   }
-  return messages;
+  return state;
 }
 
 export function useActiveThreadActions() {
@@ -103,14 +107,10 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const chatNav = useChatNav();
   const isSkip = chatNav.isNew;
   // TODO: perhaps we should handle stale case ???
-  const { data: thread } = useCvxQueryCached(
-    api.chat.getThread,
-    isSkip ? "skip" : { threadUuid: chatNav.id }
-  );
-  const { data: messagesPersisted } = useCvxQueryCached(
-    api.chat.getAllThreadMessagesAsc,
-    isSkip ? "skip" : { threadUuid: chatNav.id }
-  );
+  const { data: thread, isPending: isThreadPending } = useActiveThreadQuery();
+  const { data: messagesPersisted, isPending: isMessagesPending } =
+    useActiveThreadMessagesQuery();
+  const isQueryPending = isSkip ? false : isThreadPending || isMessagesPending;
 
   const upsertThread = cvx.mutations.upsertThread();
 
@@ -126,6 +126,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     status: sdkStatus,
     setMessages: sdkSetMessages,
   } = useChat<MyUIMessage>({
+    messages: messagesPersisted,
     id: chatNav.id,
     transport: {
       async sendMessages(options) {
@@ -167,7 +168,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    // TOTO this is fully broken. We need to clarify when to set messages
+    // TODO this is fully broken. We need to clarify when to set messages
     // if (sdkStatus === "streaming") return;
     // if (thread?.liveStatus !== "completed") return;
     if (!messagesPersisted) return;
@@ -281,24 +282,41 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   //   console.log("messagesStreamed", messagesStreamed);
   // }, [messagesStreamed]);
 
+  // TODO tmb because we only use streamedMessages for now
+  const isUseChatPending = isSkip ? false : messagesStreamed.length === 0;
+  const isPending = isQueryPending || isUseChatPending;
+
   const actions = {
     sendMessage,
     cancel,
     regenerate,
   } satisfies ActiveThreadActions;
 
-  const state = {
-    uuid: chatNav.id,
-    streamStatus: thread?.liveStatus ?? "pending",
-    dataStatus: thread === undefined ? "pending" : "fresh",
-    messagesQueue,
-  } satisfies Omit<ActiveThreadState, "messages">;
+  const state = useMemo(
+    () =>
+      ({
+        uuid: chatNav.id,
+        streamStatus: thread?.liveStatus ?? "pending",
+        dataStatus: thread === undefined ? "pending" : "fresh",
+        messagesQueue,
+        isPending,
+      }) satisfies Omit<ActiveThreadState, "messages">,
+    [chatNav.id, thread, messagesQueue, isPending]
+  );
+
+  const messagesState = useMemo(
+    () => ({
+      messages: messagesStreamed,
+      isPending,
+    }),
+    [messagesStreamed, isPending]
+  );
 
   return (
     <ActiveTheadActionsContext.Provider value={actions}>
       <ActiveTheadStateContext.Provider value={state}>
         {/* TODO: rewire to messages */}
-        <ActiveTheadMessagesContext.Provider value={messagesStreamed}>
+        <ActiveTheadMessagesContext.Provider value={messagesState}>
           {children}
         </ActiveTheadMessagesContext.Provider>
       </ActiveTheadStateContext.Provider>

@@ -3,9 +3,10 @@ import { useEffect, useRef } from "react";
 /**
  * To get a non reactive snapshot from a state depending on a condition
  */
-export function useStateSnapshotWhenReady<T>(
+export function useStateSnapshotWhenReady<T, U extends T>(
   value: T | undefined,
-  ready: boolean
+  ready: boolean,
+  initialValue?: U
 ) {
   const ref = useRef<T | undefined>(undefined);
 
@@ -16,5 +17,5 @@ export function useStateSnapshotWhenReady<T>(
     }
   }, [ready, value]);
 
-  return ref.current;
+  return ref.current === undefined ? initialValue : ref.current;
 }

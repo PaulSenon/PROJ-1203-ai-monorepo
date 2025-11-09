@@ -5,7 +5,7 @@
 @custom-variant light (&:where(.light, .light *));
 
 @theme {
-  --duration-base: 300ms;
+  --duration-base: 250ms;
   --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
 
   --font-sans:

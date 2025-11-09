@@ -84,8 +84,9 @@ export function useCvxQueryCached<Query extends FunctionReference<"query">>(
   const isPending = useMemo(() => {
     if (isSkip) return true;
     if (cacheEntry.isPending) return true;
+    if (!cacheEntry.snapshot && convexIsPending) return true;
     return false;
-  }, [isSkip, cacheEntry.isPending]);
+  }, [isSkip, cacheEntry.isPending, convexIsPending, cacheEntry.snapshot]);
 
   return useMemo(
     () => ({
@@ -97,7 +98,6 @@ export function useCvxQueryCached<Query extends FunctionReference<"query">>(
   );
 }
 
-const MAX_CACHE_SIZE = 500;
 export function useCvxPaginatedQueryCached<
   Query extends PaginatedQueryReference,
 >(
@@ -113,17 +113,21 @@ export function useCvxPaginatedQueryCached<
   const argsObject = isSkip ? {} : args;
 
   // Cache
-  const keyString = [
-    "tsQueryCached",
-    "cvxQueryCached",
-    createQueryKey(query, {
-      ...argsObject,
-      paginationOpts: {
-        numItems: options.initialNumItems,
-        cursor: null,
-      },
-    }),
-  ].join(":");
+  const keyString = useMemo(
+    () =>
+      [
+        "tsQueryCached",
+        "cvxQueryCached",
+        createQueryKey(query, {
+          ...argsObject,
+          paginationOpts: {
+            numItems: options.initialNumItems,
+            cursor: null,
+          },
+        }),
+      ].join(":"),
+    [query, argsObject, options.initialNumItems]
+  );
   const cacheEntry = useUserCacheEntryOnce<PaginatedQueryItem<Query>[]>(
     keyString,
     z.array(z.any())
@@ -136,9 +140,10 @@ export function useCvxPaginatedQueryCached<
   // Cache persistence
   useEffect(() => {
     if (isSkip || convexIsPending) return;
+    // this only cache the first page (initialNumItems)
     if (
       convexQueryResult.results.length > 0 &&
-      convexQueryResult.results.length < MAX_CACHE_SIZE
+      convexQueryResult.results.length <= options.initialNumItems
     ) {
       cacheEntry.set(convexQueryResult.results);
     }
@@ -149,6 +154,7 @@ export function useCvxPaginatedQueryCached<
     convexQueryResult,
     cacheEntry.set,
     cacheEntry.del,
+    options.initialNumItems,
   ]);
 
   // Result with fallback on cache
@@ -171,11 +177,13 @@ export function useCvxPaginatedQueryCached<
     return true;
   }, [isSkip, convexIsPending, cacheEntry.isPending]);
   // TODO: handle more fine grained loading (for pages) (e.g. convexQueryResult.status)
+  //  => not needed as long as we only cache the first page (initialNumItems)
   const isPending = useMemo(() => {
     if (isSkip) return true;
     if (cacheEntry.isPending) return true;
+    if (!cacheEntry.isPending && results.length === 0) return convexIsPending;
     return false;
-  }, [isSkip, cacheEntry.isPending]);
+  }, [isSkip, cacheEntry.isPending, convexIsPending, results]);
 
   return useMemo(
     () => ({

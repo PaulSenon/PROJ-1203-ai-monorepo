@@ -1,25 +1,26 @@
+import z, { type ZodType } from "zod";
 import type { ICacheAdapter } from "../ICacheAdapter";
 
-interface CacheEntry<TValue> {
-  value: TValue;
-  timestamp: number;
-}
+type Snapshot<TKey extends string, TValue> = {
+  entries: Record<TKey, TValue>;
+  keyOrder: TKey[];
+};
 
-interface StorageData<TValue> {
-  entries: Record<string, CacheEntry<TValue>>;
-  keyOrder: string[];
-}
+const SnapshotSchema = z.object({
+  entries: z.record(z.string(), z.unknown()),
+  keyOrder: z.array(z.string()),
+}) satisfies ZodType<Snapshot<string, unknown>>;
 
 /**
- * Creates a size-limited adapter wrapper that manages storage quota for localStorage.
- * Uses a single localStorage key with in-memory Map for efficient access.
- * Persists changes asynchronously via requestAnimationFrame.
+ * Creates an in-memory persisted buffer adapter that wraps any cache adapter.
+ * Uses a single metadata key to store a snapshot of all entries with FIFO eviction.
+ * All operations work on in-memory Map, with debounced background persistence.
  *
  * @usage
  * ```ts
- * const limitedAdapter = sizeLimitedAdapter(localCacheAdapter, {
+ * const bufferAdapter = sizeLimitedAdapter(localCacheAdapter, {
  *   maxKeys: 1000,
- *   storageKey: "cache-data"
+ *   storageKey: "cache-buffer"
  * });
  * ```
  */
@@ -27,209 +28,84 @@ export function sizeLimitedAdapter<
   TKey extends string = string,
   TValue = unknown,
 >(
-  adapter: ICacheAdapter<TKey, TValue>,
+  adapter: ICacheAdapter<string, unknown>,
   options: {
     maxKeys?: number;
-    maxSizeBytes?: number;
     storageKey?: string;
   } = {}
 ): ICacheAdapter<TKey, TValue> {
   const maxKeys = options.maxKeys ?? 1000;
-  const maxSizeBytes = options.maxSizeBytes;
-  const storageKey = options.storageKey ?? "cache-data";
+  const storageKey = `cache-buffer:${options.storageKey}`;
 
-  // In-memory Map: key -> CacheEntry
-  const memoryCache = new Map<TKey, CacheEntry<TValue>>();
+  // In-memory Map: key -> value
+  let memoryCache: Map<TKey, TValue> = new Map();
   // Track insertion order for FIFO eviction
-  const keyOrder: TKey[] = [];
-  let isInitialized = false;
-  let pendingPersist = false;
+  let keyOrder: TKey[] = [];
+  let persistTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
-   * Load all data from localStorage into memory on first access
+   * Load full snapshot from storage on first access
    */
-  async function loadFromStorage(): Promise<void> {
-    if (isInitialized) return;
-
+  const init = async (): Promise<void> => {
     try {
       const stored = await adapter.get(storageKey as TKey);
-      if (stored) {
-        const data = stored as unknown as StorageData<TValue>;
-        if (data.entries && data.keyOrder) {
-          for (const key of data.keyOrder) {
-            const entry = data.entries[key];
-            if (entry) {
-              memoryCache.set(key as TKey, entry);
-              keyOrder.push(key as TKey);
-            }
-          }
-        }
-      }
-    } catch {
+      const snapshot = (await SnapshotSchema.parseAsync(stored)) as Snapshot<
+        TKey,
+        TValue
+      >;
+      memoryCache = new Map(
+        Object.entries(snapshot.entries) as [TKey, TValue][]
+      );
+      keyOrder = snapshot.keyOrder;
+    } catch (error) {
+      console.warn("failed to load from storage", error);
       // If load fails, start with empty cache
     }
 
-    isInitialized = true;
-  }
-
-  /**
-   * Persist in-memory data to localStorage asynchronously
-   */
-  function persistToStorage(): void {
-    if (pendingPersist) return;
-    pendingPersist = true;
-
-    requestAnimationFrame(async () => {
-      try {
-        const data: StorageData<TValue> = {
-          entries: {},
-          keyOrder: [],
-        };
-
-        for (const key of keyOrder) {
-          const entry = memoryCache.get(key);
-          if (entry) {
-            data.entries[key] = entry;
-            data.keyOrder.push(key);
-          }
-        }
-
-        await adapter.set(storageKey as TKey, data as unknown as TValue);
-      } catch (error) {
-        // Handle QuotaExceededError by evicting and retrying
-        if (
-          error instanceof Error &&
-          (error.name === "QuotaExceededError" ||
-            error.message.includes("QuotaExceededError"))
-        ) {
-          // Evict oldest entries until we can persist
-          while (keyOrder.length > 0) {
-            const oldestKey = keyOrder.shift();
-            if (oldestKey) {
-              memoryCache.delete(oldestKey);
-            }
-            try {
-              const data: StorageData<TValue> = {
-                entries: {},
-                keyOrder: [],
-              };
-              for (const key of keyOrder) {
-                const entry = memoryCache.get(key);
-                if (entry) {
-                  data.entries[key] = entry;
-                  data.keyOrder.push(key);
-                }
-              }
-              await adapter.set(storageKey as TKey, data as unknown as TValue);
-              break;
-            } catch {
-              // Continue evicting
-            }
-          }
-        }
-      } finally {
-        pendingPersist = false;
-      }
+    console.log("loaded from storage", {
+      storageKey,
+      memoryCache: Object.fromEntries(memoryCache.entries()),
+      keyOrder,
     });
-  }
+  };
+  const initPromise = init();
 
   /**
-   * Estimate current storage size in bytes
+   * Persist full snapshot to storage with debounce
    */
-  function estimateSize(): number {
-    let size = 0;
-    for (const [key, entry] of memoryCache.entries()) {
-      size += key.length * 2; // UTF-16 encoding
-      size += JSON.stringify(entry.value).length * 2;
-      size += 8; // timestamp (number)
+  const schedulePersistence = (): void => {
+    if (persistTimeout) {
+      clearTimeout(persistTimeout);
     }
-    return size;
-  }
 
-  /**
-   * Check storage quota using navigator.storage.estimate() if available
-   */
-  async function getStorageEstimate(): Promise<{
-    usage: number;
-    quota: number;
-  } | null> {
-    if ("storage" in navigator && "estimate" in navigator.storage) {
+    persistTimeout = setTimeout(async () => {
       try {
-        const estimate = await navigator.storage.estimate();
-        return {
-          usage: estimate.usage ?? 0,
-          quota: estimate.quota ?? 0,
+        const snapshot: Snapshot<TKey, TValue> = {
+          entries: Object.fromEntries(memoryCache.entries()) as Record<
+            TKey,
+            TValue
+          >,
+          keyOrder: [...keyOrder],
         };
-      } catch {
-        // API not available or failed
-      }
-    }
-    return null;
-  }
 
-  /**
-   * Evict oldest entries if over limits
-   */
-  async function evictIfNeeded(): Promise<void> {
-    // Check key count limit
-    if (keyOrder.length >= maxKeys) {
-      const oldestKey = keyOrder.shift();
-      if (oldestKey) {
-        memoryCache.delete(oldestKey);
+        await adapter.set(storageKey, snapshot);
+      } catch (error) {
+        // Silently ignore persistence errors
+        console.warn("failed to persist to storage", error);
+      } finally {
+        persistTimeout = null;
       }
-    }
-
-    // Check size limit
-    if (maxSizeBytes) {
-      let currentSize = estimateSize();
-      while (currentSize > maxSizeBytes && keyOrder.length > 0) {
-        const oldestKey = keyOrder.shift();
-        if (oldestKey) {
-          memoryCache.delete(oldestKey);
-          currentSize = estimateSize();
-        }
-      }
-    }
-
-    // Check browser quota (proactive check)
-    const estimate = await getStorageEstimate();
-    if (estimate) {
-      const currentSize = estimateSize();
-      // If we're using more than 80% of quota, evict some entries
-      const threshold = estimate.quota * 0.8;
-      if (estimate.usage + currentSize > threshold) {
-        // Evict until we're below 70%
-        const target = estimate.quota * 0.7;
-        while (
-          keyOrder.length > 0 &&
-          estimate.usage + estimateSize() > target
-        ) {
-          const oldestKey = keyOrder.shift();
-          if (oldestKey) {
-            memoryCache.delete(oldestKey);
-          }
-        }
-      }
-    }
-  }
+    }, 100);
+  };
 
   return {
-    async get(key: TKey): Promise<TValue | undefined> {
-      await loadFromStorage();
-      const entry = memoryCache.get(key);
-      if (entry) {
-        // Update access timestamp for potential LRU (currently using FIFO)
-        entry.timestamp = Date.now();
-        return entry.value;
-      }
-      return;
+    get: async (key: TKey): Promise<TValue | undefined> => {
+      await initPromise;
+      return memoryCache.get(key);
     },
 
-    async set(key: TKey, value: TValue): Promise<void> {
-      await loadFromStorage();
-
-      // Evict if needed before adding
-      await evictIfNeeded();
+    set: async (key: TKey, value: TValue): Promise<void> => {
+      await initPromise;
 
       // Remove key from order if it exists (will be re-added at end)
       const existingIndex = keyOrder.indexOf(key);
@@ -237,19 +113,24 @@ export function sizeLimitedAdapter<
         keyOrder.splice(existingIndex, 1);
       }
 
+      // Evict oldest if at limit
+      if (keyOrder.length >= maxKeys) {
+        const oldestKey = keyOrder.shift();
+        if (oldestKey) {
+          memoryCache.delete(oldestKey);
+        }
+      }
+
       // Add/update entry
-      memoryCache.set(key, {
-        value,
-        timestamp: Date.now(),
-      });
+      memoryCache.set(key, value);
       keyOrder.push(key);
 
-      // Schedule async persistence
-      persistToStorage();
+      // Schedule debounced persistence
+      schedulePersistence();
     },
 
-    async del(key: TKey): Promise<void> {
-      await loadFromStorage();
+    del: async (key: TKey): Promise<void> => {
+      await initPromise;
 
       memoryCache.delete(key);
       const index = keyOrder.indexOf(key);
@@ -257,15 +138,20 @@ export function sizeLimitedAdapter<
         keyOrder.splice(index, 1);
       }
 
-      // Schedule async persistence
-      persistToStorage();
+      // Schedule debounced persistence
+      schedulePersistence();
     },
 
-    async clear(): Promise<void> {
+    clear: async (): Promise<void> => {
       memoryCache.clear();
       keyOrder.length = 0;
 
-      adapter.del(storageKey as TKey);
+      if (persistTimeout) {
+        clearTimeout(persistTimeout);
+        persistTimeout = null;
+      }
+
+      await adapter.del(storageKey as TKey);
     },
   };
 }

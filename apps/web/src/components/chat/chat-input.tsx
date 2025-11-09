@@ -83,7 +83,11 @@ export function ChatInput() {
             </PromptInputModelSelectContent>
           </PromptInputModelSelect>
         </PromptInputTools>
-        <PromptInputSubmit disabled={inputState.disabled} status={"ready"} />
+        <PromptInputSubmit
+          className="duration-0"
+          disabled={inputState.disabled}
+          status={"ready"}
+        />
       </PromptInputFooter>
     </PromptInput>
   );

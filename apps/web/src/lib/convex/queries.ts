@@ -9,20 +9,13 @@ import { paginatedQueryBuilder, queryBuilder } from "./helpers";
  */
 
 const convexQueries = {
-  threadHistoryPaginated: paginatedQueryBuilder(
-    api.chat.getThreadsForListing,
-    {},
-    {
-      initialNumItems: 50,
-    }
-  ),
+  threadHistoryPaginated: paginatedQueryBuilder(api.chat.getThreadsForListing, {
+    initialNumItems: 50,
+  }),
   getChatPreferences: queryBuilder(api.users.getUserChatPreferences),
-  // TODO: high order
-  // getThread: queryBuilder(api.chat.getThread, { threadUuid:  }),
-  // const thread = useQuery(
-  //   api.chat.getThread,
-  //   isSkip ? "skip" : { threadUuid: chatNav.id }
-  // );
+  getThread: queryBuilder(api.chat.getThread),
+  getAllThreadMessagesAsc: queryBuilder(api.chat.getAllThreadMessagesAsc),
+  getCurrentUser: queryBuilder(api.users.getCurrentUser),
 } as const;
 
 const convexMutations = {
@@ -30,28 +23,60 @@ const convexMutations = {
   upsertChatPreferences: () =>
     useMutation(api.users.upsertUserChatPreferences).withOptimisticUpdate(
       (localStore, mutationArgs) => {
-        const query = convexQueries.getChatPreferences.query;
-        const args = convexQueries.getChatPreferences.args;
-        const value = localStore.getQuery(query, ...args);
-        localStore.setQuery(query, args, {
-          // if new
-          _id: crypto.randomUUID() as Id<"userChatPreferences">,
-          _creationTime: Date.now(),
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          userId: crypto.randomUUID() as Id<"users">,
-          // if existing
-          ...value,
-          // optimistic patch
-          preferredModelId: mutationArgs?.patch?.preferredModelId,
-        });
+        const chatPreferencesQuery = convexQueries.getChatPreferences();
+        const value = localStore.getQuery(
+          chatPreferencesQuery.query,
+          ...chatPreferencesQuery.args
+        );
+        localStore.setQuery(
+          chatPreferencesQuery.query,
+          chatPreferencesQuery.args,
+          {
+            // if new
+            _id: crypto.randomUUID() as Id<"userChatPreferences">,
+            _creationTime: Date.now(),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            userId: crypto.randomUUID() as Id<"users">,
+            // if existing
+            ...value,
+            // optimistic patch
+            preferredModelId: mutationArgs?.patch?.preferredModelId,
+          }
+        );
       }
     ),
   upsertThread: () =>
     useMutation(api.chat.upsertThread).withOptimisticUpdate(
       (localStore, mutationArgs) => {
-        const query = convexQueries.threadHistoryPaginated.query;
-        const args = convexQueries.threadHistoryPaginated.args;
+        // thread query
+        const threadQuery = convexQueries.getThread({
+          threadUuid: mutationArgs.threadUuid,
+        });
+        const thread1 = localStore.getQuery(
+          threadQuery.query,
+          ...threadQuery.args
+        );
+        localStore.setQuery(threadQuery.query, ...threadQuery.args, {
+          _id: thread1?._id ?? (crypto.randomUUID() as Id<"threads">),
+          _creationTime: thread1?._creationTime ?? Date.now(),
+          userId: thread1?.userId ?? (crypto.randomUUID() as Id<"users">),
+          uuid: mutationArgs.threadUuid,
+          createdAt: thread1?.createdAt ?? Date.now(),
+          updatedAt: Date.now(),
+          lifecycleState: thread1?.lifecycleState ?? "active",
+          liveStatus:
+            mutationArgs.patch.liveStatus ?? thread1?.liveStatus ?? "completed",
+          title: mutationArgs.patch.title ?? thread1?.title,
+          deletedAt: thread1?.deletedAt,
+          lastUsedModelId:
+            mutationArgs.patch.lastUsedModelId ?? thread1?.lastUsedModelId,
+        });
+
+        // paginated query
+        const paginatedQuery = convexQueries.threadHistoryPaginated({});
+        const query = paginatedQuery.query;
+        const args = paginatedQuery.args;
 
         // we get and filter out the thread if already exist
         const allPages = localStore.getAllQueries(query);

@@ -1,9 +1,9 @@
 import { ChatFeed } from "./chat-feed";
 import { ChatInput } from "./chat-input";
 
-export function Chat() {
+export function Chat({ className }: { className?: string }) {
   return (
-    <div>
+    <div className={className}>
       <ChatFeed />
       <ChatInput />
     </div>

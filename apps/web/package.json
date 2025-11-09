@@ -17,6 +17,7 @@
     "@ai-monorepo/convex": "workspace:^",
     "@ai-sdk/react": "catalog:ai",
     "@clerk/clerk-react": "catalog:clerk",
+    "@clerk/themes": "catalog:clerk",
     "@convex-dev/agent": "catalog:convex",
     "@hookform/resolvers": "^5.2.2",
     "@orpc/client": "catalog:orpc",

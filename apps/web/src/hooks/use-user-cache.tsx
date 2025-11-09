@@ -1,6 +1,13 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { idbKvAdapter } from "@/lib/cache/adapters/idbKV";
 import { localCacheAdapter } from "@/lib/cache/adapters/localStorageAdapter";
 import { multiLayerCache } from "@/lib/cache/adapters/multiLayerCache";
@@ -14,19 +21,33 @@ export const lastLoggedInUserIdCache = {
   set: (userId: string) => localStorage.setItem("lastLoggedInUserId", userId),
 };
 
+// const passThroughCacheAdapter: ICacheAdapter<string, unknown> = {
+//   get: () => Promise.resolve(undefined),
+//   set: () => Promise.resolve(),
+//   del: () => Promise.resolve(),
+//   clear: () => Promise.resolve(),
+// };
+
 function createUserCache(cacheScope: string) {
   return new Cache(
     multiLayerCache([
       sizeLimitedAdapter(localCacheAdapter, {
-        maxKeys: 1000,
+        maxKeys: 500,
         storageKey: cacheScope,
       }),
       idbKvAdapter(cacheScope),
+      // passThroughCacheAdapter,
     ])
   );
 }
 
-export function useUserCache() {
+type CacheState = {
+  cache: Cache<string>;
+  scope: string;
+};
+const userCacheContext = createContext<CacheState | null>(null);
+
+export function UserCacheProvider({ children }: { children: React.ReactNode }) {
   const { clerkUser, isLoadingClerk } = useAuth();
   const cacheScope = useMemo(
     () => clerkUser?.id ?? lastLoggedInUserIdCache.get() ?? "anonymous",
@@ -35,7 +56,6 @@ export function useUserCache() {
 
   const cache = useMemo(() => createUserCache(cacheScope), [cacheScope]);
 
-  // persist for next time
   useEffect(() => {
     if (isLoadingClerk) return;
     if (clerkUser) {
@@ -46,7 +66,24 @@ export function useUserCache() {
     }
   }, [clerkUser, isLoadingClerk, cache]);
 
-  return useMemo(() => ({ cache, scope: cacheScope }), [cache, cacheScope]);
+  const value = useMemo(
+    () => ({ cache, scope: cacheScope }),
+    [cache, cacheScope]
+  );
+
+  return (
+    <userCacheContext.Provider value={value}>
+      {children}
+    </userCacheContext.Provider>
+  );
+}
+
+export function useUserCache() {
+  const context = useContext(userCacheContext);
+  if (!context) {
+    throw new Error("useUserCache must be used within a UserCacheProvider");
+  }
+  return context;
 }
 
 // TODO: move in helpers

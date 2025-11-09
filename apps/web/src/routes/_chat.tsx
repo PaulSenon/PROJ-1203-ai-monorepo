@@ -6,7 +6,7 @@ import { ChatInputProvider } from "@/hooks/use-chat-input";
 export const Route = createFileRoute("/_chat")({
   component: RouteComponent,
 
-  wrapInSuspense: true,
+  // wrapInSuspense: true,
 });
 
 function RouteComponent() {

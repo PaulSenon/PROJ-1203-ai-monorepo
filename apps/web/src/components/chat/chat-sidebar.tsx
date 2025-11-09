@@ -11,7 +11,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
 } from "@/components/ui/sidebar";
-import { usePreviousThreadHistory } from "@/hooks/use-chat-listing";
+import { usePreviousThreadHistoryPaginated } from "@/hooks/queries/use-chat-listing-queries";
 import { useChatNav } from "@/hooks/use-chat-nav";
 import { cn } from "@/lib/utils";
 import { UserProfileButton } from "../auth/user-avatar";
@@ -19,7 +19,7 @@ import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { Skeleton } from "../ui/skeleton";
 
-export function ChatSidebar() {
+export function ChatSidebar({ className }: { className?: string }) {
   const chatNav = useChatNav();
   const handleNewChat = () => chatNav.openNewChat();
   const handleClickThread = (threadUuid: string) =>
@@ -28,10 +28,10 @@ export function ChatSidebar() {
   // const inputActions = useChatInputActions();
   // const inputState = useChatInputState();
 
-  const history = usePreviousThreadHistory();
+  const history = usePreviousThreadHistoryPaginated();
 
   return (
-    <Sidebar>
+    <Sidebar className={className}>
       <SidebarHeader className="space-y-3 p-4 pb-0">
         <div className="flex items-center justify-center">
           <h1 className="font-semibold text-lg tracking-tight">

@@ -22,8 +22,12 @@ const VITE_CLERK_SIGN_UP_URL = env.VITE_CLERK_SIGN_UP_URL;
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
 import { useConvexAuth, useMutation } from "convex/react";
 
-export type ClerkUser = ReturnType<typeof useUser>["user"];
-export type ClerkSession = ReturnType<typeof useSession>["session"];
+export type ClerkUser = NonNullable<
+  NonNullable<ReturnType<typeof useUser>>["user"]
+>;
+export type ClerkSession = NonNullable<
+  NonNullable<ReturnType<typeof useSession>>["session"]
+>;
 
 type AuthState =
   | "0_clerk_loading"
