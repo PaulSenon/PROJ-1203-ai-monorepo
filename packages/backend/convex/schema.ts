@@ -61,6 +61,13 @@ const schema = defineSchema({
     .index("byTokenIdentifier", ["tokenIdentifier"])
     .index("byEmail", ["email"]),
 
+  userChatPreferences: defineTable({
+    userId: v.id("users"),
+    preferredModelId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("byUserId", ["userId"]),
+
   threads: defineTable({
     userId: v.id("users"),
     uuid: v.string(),

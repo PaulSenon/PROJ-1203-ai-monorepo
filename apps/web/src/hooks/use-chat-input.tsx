@@ -1,6 +1,5 @@
 import type { AllowedModelIds } from "@ai-monorepo/ai/model.registry";
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
-import { skipToken, useQuery } from "@tanstack/react-query";
 import { useConvex, useMutation } from "convex/react";
 import {
   createContext,
@@ -15,7 +14,7 @@ import {
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
 import z from "zod";
-import { useAuth } from "./use-auth";
+import { useTsQueryInitialValue } from "./queries/tanstack/use-tanstack-query-2-initial-value";
 import { useChatNav } from "./use-chat-nav";
 import { useUserCacheEntry } from "./use-user-cache";
 import { useSaveToClipboard } from "./utils/uas-save-to-clipboard";
@@ -69,6 +68,7 @@ function _ChatInputProvider({ children }: { children: React.ReactNode }) {
 
   // goal: only set input state once first when draft ready and ignore further changes
   // const draftReadySnapshot = useStateSnapshotWhenReady(draft, !isPendingDraft);
+  // TODO: we now already receive stable snapshot so perhaps this should re refactored
   useEffect(() => {
     console.log("draft", draft);
     if (!inputRef.current) return;
@@ -177,22 +177,18 @@ function _ChatDraftProvider({ children }: { children: React.ReactNode }) {
   const { isNew, id } = useChatNav();
   const [isSavePending, setIsSavePending] = useState(false);
 
-  // TODO: Move this block to cached useQuery hook
-  const { isFullyReady } = useAuth();
-  const isSkip = !isFullyReady || isNew;
-
   // non reactive but always refreshed when id changes (no stale time)
-  const draftFromDb = useQuery({
+  // TODO: review draft lifecycle since we handle snapshot at query level
+  const draftFromDb = useTsQueryInitialValue({
     queryKey: ["draft", id],
-    queryFn: isSkip
-      ? skipToken
-      : () => convex.query(api.chat.getDraft, { threadUuid: id }),
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: "always",
+    queryFn: () =>
+      convex
+        .query(api.chat.getDraft, { threadUuid: id })
+        .then((data) => data?.data ?? null),
   });
   // ------------------------------------------------------------
   const isPendingDb = draftFromDb.isPending;
+  // TODO: set/delete should mutate useTsQueryInitialValue cached data (delete)
   const setDraftDb = useMutation(api.chat.upsertDraft);
   const deleteDraftDb = useMutation(api.chat.deleteDraft);
 
@@ -204,7 +200,7 @@ function _ChatDraftProvider({ children }: { children: React.ReactNode }) {
   } = useUserCacheEntry("draft:new", z.string());
 
   const isPending = isNew ? isPendingCache : isPendingDb;
-  const draft = isNew ? draftFromCache : draftFromDb.data?.data;
+  const draft = isNew ? draftFromCache : draftFromDb.data;
 
   const abortController = useRef<AbortController>(new AbortController());
 

@@ -35,6 +35,13 @@ import type { ICacheAdapter } from "./ICacheAdapter";
  *     console.log(value);
  *   }
  */
+
+type CacheEntry<TValue> = {
+  get: () => Promise<TValue | undefined>;
+  set: (value: TValue) => Promise<void>;
+  del: () => Promise<void>;
+};
+
 export class Cache<TKeyBase extends string> {
   private readonly cacheAdapter: ICacheAdapter<TKeyBase>;
 
@@ -45,58 +52,37 @@ export class Cache<TKeyBase extends string> {
   entry<TKey extends TKeyBase, TValue>(
     key: TKey,
     schema: StandardSchemaV1<TValue>
-  ) {
-    return new ValidatedCacheEntry({
-      adapter: this.cacheAdapter,
-      schema,
-      key,
-    });
+  ): CacheEntry<TValue> {
+    return {
+      get: async () => {
+        const value = await this.cacheAdapter.get(key);
+        if (!value) return;
+        const result = await schema["~standard"].validate(value);
+        if (result.issues) {
+          console.warn(
+            `cache get: Value found but ignored because not matching schema: key:${key}`
+          );
+          await this.cacheAdapter.del(key);
+          return;
+        }
+        return result.value;
+      },
+      set: async (value: TValue) => {
+        const validatedValue = await schema["~standard"].validate(value);
+        if (validatedValue.issues) {
+          throw new Error(`cache set: Value not matching schema: key:${key}`, {
+            cause: `received:\n${JSON.stringify(value, null, 2)}\nissues:\n${validatedValue.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n ")}`,
+          });
+        }
+        await this.cacheAdapter.set(key, validatedValue.value);
+      },
+      del: async () => {
+        await this.cacheAdapter.del(key);
+      },
+    };
   }
 
   clear() {
     return this.cacheAdapter.clear();
-  }
-}
-
-class ValidatedCacheEntry<TKey extends string, TValue> {
-  private readonly cacheAdapter: ICacheAdapter<TKey>;
-  private readonly schema: StandardSchemaV1<TValue>;
-  private readonly key: TKey;
-
-  constructor({
-    adapter,
-    schema,
-    key,
-  }: {
-    adapter: ICacheAdapter<TKey>;
-    schema: StandardSchemaV1<TValue>;
-    key: TKey;
-  }) {
-    this.cacheAdapter = adapter;
-    this.schema = schema;
-    this.key = key;
-  }
-
-  async del() {
-    await this.cacheAdapter.del(this.key);
-  }
-
-  async get() {
-    const value = await this.cacheAdapter.get(this.key);
-    if (!value) return;
-    const result = await this.schema["~standard"].validate(value);
-    if (result.issues) {
-      await this.del();
-      return;
-    }
-    return result.value;
-  }
-
-  async set(value: TValue) {
-    const validatedValue = await this.schema["~standard"].validate(value);
-    if (validatedValue.issues) {
-      throw new Error("Invalid value", { cause: validatedValue.issues });
-    }
-    await this.cacheAdapter.set(this.key, validatedValue.value);
   }
 }

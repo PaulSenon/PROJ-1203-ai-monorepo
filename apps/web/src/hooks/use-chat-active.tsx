@@ -6,7 +6,6 @@ import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
 import { useChat } from "@ai-sdk/react";
 import { eventIteratorToUnproxiedDataStream } from "@orpc/client";
-import { useQuery } from "convex/react";
 import { nanoid } from "nanoid";
 import {
   createContext,
@@ -21,7 +20,7 @@ import {
 import { cvx } from "@/lib/convex/queries";
 import type { MaybePromise } from "@/lib/utils";
 import { chatRpc } from "@/utils/orpc/orpc";
-import { useAuth } from "./use-auth";
+import { useCvxQueryCached } from "./queries/convex/utils/use-convex-query-2-cached";
 import { useChatInputActions } from "./use-chat-input";
 import { useChatNav } from "./use-chat-nav";
 
@@ -101,14 +100,14 @@ export function useActiveThreadActions() {
 
 export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const inputActions = useChatInputActions();
-  const { isFullyReady } = useAuth();
   const chatNav = useChatNav();
-  const isSkip = !isFullyReady || chatNav.isNew;
-  const thread = useQuery(
+  const isSkip = chatNav.isNew;
+  // TODO: perhaps we should handle stale case ???
+  const { data: thread } = useCvxQueryCached(
     api.chat.getThread,
     isSkip ? "skip" : { threadUuid: chatNav.id }
   );
-  const messagesPersisted = useQuery(
+  const { data: messagesPersisted } = useCvxQueryCached(
     api.chat.getAllThreadMessagesAsc,
     isSkip ? "skip" : { threadUuid: chatNav.id }
   );
@@ -206,6 +205,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         threadUuid: chatNav.id,
         patch: {
           liveStatus: "streaming",
+          lastUsedModelId: uiMessage?.metadata?.modelId,
         },
       });
       return sdkSendMessage(uiMessage);
@@ -264,6 +264,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         threadUuid: chatNav.id,
         patch: {
           liveStatus: "streaming",
+          lastUsedModelId: options?.selectedModelId,
         },
       });
       sdkRegenerate({

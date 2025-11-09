@@ -11,13 +11,16 @@ import type {
 } from "convex/react";
 import type { FunctionReference, FunctionReturnType } from "convex/server";
 import { useRef } from "react";
-import { usePaginatedQueryBase, useQueryBase } from "./use-convex-query-0-base";
+import {
+  useCvxPaginatedQueryAuth,
+  useCvxQueryAuth,
+} from "./use-convex-query-0-auth";
 
-export function useQueryStable<Query extends FunctionReference<"query">>(
+export function useCvxQueryStable<Query extends FunctionReference<"query">>(
   query: Query,
   ...queryArgs: OptionalRestArgsOrSkip<Query>
 ): FunctionReturnType<Query> | undefined {
-  const result = useQueryBase(query, ...queryArgs);
+  const result = useCvxQueryAuth(query, ...queryArgs);
   const stored = useRef(result);
 
   if (result !== undefined) {
@@ -26,7 +29,9 @@ export function useQueryStable<Query extends FunctionReference<"query">>(
   return stored.current;
 }
 
-export function usePaginatedQueryStable<Query extends PaginatedQueryReference>(
+export function useCvxPaginatedQueryStable<
+  Query extends PaginatedQueryReference,
+>(
   query: Query,
   args: PaginatedQueryArgs<Query> | "skip",
   options: {
@@ -34,7 +39,7 @@ export function usePaginatedQueryStable<Query extends PaginatedQueryReference>(
     // latestPageSize?: "grow" | "fixed";
   }
 ): UsePaginatedQueryReturnType<Query> {
-  const res = usePaginatedQueryBase(query, args, options);
+  const res = useCvxPaginatedQueryAuth(query, args, options);
 
   const stored = useRef(res.results);
 

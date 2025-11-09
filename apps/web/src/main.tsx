@@ -1,4 +1,5 @@
 import { createRouter, RouterProvider } from "@tanstack/react-router";
+import { ConvexQueryCacheProvider } from "convex-helpers/react/cache/provider";
 import type { ReactNode } from "react";
 import ReactDom from "react-dom/client";
 import Loader from "./components/loader";
@@ -28,7 +29,15 @@ const router = createRouter({
     return (
       <AuthProvider>
         <ConvexProvider>
-          <TanstackQueryClientProvider>{children}</TanstackQueryClientProvider>
+          <ConvexQueryCacheProvider
+            debug={false}
+            expiration={120_000}
+            maxIdleEntries={100}
+          >
+            <TanstackQueryClientProvider>
+              {children}
+            </TanstackQueryClientProvider>
+          </ConvexQueryCacheProvider>
         </ConvexProvider>
       </AuthProvider>
     );

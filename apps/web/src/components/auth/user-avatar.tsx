@@ -25,6 +25,7 @@ interface UserProfileButtonProps {
 }
 
 export function UserProfileButton({ className }: UserProfileButtonProps) {
+  // TODO user preview from cache
   const { clerkUser, isFullyReady, isLoadingClerk, isAnonymous } = useAuth();
 
   const disabled = !isFullyReady;

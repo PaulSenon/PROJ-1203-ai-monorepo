@@ -68,7 +68,8 @@ export function ChatSidebar() {
           </SidebarGroupLabel>
 
           <div className="mt-2 space-y-1">
-            {history.status === "LoadingFirstPage" ? (
+            {/* TODO: handle more fine grained loading (for pages) */}
+            {history.isPending ? (
               // Initial loading skeleton
               Array.from({ length: 20 }).map((_, i) => (
                 <ThreadItemSkeleton index={i} key={i} />

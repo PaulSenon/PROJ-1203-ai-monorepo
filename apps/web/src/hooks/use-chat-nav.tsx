@@ -1,6 +1,6 @@
 import { useRouter } from "@tanstack/react-router";
 import { nanoid } from "nanoid";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Route as ChatRoute } from "../routes/_chat/chat.{-$id}";
 
 /**
@@ -12,7 +12,7 @@ export function useChatNav() {
   const params = ChatRoute.useParams();
 
   const isNew = params.id === undefined;
-  const id = params.id ?? nanoid();
+  const id = useMemo(() => params.id ?? nanoid(), [params.id]);
 
   const persistNewChatIdToUrl = useCallback(() => {
     if (!isNew) return;

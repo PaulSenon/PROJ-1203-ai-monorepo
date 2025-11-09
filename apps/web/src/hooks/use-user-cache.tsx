@@ -1,6 +1,6 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { idbKvAdapter } from "@/lib/cache/adapters/idbKV";
 import { localCacheAdapter } from "@/lib/cache/adapters/localStorageAdapter";
 import { multiLayerCache } from "@/lib/cache/adapters/multiLayerCache";
@@ -28,8 +28,10 @@ function createUserCache(cacheScope: string) {
 
 export function useUserCache() {
   const { clerkUser, isLoadingClerk } = useAuth();
-  const cacheScope =
-    clerkUser?.id ?? lastLoggedInUserIdCache.get() ?? "anonymous";
+  const cacheScope = useMemo(
+    () => clerkUser?.id ?? lastLoggedInUserIdCache.get() ?? "anonymous",
+    [clerkUser]
+  );
 
   const cache = useMemo(() => createUserCache(cacheScope), [cacheScope]);
 
@@ -44,12 +46,67 @@ export function useUserCache() {
     }
   }, [clerkUser, isLoadingClerk, cache]);
 
-  return { cache, scope: cacheScope };
+  return useMemo(() => ({ cache, scope: cacheScope }), [cache, cacheScope]);
 }
 
-export function useUserCacheEntry<T>(key: string, schema: StandardSchemaV1<T>) {
+// TODO: move in helpers
+function passThroughSchema<T>(): StandardSchemaV1<T> {
+  return {
+    "~standard": {
+      validate: (value): StandardSchemaV1.SuccessResult<T> => ({
+        value: value as T,
+      }),
+      vendor: "pass-through",
+      version: 1,
+    },
+  };
+}
+
+export function useUserCacheEntryOnce<T>(
+  key: string, // TODO: make it string[]
+  schema?: StandardSchemaV1<T>
+) {
+  const schemaRef = useRef(schema);
+
+  // null: loaded but null
+  // undefined: not loaded yet
+  const [snapshot, setSnapshot] = useState<T | null | undefined>(undefined);
+  const { cache } = useUserCache();
+  const entry = useMemo(
+    () => cache.entry(key, schemaRef.current ?? passThroughSchema<T>()),
+    [cache, key]
+  );
+
+  useEffect(() => {
+    // reset loading state if cache changes
+    setSnapshot(undefined);
+    entry.get().then((value) => {
+      // Important: must be null, never undefined
+      // otherwise it will says "it's still loading"
+      setSnapshot(value ?? null);
+    });
+  }, [entry]);
+
+  return useMemo(
+    () => ({
+      ...entry,
+      snapshot,
+      isPending: snapshot === undefined,
+    }),
+    [entry, snapshot]
+  );
+}
+
+export function useUserCacheEntry<T>(
+  key: string, // TODO: make it string[]
+  schema?: StandardSchemaV1<T>
+) {
+  const schemaRef = useRef(schema);
   const { cache, scope } = useUserCache();
-  const entry = useMemo(() => cache.entry(key, schema), [cache, key, schema]);
+  const entry = useMemo(
+    () => cache.entry(key, schemaRef.current ?? passThroughSchema<T>()),
+    [cache, key]
+  );
 
   const queryKey = ["user-cache-entry", scope, key];
 
@@ -111,10 +168,13 @@ export function useUserCacheEntry<T>(key: string, schema: StandardSchemaV1<T>) {
     isInEmergencyState: () => set.isPending,
   });
 
-  return {
-    isPending,
-    data,
-    set: set.mutateAsync,
-    del: del.mutateAsync,
-  };
+  return useMemo(
+    () => ({
+      isPending,
+      data,
+      set: set.mutateAsync,
+      del: del.mutateAsync,
+    }),
+    [isPending, data, set, del]
+  );
 }

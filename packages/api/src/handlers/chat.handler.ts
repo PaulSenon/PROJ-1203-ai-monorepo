@@ -257,10 +257,18 @@ export const chatProcedure = chatProcedures.chat
           ? "cancelled"
           : (responseMessage.metadata?.liveStatus ?? "completed");
 
-        await fetchMutation(api.chat.updateThread, {
-          threadId: thread._id,
-          liveStatus: lastMessageStatus,
+        // TODO: update is better but had conflicts.
+        await fetchMutation(api.chat.upsertThread, {
+          threadUuid: thread.uuid,
+          patch: {
+            liveStatus: lastMessageStatus,
+          },
         });
+        // TODO: fix update to use patches then use update again
+        // await fetchMutation(api.chat.updateThread, {
+        //   threadId: thread._id,
+        //   liveStatus: lastMessageStatus,
+        // });
 
         await fetchMutation(api.chat.upsertMessage, {
           threadId: thread._id,

@@ -1,18 +1,17 @@
-import {
-  type OptionalRestArgsOrSkip,
-  type PaginatedQueryArgs,
-  type PaginatedQueryReference,
-  type UsePaginatedQueryReturnType,
-  usePaginatedQuery,
-  useQuery,
+import type {
+  OptionalRestArgsOrSkip,
+  PaginatedQueryArgs,
+  PaginatedQueryReference,
+  UsePaginatedQueryReturnType,
 } from "convex/react";
 import type { FunctionReference, FunctionReturnType } from "convex/server";
+import { usePaginatedQuery, useQuery } from "convex-helpers/react/cache/hooks";
 import { useAuth } from "@/hooks/use-auth";
 
 /**
  * Add auth check to convex query hooks
  */
-export function useQueryBase<Query extends FunctionReference<"query">>(
+export function useCvxQueryAuth<Query extends FunctionReference<"query">>(
   query: Query,
   ...queryArgs: OptionalRestArgsOrSkip<Query>
 ): FunctionReturnType<Query> | undefined {
@@ -22,7 +21,7 @@ export function useQueryBase<Query extends FunctionReference<"query">>(
   return result;
 }
 
-export function usePaginatedQueryBase<Query extends PaginatedQueryReference>(
+export function useCvxPaginatedQueryAuth<Query extends PaginatedQueryReference>(
   query: Query,
   args: PaginatedQueryArgs<Query> | "skip",
   options: {
