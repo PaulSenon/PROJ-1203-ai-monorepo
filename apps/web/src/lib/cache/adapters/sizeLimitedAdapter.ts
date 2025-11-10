@@ -1,4 +1,5 @@
 import z, { type ZodType } from "zod";
+import { createEmergencySave } from "@/lib/browser/page-unload-helpers";
 import type { ICacheAdapter } from "../ICacheAdapter";
 
 type Snapshot<TKey extends string, TValue> = {
@@ -43,12 +44,30 @@ export function sizeLimitedAdapter<
   let keyOrder: TKey[] = [];
   let persistTimeout: ReturnType<typeof setTimeout> | null = null;
 
+  const getSnapshot = () => {
+    const snapshot: Snapshot<TKey, TValue> = {
+      entries: Object.fromEntries(memoryCache.entries()) as Record<
+        TKey,
+        TValue
+      >,
+      keyOrder: [...keyOrder],
+    };
+    return snapshot;
+  };
+
   /**
    * Load full snapshot from storage on first access
    */
   const init = async (): Promise<void> => {
     try {
-      const stored = await adapter.get(storageKey as TKey);
+      const emergencyRestore = createEmergencySave({
+        key: storageKey,
+        getData: getSnapshot,
+        isInEmergency: () => persistTimeout !== null,
+      });
+      const dataToRestore = emergencyRestore?.data;
+
+      const stored = dataToRestore ?? (await adapter.get(storageKey as TKey));
       const snapshot = (await SnapshotSchema.parseAsync(stored)) as Snapshot<
         TKey,
         TValue
@@ -70,6 +89,19 @@ export function sizeLimitedAdapter<
   };
   const initPromise = init();
 
+  const persistNow = async () => {
+    try {
+      const snapshot = getSnapshot();
+
+      await adapter.set(storageKey, snapshot);
+    } catch (error) {
+      // Silently ignore persistence errors
+      console.warn("failed to persist to storage", error);
+    } finally {
+      persistTimeout = null;
+    }
+  };
+
   /**
    * Persist full snapshot to storage with debounce
    */
@@ -78,24 +110,7 @@ export function sizeLimitedAdapter<
       clearTimeout(persistTimeout);
     }
 
-    persistTimeout = setTimeout(async () => {
-      try {
-        const snapshot: Snapshot<TKey, TValue> = {
-          entries: Object.fromEntries(memoryCache.entries()) as Record<
-            TKey,
-            TValue
-          >,
-          keyOrder: [...keyOrder],
-        };
-
-        await adapter.set(storageKey, snapshot);
-      } catch (error) {
-        // Silently ignore persistence errors
-        console.warn("failed to persist to storage", error);
-      } finally {
-        persistTimeout = null;
-      }
-    }, 100);
+    persistTimeout = setTimeout(persistNow, 100);
   };
 
   return {

@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useDraftActions, useDraftState } from "./use-draft";
+import { useChatDraftActions, useChatDraftState } from "./use-chat-draft";
 
 // TODO draft: on new chat from click to new chat button, the draft shouldn't be restored but instead should show a hint to the user if there were a draft saved, with action to restore it
 
@@ -34,9 +34,9 @@ const ChatInputActionsContext = createContext<ChatInputContextActions | null>(
 );
 
 export function ChatInputProvider({ children }: { children: React.ReactNode }) {
-  const draftState = useDraftState();
+  const draftState = useChatDraftState();
 
-  const draftActions = useDraftActions();
+  const draftActions = useChatDraftActions();
   const [input, _setInput] = useState("");
   const inputRef = useHotkeys<HTMLTextAreaElement>(
     ["mod+s"],

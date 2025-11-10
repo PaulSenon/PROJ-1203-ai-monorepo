@@ -105,7 +105,7 @@ type DraftActions = {
 const DraftStateContext = createContext<DraftState | null>(null);
 const DraftActionsContext = createContext<DraftActions | null>(null);
 
-export function useDraftState() {
+export function useChatDraftState() {
   const state = useContext(DraftStateContext);
   if (!state) {
     throw new Error("useDraftState must be used within DraftProvider");
@@ -113,7 +113,7 @@ export function useDraftState() {
   return state;
 }
 
-export function useDraftActions() {
+export function useChatDraftActions() {
   const actions = useContext(DraftActionsContext);
   if (!actions) {
     throw new Error("useDraftActions must be used within DraftProvider");
@@ -153,8 +153,8 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
       async (data: string) => {
         // skip if draft is already the same
         if (draft === data) return;
-        console.log("saving draft", { id, data, isNew });
-        setSaveStatus("saving");
+        // console.log("saving draft", { id, data, isNew });
+        // setSaveStatus("saving");
         try {
           if (isNew) {
             await newChatDraft.setDraft(data);
@@ -271,7 +271,7 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
 }
 
 // TODO: perhaps there is a better way to handle this
-export function DraftProvider({ children }: { children: React.ReactNode }) {
+export function ChatDraftProvider({ children }: { children: React.ReactNode }) {
   const Outlet = useCallback(
     () => <INTERNAL_DraftProvider>{children}</INTERNAL_DraftProvider>,
     [children]

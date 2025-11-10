@@ -1,4 +1,8 @@
 import { useCallback, useEffect } from "react";
+import {
+  emergencyRestore,
+  emergencySave,
+} from "@/lib/browser/page-unload-helpers";
 import { usePageUnload } from "./use-page-unload";
 
 /**
@@ -40,41 +44,29 @@ import { usePageUnload } from "./use-page-unload";
  * });
  * ```
  */
-
-type EmergencySaveOptions<T1, T2 extends T1> = {
+type EmergencySaveOptions<T> = {
   // must be stable between page loads
   key: string;
   // the data state to save in case of emergency
-  data: T1;
+  data: T;
   // the setter function to restore the data (the one that has been skipped by page unload)
-  restoreCallback: (data: T2, { savedAt }: { savedAt: number }) => unknown;
+  restoreCallback: (data: T, { savedAt }: { savedAt: number }) => unknown;
   // the function telling if we are in a state that should be saved in case of emergency
   isInEmergencyState: () => boolean;
 };
-export function useEmergencySave<T1, T2 extends T1>(
-  options: EmergencySaveOptions<T1, T2>
-) {
+export function useEmergencySave<T>(options: EmergencySaveOptions<T>) {
   const { key, restoreCallback, data, isInEmergencyState } = options;
 
-  const emergencySaveKey = `emergency-save:${key}`;
   useEffect(() => {
-    const rawData = localStorage.getItem(emergencySaveKey);
-    if (!rawData) return;
-    try {
-      localStorage.removeItem(emergencySaveKey);
-      console.log("EMERGENCY SAVE RESTORED", { key, rawData });
-      const res = JSON.parse(rawData);
-      restoreCallback(res, { savedAt: Date.now() });
-    } catch (_error) {
-      console.error("Error parsing emergency save", _error);
-    }
-  }, [key, emergencySaveKey, restoreCallback]);
+    const restoredData = emergencyRestore<T>(key);
+    if (restoredData === undefined) return;
+    restoreCallback(restoredData.data, { savedAt: restoredData.savedAt });
+  }, [key, restoreCallback]);
 
-  const emergencySave = useCallback(() => {
+  const saveInEmergency = useCallback(() => {
     if (!isInEmergencyState()) return;
-    console.log("EMERGENCY SAVE TRIGGERED", { key, data });
-    localStorage.setItem(emergencySaveKey, JSON.stringify(data));
-  }, [key, data, isInEmergencyState, emergencySaveKey]);
+    emergencySave(key, data);
+  }, [key, data, isInEmergencyState]);
 
-  usePageUnload(emergencySave);
+  usePageUnload(saveInEmergency);
 }

@@ -1,8 +1,8 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { ChatDraftProvider } from "@/hooks/use-chat-draft";
 import { ChatInputProvider } from "@/hooks/use-chat-input";
-import { DraftProvider } from "@/hooks/use-draft";
 
 export const Route = createFileRoute("/_chat")({
   component: RouteComponent,
@@ -12,9 +12,9 @@ export const Route = createFileRoute("/_chat")({
 
 function ChatProviders({ children }: { children: React.ReactNode }) {
   return (
-    <DraftProvider>
+    <ChatDraftProvider>
       <ChatInputProvider>{children}</ChatInputProvider>
-    </DraftProvider>
+    </ChatDraftProvider>
   );
 }
 

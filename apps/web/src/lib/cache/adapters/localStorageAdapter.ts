@@ -1,3 +1,4 @@
+import { deferSyncTask } from "@/helpers/defer-sync-task";
 import type { ICacheAdapter } from "../ICacheAdapter";
 
 export const localCacheAdapter: ICacheAdapter = {
@@ -12,14 +13,8 @@ export const localCacheAdapter: ICacheAdapter = {
   },
   set: async (key, value) => {
     const serializedValue = JSON.stringify(value);
-    if ("requestIdleCallback" in window) {
-      requestIdleCallback(() => localStorage.setItem(key, serializedValue), {
-        timeout: 0,
-      });
-    } else {
-      setTimeout(() => localStorage.setItem(key, serializedValue), 0);
-    }
+    await deferSyncTask(() => localStorage.setItem(key, serializedValue));
   },
-  del: async (key) => localStorage.removeItem(key),
-  clear: async () => localStorage.clear(),
+  del: async (key) => deferSyncTask(() => localStorage.removeItem(key)),
+  clear: async () => deferSyncTask(() => localStorage.clear()),
 };

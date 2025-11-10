@@ -14,6 +14,7 @@ import { multiLayerCache } from "@/lib/cache/adapters/multiLayerCache";
 import { sizeLimitedAdapter } from "@/lib/cache/adapters/sizeLimitedAdapter";
 import { Cache } from "@/lib/cache/LocalCache";
 import { useAuth } from "./use-auth";
+import { useEmergencySave } from "./utils/use-emergency-save";
 
 export const lastLoggedInUserIdCache = {
   get: () => localStorage.getItem("lastLoggedInUserId"),
@@ -197,12 +198,12 @@ export function useUserCacheEntry<T>(
     },
   });
 
-  // useEmergencySave({
-  //   key: queryKey.join(":"),
-  //   data,
-  //   restoreCallback: (restored) => restored && set.mutate(restored),
-  //   isInEmergencyState: () => set.isPending,
-  // });
+  useEmergencySave({
+    key: queryKey.join(":"),
+    data,
+    restoreCallback: (restored) => restored && set.mutate(restored),
+    isInEmergencyState: () => set.isPending,
+  });
 
   return useMemo(
     () => ({
