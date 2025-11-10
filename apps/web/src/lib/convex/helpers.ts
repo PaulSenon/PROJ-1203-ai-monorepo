@@ -18,11 +18,10 @@ import { convexToJson, type Value } from "convex/values";
  * @param args Arguments to the function, like { foo: "bar" }
  * @returns A string key that uniquely identifies the query and its arguments.
  */
-export function createQueryKey<Query extends FunctionReference<"query">>(
-  query: Query,
-  args: FunctionArgs<Query>
-): string {
-  const queryString = getFunctionName(query);
+export function createQueryKey<
+  Fn extends FunctionReference<"query" | "mutation">,
+>(fn: Fn, args: FunctionArgs<Fn>): string {
+  const queryString = getFunctionName(fn);
   const key = [queryString, convexToJson(args)];
   const queryKey = JSON.stringify(key);
   return queryKey;

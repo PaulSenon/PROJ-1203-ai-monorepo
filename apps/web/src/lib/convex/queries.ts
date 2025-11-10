@@ -1,6 +1,7 @@
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
 import type { Doc, Id } from "@ai-monorepo/convex/convex/_generated/dataModel";
-import { insertAtTop, useMutation } from "convex/react";
+import { insertAtTop } from "convex/react";
+import { useCvxMutationAuth } from "@/hooks/queries/convex/utils/use-convex-mutation-0-auth";
 import { paginatedQueryBuilder, queryBuilder } from "./helpers";
 
 /**
@@ -19,35 +20,34 @@ const convexQueries = {
 } as const;
 
 const convexMutations = {
-  // TODO: finish this user prefs thingy
   upsertChatPreferences: () =>
-    useMutation(api.users.upsertUserChatPreferences).withOptimisticUpdate(
-      (localStore, mutationArgs) => {
-        const chatPreferencesQuery = convexQueries.getChatPreferences();
-        const value = localStore.getQuery(
-          chatPreferencesQuery.query,
-          ...chatPreferencesQuery.args
-        );
-        localStore.setQuery(
-          chatPreferencesQuery.query,
-          chatPreferencesQuery.args,
-          {
-            // if new
-            _id: crypto.randomUUID() as Id<"userChatPreferences">,
-            _creationTime: Date.now(),
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            userId: crypto.randomUUID() as Id<"users">,
-            // if existing
-            ...value,
-            // optimistic patch
-            preferredModelId: mutationArgs?.patch?.preferredModelId,
-          }
-        );
-      }
-    ),
+    useCvxMutationAuth(
+      api.users.upsertUserChatPreferences
+    ).withOptimisticUpdate((localStore, mutationArgs) => {
+      const chatPreferencesQuery = convexQueries.getChatPreferences();
+      const value = localStore.getQuery(
+        chatPreferencesQuery.query,
+        ...chatPreferencesQuery.args
+      );
+      localStore.setQuery(
+        chatPreferencesQuery.query,
+        { ...chatPreferencesQuery.args },
+        {
+          // if new
+          _creationTime: Date.now(),
+          _id: crypto.randomUUID() as Id<"userChatPreferences">,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          userId: crypto.randomUUID() as Id<"users">,
+          // if existing
+          ...value,
+          // optimistic patch
+          preferredModelId: mutationArgs?.patch?.preferredModelId,
+        }
+      );
+    }),
   upsertThread: () =>
-    useMutation(api.chat.upsertThread).withOptimisticUpdate(
+    useCvxMutationAuth(api.chat.upsertThread).withOptimisticUpdate(
       (localStore, mutationArgs) => {
         // thread query
         const threadQuery = convexQueries.getThread({
