@@ -153,8 +153,8 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
       async (data: string) => {
         // skip if draft is already the same
         if (draft === data) return;
-        // console.log("saving draft", { id, data, isNew });
-        // setSaveStatus("saving");
+        console.log("saving draft", { id, data, isNew });
+        setSaveStatus("saving");
         try {
           if (isNew) {
             await newChatDraft.setDraft(data);
