@@ -17,9 +17,55 @@ const convexQueries = {
   getThread: queryBuilder(api.chat.getThread),
   getAllThreadMessagesAsc: queryBuilder(api.chat.getAllThreadMessagesAsc),
   getCurrentUser: queryBuilder(api.users.getCurrentUser),
+  getDraft: queryBuilder(api.chat.getDraft),
 } as const;
 
 const convexMutations = {
+  draft: {
+    upsert: () =>
+      useCvxMutationAuth(api.chat.upsertDraft).withOptimisticUpdate(
+        (localStore, mutationArgs) => {
+          const draftQuery = convexQueries.getDraft({
+            threadUuid: mutationArgs.threadUuid,
+          });
+          const draft = localStore.getQuery(
+            draftQuery.query,
+            ...draftQuery.args
+          );
+          // TODO: maybe not ...args but just args[0] ?
+          localStore.setQuery(draftQuery.query, ...draftQuery.args, {
+            // if new
+            _id: crypto.randomUUID() as Id<"drafts">,
+            _creationTime: Date.now(),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            userId: crypto.randomUUID() as Id<"users">,
+            threadId: crypto.randomUUID() as Id<"threads">,
+            // if existing
+            ...draft,
+            // optimistic patch
+            data: mutationArgs.data,
+          });
+        }
+      ),
+    delete: () =>
+      useCvxMutationAuth(api.chat.deleteDraft).withOptimisticUpdate(
+        (localStore, mutationArgs) => {
+          const draftQuery = convexQueries.getDraft({
+            threadUuid: mutationArgs.threadUuid,
+          });
+          const draft = localStore.getQuery(
+            draftQuery.query,
+            ...draftQuery.args
+          );
+          if (!draft) return;
+          localStore.setQuery(draftQuery.query, ...draftQuery.args, {
+            ...draft,
+            data: undefined,
+          });
+        }
+      ),
+  },
   upsertChatPreferences: () =>
     useCvxMutationAuth(
       api.users.upsertUserChatPreferences

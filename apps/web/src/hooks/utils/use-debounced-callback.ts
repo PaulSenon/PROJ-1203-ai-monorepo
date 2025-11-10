@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { usePageUnload } from "./use-page-unload";
 
 type DebounceOptions = {
@@ -74,5 +74,5 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   // flush on page unload
   usePageUnload(() => flush());
 
-  return { debounced, commit: flush };
+  return useMemo(() => ({ debounced, commit: flush }), [debounced, flush]);
 }

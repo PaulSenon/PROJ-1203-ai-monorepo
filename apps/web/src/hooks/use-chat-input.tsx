@@ -1,6 +1,4 @@
 import type { AllowedModelIds } from "@ai-monorepo/ai/model.registry";
-import { api } from "@ai-monorepo/convex/convex/_generated/api";
-import { useConvex, useMutation } from "convex/react";
 import {
   createContext,
   type RefObject,
@@ -8,17 +6,10 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { toast } from "sonner";
-import z from "zod";
-import { useTsQueryInitialValue } from "./queries/tanstack/use-tanstack-query-2-initial-value";
-import { useChatNav } from "./use-chat-nav";
-import { useUserCacheEntry } from "./use-user-cache";
-import { useSaveToClipboard } from "./utils/uas-save-to-clipboard";
-import { useDebouncedCallback } from "./utils/use-debounced-callback";
+import { useDraftActions, useDraftState } from "./use-draft";
 
 // TODO draft: on new chat from click to new chat button, the draft shouldn't be restored but instead should show a hint to the user if there were a draft saved, with action to restore it
 
@@ -27,7 +18,7 @@ type ChatInputContextState = {
   selectedModelId: AllowedModelIds;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   disabled: boolean;
-  isSaveDraftPending: boolean;
+  isPending: boolean;
 };
 
 type ChatInputContextActions = {
@@ -42,24 +33,18 @@ const ChatInputActionsContext = createContext<ChatInputContextActions | null>(
   null
 );
 
-function _ChatInputProvider({ children }: { children: React.ReactNode }) {
-  // export function useChatInput() {
-  const {
-    draft,
-    isPending: isPendingDraft,
-    setDraft,
-    delDraft,
-    commitSave,
-    isSavePending,
-  } = useChatDraft();
+export function ChatInputProvider({ children }: { children: React.ReactNode }) {
+  const draftState = useDraftState();
+
+  const draftActions = useDraftActions();
   const [input, _setInput] = useState("");
   const inputRef = useHotkeys<HTMLTextAreaElement>(
     ["mod+s"],
     () => {
       console.log("commitSave");
-      commitSave();
+      draftActions.commitSave();
     },
-    [commitSave],
+    [draftActions.commitSave],
     {
       enableOnFormTags: ["textarea"],
       preventDefault: true,
@@ -67,15 +52,22 @@ function _ChatInputProvider({ children }: { children: React.ReactNode }) {
   );
 
   // goal: only set input state once first when draft ready and ignore further changes
-  // const draftReadySnapshot = useStateSnapshotWhenReady(draft, !isPendingDraft);
   useEffect(() => {
-    console.log("draft", draft);
+    console.log("draft", {
+      draft: draftState.draft,
+      status: draftState.status,
+    });
+    if (!draftState.draft) return;
     if (!inputRef.current) return;
-    if (inputRef.current.value.length > 0) return;
-    if (isPendingDraft) return;
-    // TODO: we could detect when draft but already inputs not avoid override but prompt user to overwrite
-    _setInput(draft ?? "");
-  }, [inputRef, draft, isPendingDraft]);
+    if (inputRef.current.value === draftState.draft) return;
+    if (draftState.status === "fresh" && inputRef.current.value.length > 0) {
+      console.warn(
+        "draft received but input not empty. Ignoring draft for now..."
+      );
+      return;
+    }
+    _setInput(draftState.draft);
+  }, [inputRef, draftState.draft, draftState.status]);
 
   // TODO
   const [selectedModelId, setSelectedModelId] =
@@ -86,19 +78,18 @@ function _ChatInputProvider({ children }: { children: React.ReactNode }) {
       // never alter input reactivity
       _setInput(value);
 
-      // only skip draft save when no change or is already saving
+      // only skip draft save when no change
       // this avoid looping back set() while del() when clear() is called
       if (input === value) return;
-      if (isSavePending) return;
-      setDraft(value);
+      draftActions.setDraft(value);
     },
-    [input, setDraft, isSavePending]
+    [input, draftActions.setDraft]
   );
 
   const clear = useCallback(() => {
     _setInput("");
-    delDraft();
-  }, [delDraft]);
+    draftActions.delDraft();
+  }, [draftActions.delDraft]);
 
   const focus = useCallback(() => {
     if (inputRef.current) {
@@ -111,21 +102,22 @@ function _ChatInputProvider({ children }: { children: React.ReactNode }) {
       input,
       selectedModelId,
       inputRef,
-      disabled: isPendingDraft,
-      isSaveDraftPending: isSavePending,
+      isPending: draftState.status !== "fresh",
+      disabled: draftState.status !== "fresh",
     }),
-    [input, selectedModelId, inputRef, isPendingDraft, isSavePending]
-  );
+    [input, selectedModelId, inputRef, draftState.status]
+  ) satisfies ChatInputContextState;
+
   const actions = useMemo(
     () => ({
       focus,
-      saveDraft: commitSave,
+      saveDraft: draftActions.commitSave,
       clear,
       setInput,
       setSelectedModelId,
     }),
-    [focus, commitSave, clear, setInput]
-  );
+    [focus, draftActions.commitSave, clear, setInput]
+  ) satisfies ChatInputContextActions;
 
   return (
     <ChatInputStateContext.Provider value={state}>
@@ -155,158 +147,3 @@ export function useChatInputActions() {
   }
   return context;
 }
-
-type ChatDraftState = {
-  draft: string | undefined;
-  isPending: boolean;
-  isSavePending: boolean;
-};
-type ChatDraftActions = {
-  setDraft: (data: string) => Promise<void>;
-  delDraft: () => Promise<void>;
-  commitSave: () => Promise<void>;
-};
-const ChatDraftContext = createContext<
-  (ChatDraftState & ChatDraftActions) | null
->(null);
-
-function _ChatDraftProvider({ children }: { children: React.ReactNode }) {
-  const convex = useConvex();
-  const saveToClipboard = useSaveToClipboard();
-  const { isNew, id } = useChatNav();
-  const [isSavePending, setIsSavePending] = useState(false);
-
-  // non reactive but always refreshed when id changes (no stale time)
-  // TODO: review draft lifecycle since we handle snapshot at query level
-  const draftFromDb = useTsQueryInitialValue({
-    queryKey: ["draft", id],
-    queryFn: () =>
-      convex
-        .query(api.chat.getDraft, { threadUuid: id })
-        .then((data) => data?.data ?? null),
-  });
-  // ------------------------------------------------------------
-  const isPendingDb = draftFromDb.isPending;
-  // TODO: set/delete should mutate useTsQueryInitialValue cached data (delete)
-  const setDraftDb = useMutation(api.chat.upsertDraft);
-  const deleteDraftDb = useMutation(api.chat.deleteDraft);
-
-  // TODO: create a useEmergencyMutation that replay cancelled mutation on next page load
-  // useEmergencySave({
-  //   key: ["draft", id].join(":"),
-  //   data: {
-  //     threadUuid: id,
-  //     data: draftFromDb.data,
-  //   },
-  //   restoreCallback: (data) => {
-  //     if (!data.data) return;
-  //     setDraftDb({ threadUuid: data.threadUuid, data: data.data });
-  //   },
-  //   isInEmergencyState: () => setDraftDb,
-  // });
-
-  const {
-    isPending: isPendingCache,
-    data: draftFromCache,
-    set: setDraftCache,
-    del: delDraftCache,
-  } = useUserCacheEntry("draft:new", z.string());
-
-  const isPending = isNew ? isPendingCache : isPendingDb;
-  const draft = isNew ? draftFromCache : draftFromDb.data;
-
-  const abortController = useRef<AbortController>(new AbortController());
-
-  const { debounced: setDraft, commit: commitSetDraft } = useDebouncedCallback(
-    async (data: string) => {
-      // skip if draft is already the same
-      if (draft === data) return;
-      console.log("saving draft", { data, isNew, id });
-      setIsSavePending(true);
-      try {
-        if (isNew) {
-          await setDraftCache(data);
-        } else {
-          await setDraftDb({
-            threadUuid: id,
-            data,
-          });
-        }
-      } catch (error) {
-        console.error(error);
-        const { success } = await saveToClipboard(data);
-        if (success) {
-          toast.error(
-            "Failed to save draft, it has been saved to your clipboard"
-          );
-        } else {
-          toast.error(
-            "Failed to save draft, and failed to save to clipboard. You might want to copy it manually to avoid losing your work"
-          );
-        }
-      } finally {
-        setIsSavePending(false);
-      }
-    },
-    [isNew, setDraftCache, setDraftDb, id],
-    { delay: 2000, abortController: abortController.current }
-  );
-
-  const { debounced: delDraft } = useDebouncedCallback(
-    async () => {
-      abortController.current.abort();
-      console.log("delDraft", { isNew, id });
-      try {
-        if (isNew) {
-          await delDraftCache();
-        } else {
-          if (draftFromDb === null) return;
-          await deleteDraftDb({
-            threadUuid: id,
-          });
-        }
-      } catch (error) {
-        console.error("Delete draft failed", error);
-      }
-    },
-    [isNew, delDraftCache, deleteDraftDb, id, abortController],
-    { delay: 2000, immediate: true }
-  );
-
-  const value = {
-    draft: draft ?? undefined,
-    isPending,
-    isSavePending,
-    setDraft,
-    delDraft,
-    commitSave: commitSetDraft,
-  } satisfies ChatDraftState & ChatDraftActions;
-
-  return (
-    <ChatDraftContext.Provider value={value}>
-      {children}
-    </ChatDraftContext.Provider>
-  );
-}
-
-export function useChatDraft() {
-  const context = useContext(ChatDraftContext);
-  if (!context) {
-    throw new Error("useChatDraft must be used within a ChatDraftProvider");
-  }
-  return context;
-}
-
-export const ChatInputProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
-  // Important: whole input context must be keyed by chat id to rerender when chat id changes
-  const chatNav = useChatNav();
-  return (
-    <_ChatDraftProvider key={chatNav.id}>
-      <_ChatInputProvider>{children}</_ChatInputProvider>
-    </_ChatDraftProvider>
-  );
-};

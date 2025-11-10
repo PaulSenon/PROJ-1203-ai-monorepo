@@ -2,6 +2,7 @@ import {
   type AllowedModelIds,
   allowedModelIds,
 } from "@ai-monorepo/ai/model.registry";
+import { useEffect } from "react";
 import { useActiveThreadActions } from "@/hooks/use-chat-active";
 import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
 import {
@@ -38,6 +39,12 @@ export function ChatInput() {
     });
   };
 
+  // TODO: perhaps we need better autofocus logic
+  useEffect(() => {
+    if (inputState.isPending) return;
+    inputActions.focus();
+  }, [inputState.isPending, inputActions.focus]);
+
   return (
     <PromptInput className="relative mt-4" onSubmit={handleSubmit}>
       <PromptInputHeader>
@@ -47,6 +54,7 @@ export function ChatInput() {
       </PromptInputHeader>
       <PromptInputBody>
         <PromptInputTextarea
+          disabled={inputState.isPending}
           onChange={(e) => inputActions.setInput(e.target.value)}
           ref={inputState.inputRef}
           value={inputState.input}
