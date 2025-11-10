@@ -10,9 +10,10 @@ import type { ICacheAdapter } from "../ICacheAdapter";
  * await multiCache.set("key", value); // Sets in both layers
  * ```
  */
-export function multiLayerCache<TKey extends string = string, TValue = unknown>(
-  adapters: ICacheAdapter<TKey, TValue>[]
-): ICacheAdapter<TKey, TValue> {
+export function multiLayerCacheAdapter<
+  TKey extends string = string,
+  TValue = unknown,
+>(adapters: ICacheAdapter<TKey, TValue>[]): ICacheAdapter<TKey, TValue> {
   if (adapters.length === 0) {
     throw new Error("multiLayerCache requires at least one adapter");
   }

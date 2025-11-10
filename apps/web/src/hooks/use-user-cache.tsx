@@ -8,11 +8,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { idbKvAdapter } from "@/lib/cache/adapters/idbKV";
-import { localCacheAdapter } from "@/lib/cache/adapters/localStorageAdapter";
-import { multiLayerCache } from "@/lib/cache/adapters/multiLayerCache";
-import { sizeLimitedAdapter } from "@/lib/cache/adapters/sizeLimitedAdapter";
-import { Cache } from "@/lib/cache/LocalCache";
+import { idbAdapter } from "@/lib/cache/adapters/idbAdapter";
+import { inMemoryEntryLimitedBufferAdapter } from "@/lib/cache/adapters/inMemoryEntryLimitedBufferAdapter";
+import { localStorageAdapter } from "@/lib/cache/adapters/localStorageAdapter";
+import { multiLayerCacheAdapter } from "@/lib/cache/adapters/multiLayerCacheAdapter";
+import { Cache } from "@/lib/cache/Cache";
 import { useAuth } from "./use-auth";
 import { useEmergencySave } from "./utils/use-emergency-save";
 
@@ -21,22 +21,15 @@ export const lastLoggedInUserIdCache = {
   set: (userId: string) => localStorage.setItem("lastLoggedInUserId", userId),
 };
 
-// const passThroughCacheAdapter: ICacheAdapter<string, unknown> = {
-//   get: () => Promise.resolve(undefined),
-//   set: () => Promise.resolve(),
-//   del: () => Promise.resolve(),
-//   clear: () => Promise.resolve(),
-// };
-
 function createUserCache(cacheScope: string) {
   return new Cache(
-    multiLayerCache([
-      sizeLimitedAdapter(localCacheAdapter, {
+    multiLayerCacheAdapter([
+      inMemoryEntryLimitedBufferAdapter(localStorageAdapter, {
         maxKeys: 500,
         storageKey: cacheScope,
       }),
-      idbKvAdapter(cacheScope),
-      // passThroughCacheAdapter,
+      idbAdapter(cacheScope),
+      // cacheDebuggerAdapter,
     ])
   );
 }

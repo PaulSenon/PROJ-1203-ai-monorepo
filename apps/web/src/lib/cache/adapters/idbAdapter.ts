@@ -6,7 +6,7 @@ import type { ICacheAdapter } from "../ICacheAdapter";
  * Each instance manages its own database with a single keyval store.
  */
 
-export function idbKvAdapter(dbName: string): ICacheAdapter {
+export function idbAdapter(dbName: string): ICacheAdapter {
   return new IdbKv(dbName);
 }
 class IdbKv<TKey extends string = string, TValue = unknown>

@@ -1,7 +1,7 @@
 import { deferSyncTask } from "@/helpers/defer-sync-task";
 import type { ICacheAdapter } from "../ICacheAdapter";
 
-export const localCacheAdapter: ICacheAdapter = {
+export const localStorageAdapter: ICacheAdapter = {
   get: async (key) => {
     const item = localStorage.getItem(key);
     if (item === null) return;

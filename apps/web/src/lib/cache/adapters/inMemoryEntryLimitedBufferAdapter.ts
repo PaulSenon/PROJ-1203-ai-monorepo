@@ -25,7 +25,7 @@ const SnapshotSchema = z.object({
  * });
  * ```
  */
-export function sizeLimitedAdapter<
+export function inMemoryEntryLimitedBufferAdapter<
   TKey extends string = string,
   TValue = unknown,
 >(
