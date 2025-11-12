@@ -1,4 +1,3 @@
-import type { AllowedModelIds } from "@ai-monorepo/ai/model.registry";
 import {
   createContext,
   type RefObject,
@@ -15,7 +14,6 @@ import { useChatDraftActions, useChatDraftState } from "./use-chat-draft";
 
 type ChatInputContextState = {
   input: string;
-  selectedModelId: AllowedModelIds;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   disabled: boolean;
   isPending: boolean;
@@ -26,7 +24,6 @@ type ChatInputContextActions = {
   saveDraft: () => void;
   clear: () => void;
   setInput: (value: string) => void;
-  setSelectedModelId: (value: AllowedModelIds) => void;
 };
 const ChatInputStateContext = createContext<ChatInputContextState | null>(null);
 const ChatInputActionsContext = createContext<ChatInputContextActions | null>(
@@ -69,10 +66,6 @@ export function ChatInputProvider({ children }: { children: React.ReactNode }) {
     _setInput(draftState.draft);
   }, [inputRef, draftState.draft, draftState.status]);
 
-  // TODO
-  const [selectedModelId, setSelectedModelId] =
-    useState<AllowedModelIds>("openai:gpt-5-mini");
-
   const setInput = useCallback(
     (value: string) => {
       // never alter input reactivity
@@ -100,12 +93,11 @@ export function ChatInputProvider({ children }: { children: React.ReactNode }) {
   const state = useMemo(
     () => ({
       input,
-      selectedModelId,
       inputRef,
       isPending: draftState.status !== "fresh",
       disabled: draftState.status !== "fresh",
     }),
-    [input, selectedModelId, inputRef, draftState.status]
+    [input, inputRef, draftState.status]
   ) satisfies ChatInputContextState;
 
   const actions = useMemo(
@@ -114,7 +106,6 @@ export function ChatInputProvider({ children }: { children: React.ReactNode }) {
       saveDraft: draftActions.commitSave,
       clear,
       setInput,
-      setSelectedModelId,
     }),
     [focus, draftActions.commitSave, clear, setInput]
   ) satisfies ChatInputContextActions;

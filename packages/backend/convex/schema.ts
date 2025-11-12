@@ -64,6 +64,11 @@ const schema = defineSchema({
   userChatPreferences: defineTable({
     userId: v.id("users"),
     preferredModelId: v.optional(v.string()),
+    lastUsedModelId: v.optional(v.string()),
+    modelToPickForNewThread: v.union(
+      v.literal("preferred"),
+      v.literal("lastUsed")
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("byUserId", ["userId"]),

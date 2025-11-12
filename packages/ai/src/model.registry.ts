@@ -105,6 +105,18 @@ const registryUtils = <const R extends ProviderRegistryProvider>() => ({
     );
   },
 });
+function createLanguageModelConfig<const T extends string>(
+  config: LanguageModelConfig<T>
+): LanguageModelConfig<T> {
+  return config;
+}
+
+export type LanguageModelConfig<T extends string> = {
+  [K in T]: {
+    id: K;
+    label: string;
+  };
+};
 
 export function createLanguageModelSubList<
   const R extends MyProviderRegistry,
@@ -127,6 +139,7 @@ export function createLanguageModelSubListValidator<
     }
   );
 }
+
 /**
  * THIS IS WHERE TO ADD / REMOVE MODEL IDS
  */
@@ -140,5 +153,24 @@ export const modelIdValidator =
     allowedModelIds
   );
 
-export type GenericModelId = InferAllLanguageModelFullId<MyProviderRegistry>;
+type GenericModelId = InferAllLanguageModelFullId<MyProviderRegistry>;
 export type AllowedModelIds = (typeof allowedModelIds)[number] & GenericModelId;
+export function isAllowedModelId(id: unknown): id is AllowedModelIds {
+  return (
+    typeof id === "string" &&
+    allowedModelIds.some((allowedId) => allowedId === id)
+  );
+}
+
+export const modelsConfig = createLanguageModelConfig<AllowedModelIds>({
+  "openai:gpt-5-mini": {
+    id: "openai:gpt-5-mini",
+    label: "GPT-5 Mini",
+  },
+  "google:gemini-2.5-flash-lite": {
+    id: "google:gemini-2.5-flash-lite",
+    label: "Gemini 2.5 Flash Lite",
+  },
+});
+
+export const defaultModelId: AllowedModelIds = "openai:gpt-5-mini";

@@ -3,6 +3,7 @@ import {
   emergencyRestore,
   emergencySave,
 } from "@/lib/browser/page-unload-helpers";
+import type { MaybePromise } from "@/lib/utils";
 import { usePageUnload } from "./use-page-unload";
 
 /**
@@ -50,7 +51,10 @@ type EmergencySaveOptions<T> = {
   // the data state to save in case of emergency
   data: T;
   // the setter function to restore the data (the one that has been skipped by page unload)
-  restoreCallback: (data: T, { savedAt }: { savedAt: number }) => unknown;
+  restoreCallback: (
+    data: T,
+    { savedAt }: { savedAt: number }
+  ) => MaybePromise<void>;
   // the function telling if we are in a state that should be saved in case of emergency
   isInEmergencyState: () => boolean;
 };

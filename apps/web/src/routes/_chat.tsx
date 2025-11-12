@@ -3,6 +3,7 @@ import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ChatDraftProvider } from "@/hooks/use-chat-draft";
 import { ChatInputProvider } from "@/hooks/use-chat-input";
+import { ModelSelectorProvider } from "@/hooks/use-user-preferences";
 
 export const Route = createFileRoute("/_chat")({
   component: RouteComponent,
@@ -13,7 +14,9 @@ export const Route = createFileRoute("/_chat")({
 function ChatProviders({ children }: { children: React.ReactNode }) {
   return (
     <ChatDraftProvider>
-      <ChatInputProvider>{children}</ChatInputProvider>
+      <ModelSelectorProvider>
+        <ChatInputProvider>{children}</ChatInputProvider>
+      </ModelSelectorProvider>
     </ChatDraftProvider>
   );
 }

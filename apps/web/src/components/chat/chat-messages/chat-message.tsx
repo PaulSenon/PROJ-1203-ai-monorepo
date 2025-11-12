@@ -6,14 +6,14 @@ import {
   MessageContent as AIElementsMessageContent,
 } from "@/components/ai-elements/message";
 import { useActiveThreadActions } from "@/hooks/use-chat-active";
-import { useChatInputState } from "@/hooks/use-chat-input";
+import { useModelSelectorState } from "@/hooks/use-user-preferences";
 import { ChatMessageError } from "./chat-message-error";
 import { ChatMessagePartReasoning } from "./chat-message-parts/chat-message-part-reasoning";
 import { ChatMessagePartText } from "./chat-message-parts/chat-message-part-text";
 
 export function ChatMessage({ message }: { message: MyUIMessage }) {
   const { regenerate } = useActiveThreadActions();
-  const { selectedModelId } = useChatInputState(); // TODO: tmp while not "retry with model" feature
+  const { selectedModelId } = useModelSelectorState(); // TODO: tmp while not "retry with model" feature
   return (
     <div className="flex flex-col items-start gap-2">
       <AIElementsMessage from={message.role} key={message.id}>

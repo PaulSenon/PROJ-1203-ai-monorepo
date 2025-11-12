@@ -1,4 +1,5 @@
 import type {
+  MutationOptions,
   OptionalRestArgsOrSkip,
   PaginatedQueryArgs,
   PaginatedQueryReference,
@@ -91,12 +92,28 @@ export function queryBuilder<TQuery extends FunctionReference<"query">>(
         if (doSkip) return [query, ...["skip"]] as QueryOptionsOrSkip<TQuery>;
         return [query, ...args];
       },
-      neverSkip(): QueryOptionsOrSkip<TQuery> {
+      neverSkip(): QueryOptions<TQuery> {
         return [query, ...args];
       },
     },
     query,
     args,
+  });
+}
+
+export function mutationBuilder<
+  TMutation extends FunctionReference<"mutation">,
+>(mutation: TMutation, options: MutationOptions<FunctionArgs<TMutation>>) {
+  return (args: FunctionArgs<TMutation>) => ({
+    options: (): [
+      TMutation,
+      FunctionArgs<TMutation>,
+      MutationOptions<FunctionArgs<TMutation>>,
+      // ...ArgsAndOptions<TMutation, MutationOptions<FunctionArgs<TMutation>>>,
+    ] => [mutation, args, options],
+    mutation,
+    args,
+    mutationOptions: options,
   });
 }
 

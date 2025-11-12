@@ -1,10 +1,7 @@
-import {
-  type AllowedModelIds,
-  allowedModelIds,
-} from "@ai-monorepo/ai/model.registry";
 import { useEffect } from "react";
 import { useActiveThreadActions } from "@/hooks/use-chat-active";
 import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
+import { useModelSelectorState } from "@/hooks/use-user-preferences";
 import {
   PromptInput,
   PromptInputAttachment,
@@ -12,21 +9,18 @@ import {
   PromptInputBody,
   PromptInputFooter,
   PromptInputHeader,
-  PromptInputModelSelect,
-  PromptInputModelSelectContent,
-  PromptInputModelSelectItem,
-  PromptInputModelSelectTrigger,
-  PromptInputModelSelectValue,
   type PromptInputProps,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
-} from "../ai-elements/prompt-input";
+} from "../../ai-elements/prompt-input";
+import { ChatModelSelector } from "./chat-model-selector";
 
 export function ChatInput() {
   const inputState = useChatInputState();
   const inputActions = useChatInputActions();
   const { sendMessage } = useActiveThreadActions();
+  const { selectedModelId } = useModelSelectorState();
   const handleSubmit: PromptInputProps["onSubmit"] = (message, event) => {
     if (!message.text || message.text.trim() === "") return;
 
@@ -34,7 +28,7 @@ export function ChatInput() {
     sendMessage({
       text: message.text,
       options: {
-        selectedModelId: inputState.selectedModelId,
+        selectedModelId,
       },
     });
   };
@@ -73,23 +67,7 @@ export function ChatInput() {
             <GlobeIcon size={16} />
             <span>Search</span>
           </PromptInputButton> */}
-          <PromptInputModelSelect
-            onValueChange={(value) =>
-              inputActions.setSelectedModelId(value as AllowedModelIds)
-            }
-            value={inputState.selectedModelId}
-          >
-            <PromptInputModelSelectTrigger>
-              <PromptInputModelSelectValue />
-            </PromptInputModelSelectTrigger>
-            <PromptInputModelSelectContent>
-              {allowedModelIds.map((modelId) => (
-                <PromptInputModelSelectItem key={modelId} value={modelId}>
-                  {modelId}
-                </PromptInputModelSelectItem>
-              ))}
-            </PromptInputModelSelectContent>
-          </PromptInputModelSelect>
+          <ChatModelSelector />
         </PromptInputTools>
         <PromptInputSubmit
           className="duration-0"

@@ -45,3 +45,21 @@ export const _1_2025_11_07_add_created_at_bulk_order_to_messages =
 export const runAddCreatedAtBulkOrder = migrations.runner(
   internal.migrations._1_2025_11_07_add_created_at_bulk_order_to_messages
 );
+
+// DEV: DONE
+// PROD: DONE
+export const _1_2025_11_12_add_user_preferences_model_to_pick_for_new_thread =
+  migrations.define({
+    table: "userChatPreferences",
+    migrateOne(_ctx, doc) {
+      if (doc.modelToPickForNewThread) return doc;
+      return {
+        modelToPickForNewThread: "lastUsed" as const,
+      };
+    },
+  });
+// pnpm dlx convex run migrations:runAddUserPreferencesModelToPickForNewThread
+export const runAddUserPreferencesModelToPickForNewThread = migrations.runner(
+  internal.migrations
+    ._1_2025_11_12_add_user_preferences_model_to_pick_for_new_thread
+);

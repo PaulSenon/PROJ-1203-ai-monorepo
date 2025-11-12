@@ -10,7 +10,7 @@ import { INTERNAL_getCurrentUser, INTERNAL_getCurrentUserOrThrow } from "./lib";
 import { mutationWithRLS, queryWithRLS } from "./rls";
 import { subscriptionTiers } from "./schema";
 
-const INTERNAL_getUserChatPreferences = async (
+export const INTERNAL_getUserChatPreferences = async (
   ctx: QueryCtx,
   args: { userId: Id<"users"> }
 ) => {
@@ -21,7 +21,7 @@ const INTERNAL_getUserChatPreferences = async (
     .unique();
   return userChatPreferences;
 };
-const INTERNAL_upsertUserChatPreferences = async (
+export const INTERNAL_upsertUserChatPreferences = async (
   ctx: MutationCtx,
   args: {
     userId: Id<"users">;
@@ -45,6 +45,7 @@ const INTERNAL_upsertUserChatPreferences = async (
 
   const userChatPreferencesId = await ctx.db.insert("userChatPreferences", {
     ...patch,
+    modelToPickForNewThread: patch?.modelToPickForNewThread ?? "lastUsed",
     userId,
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -65,6 +66,10 @@ export const upsertUserChatPreferences = mutationWithRLS({
     patch: v.optional(
       v.object({
         preferredModelId: v.optional(v.string()),
+        lastUsedModelId: v.optional(v.string()),
+        modelToPickForNewThread: v.optional(
+          v.union(v.literal("preferred"), v.literal("lastUsed"))
+        ),
       })
     ),
   },

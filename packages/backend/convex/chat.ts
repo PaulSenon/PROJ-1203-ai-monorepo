@@ -10,6 +10,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { INTERNAL_getCurrentUserOrThrow } from "./lib";
 import { mutationWithRLS, queryWithRLS } from "./rls";
 import { lifecycleStates, liveStatuses, vv } from "./schema";
+import { INTERNAL_upsertUserChatPreferences } from "./users";
 
 async function InternalDeleteMessageWithParts(
   ctx: MutationCtx,
@@ -719,6 +720,18 @@ export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
 
     const threadPromise = ctx.db.get(threadId);
     const insertPromises: Promise<unknown>[] = [];
+
+    // also update user preferences if last used model id is set
+    if (threadPatch.lastUsedModelId) {
+      insertPromises.push(
+        INTERNAL_upsertUserChatPreferences(ctx, {
+          userId: user._id,
+          patch: {
+            lastUsedModelId: threadPatch.lastUsedModelId,
+          },
+        })
+      );
+    }
 
     const now = Date.now();
     let bulkOrder = 0;

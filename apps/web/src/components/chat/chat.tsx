@@ -1,5 +1,5 @@
 import { ChatFeed } from "./chat-feed";
-import { ChatInput } from "./chat-input";
+import { ChatInput } from "./chat-input/chat-input";
 
 export function Chat({ className }: { className?: string }) {
   return (

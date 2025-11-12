@@ -1,6 +1,7 @@
 import {
   type AllowedModelIds,
-  allowedModelIds,
+  defaultModelId,
+  isAllowedModelId,
 } from "@ai-monorepo/ai/model.registry";
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import { useChat } from "@ai-sdk/react";
@@ -39,7 +40,7 @@ type SendMessageParams = {
   text: string;
   // attachments?: FileUIPart[];
   options?: {
-    selectedModelId?: string;
+    selectedModelId?: AllowedModelIds;
   };
 };
 
@@ -55,10 +56,6 @@ type ActiveThreadActions = {
     options?: RegenerateMessageOptions
   ) => MaybePromise<void>;
 };
-
-const isAllowedModelId = (id: unknown): id is AllowedModelIds =>
-  typeof id === "string" &&
-  allowedModelIds.some((allowedId) => allowedId === id);
 
 const ActiveTheadMessagesContext = createContext<Pick<
   ActiveThreadState,
@@ -139,7 +136,9 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         const lastMessage = options.messages.at(-1);
         if (!lastMessage) throw new Error("No message to send");
         const selectedModelId =
-          optionsMetadata?.selectedModelId ?? lastMessage.metadata?.modelId;
+          optionsMetadata?.selectedModelId ??
+          lastMessage.metadata?.modelId ??
+          defaultModelId;
         if (!isAllowedModelId(selectedModelId))
           throw new Error("Invalid model ID");
         return eventIteratorToUnproxiedDataStream(

@@ -2,7 +2,11 @@ import { api } from "@ai-monorepo/convex/convex/_generated/api";
 import type { Doc, Id } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { insertAtTop } from "convex/react";
 import { useCvxMutationAuth } from "@/hooks/queries/convex/utils/use-convex-mutation-0-auth";
-import { paginatedQueryBuilder, queryBuilder } from "./helpers";
+import {
+  mutationBuilder,
+  paginatedQueryBuilder,
+  queryBuilder,
+} from "./helpers";
 
 /**
  * This is where to define all query options to use across the app.
@@ -19,6 +23,113 @@ const convexQueries = {
   getCurrentUser: queryBuilder(api.users.getCurrentUser),
   getDraft: queryBuilder(api.chat.getDraft),
 } as const;
+
+// TODO: WIP trying to find the right abstraction between factory of useMutation hooks, or closer to how convex query work, with this thing that allow using a builder to create mutation args builder, with prefilled and typesafe, function and optimistic update. Then we just need to pass args when wanting to create mutation args. But this require calling the mutation in place and with convex client.
+/**
+ * @example
+ * ```ts
+ * const convex = useConvex();
+ *
+ * const mutationOptions = useMemo(() => {
+ *  return cvx.mutationV2.draft.upsert({
+ *     threadUuid,
+ *     data: {
+ *       content: draft,
+ *     },
+ *   }).options();
+ * }, [draft, threadUuid]);
+ *
+ * const upsertDraft = useCallback(() => {
+ *   return convex.mutation(...mutationOptions);
+ * }, [convex, mutationOptions]);
+ *
+ * // usagge:
+ * upsertDraft();
+ * ```
+ * VS
+ * ```ts
+ * const mutation = cvx.mutation.draft.upsert();
+ *
+ * // usagge:
+ * mutation({
+ *   threadUuid,
+ *   data: {
+ *     content: draft,
+ *   },
+ * });
+ * ```
+ */
+const convexMutationV2 = {
+  draft: {
+    upsert: mutationBuilder(api.chat.upsertDraft, {
+      optimisticUpdate: (localStore, mutationArgs) => {
+        const draftQuery = convexQueries.getDraft({
+          threadUuid: mutationArgs.threadUuid,
+        });
+        const draft = localStore.getQuery(draftQuery.query, ...draftQuery.args);
+        // TODO: maybe not ...args but just args[0] ?
+        localStore.setQuery(draftQuery.query, ...draftQuery.args, {
+          // if new
+          _id: crypto.randomUUID() as Id<"drafts">,
+          _creationTime: Date.now(),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          userId: crypto.randomUUID() as Id<"users">,
+          threadId: crypto.randomUUID() as Id<"threads">,
+          // if existing
+          ...draft,
+          // optimistic patch
+          data: mutationArgs.data,
+        });
+      },
+    }),
+    delete: mutationBuilder(api.chat.deleteDraft, {
+      optimisticUpdate: (localStore, mutationArgs) => {
+        const draftQuery = convexQueries.getDraft({
+          threadUuid: mutationArgs.threadUuid,
+        });
+        const draft = localStore.getQuery(draftQuery.query, ...draftQuery.args);
+        if (!draft) return;
+        localStore.setQuery(draftQuery.query, ...draftQuery.args, {
+          ...draft,
+          data: undefined,
+        });
+      },
+    }),
+  },
+  userPreferences: {
+    upsert: mutationBuilder(api.users.upsertUserChatPreferences, {
+      optimisticUpdate: (localStore, mutationArgs) => {
+        const chatPreferencesQuery = convexQueries.getChatPreferences();
+        const value = localStore.getQuery(
+          chatPreferencesQuery.query,
+          ...chatPreferencesQuery.args
+        );
+        localStore.setQuery(
+          chatPreferencesQuery.query,
+          { ...chatPreferencesQuery.args },
+          {
+            // if new
+            _creationTime: Date.now(),
+            _id: crypto.randomUUID() as Id<"userChatPreferences">,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            userId: crypto.randomUUID() as Id<"users">,
+            // if existing
+            ...value,
+            // optimistic patch
+            preferredModelId: mutationArgs?.patch?.preferredModelId,
+            lastUsedModelId: mutationArgs?.patch?.lastUsedModelId,
+            modelToPickForNewThread:
+              mutationArgs?.patch?.modelToPickForNewThread ??
+              value?.modelToPickForNewThread ??
+              "lastUsed",
+          }
+        );
+      },
+    }),
+  },
+};
 
 const convexMutations = {
   draft: {
@@ -89,6 +200,11 @@ const convexMutations = {
           ...value,
           // optimistic patch
           preferredModelId: mutationArgs?.patch?.preferredModelId,
+          lastUsedModelId: mutationArgs?.patch?.lastUsedModelId,
+          modelToPickForNewThread:
+            mutationArgs?.patch?.modelToPickForNewThread ??
+            value?.modelToPickForNewThread ??
+            "lastUsed",
         }
       );
     }),
@@ -175,4 +291,5 @@ const convexMutations = {
 export const cvx = {
   query: convexQueries,
   mutations: convexMutations,
+  mutationV2: convexMutationV2,
 };
