@@ -1,6 +1,8 @@
 # ai-monorepo
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, Hono, ORPC, and more.
+My ai-related monorepo to contain chat app and many api ai feature I can reuse across projects.
+WIP stage, reimplementing from scratch a fully optimized llm chat web app inspired on t3.chat.
+This starts from the rewrite of my participation to the t3.chat cloeathon.
 
 ## Features
 
@@ -10,9 +12,10 @@ This project was created with [Better-T-Stack](https://github.com/AmanVarshney01
 - **shadcn/ui** - Reusable UI components
 - **Hono** - Lightweight, performant server framework
 - **oRPC** - End-to-end type-safe APIs with OpenAPI integration
-- **workers** - Runtime environment
 - **PWA** - Progressive Web App support
 - **Turborepo** - Optimized monorepo build system
+- **Convex** - Database and AI agent framework
+- **Clerk** - Authentication and user management (might change later though)
 
 ## Getting Started
 
@@ -74,26 +77,3 @@ ai-monorepo/
 - `pnpm dev:server`: Start only the server
 - `pnpm check-types`: Check TypeScript types across all apps
 - `cd apps/web && pnpm generate-pwa-assets`: Generate PWA assets
-
-```txt
- |  Next steps                                                  │
- │  1. cd ai-monorepo                                           │
- │  2. pnpm install                                             │
- │  3. pnpm run dev                                             │
- │  Your project will be available at:                          │
- │  • Frontend: http://localhost:3001                           │
- │  • Backend API: http://localhost:3000                        │
- │  • OpenAPI (Scalar UI): http://localhost:3000/api-reference  │
- │                                                              │
- │  Deploy with Alchemy:                                        │
- │  • Dev: pnpm run dev                                         │
- │  • Deploy: pnpm run deploy                                   │
- │  • Destroy: pnpm run destroy                                 │
- │                                                              │
- │  Update all dependencies:                                    │
- │  pnpm dlx taze -r                                            │
- │                                                              │
- │  Like Better-T-Stack? Please consider giving us a star       │
- │     on GitHub:                                               │
- │  https://github.com/AmanVarshney01/create-better-t-stack     |
-```
