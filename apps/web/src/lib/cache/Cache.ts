@@ -42,6 +42,9 @@ type CacheEntry<TValue> = {
   del: () => Promise<void>;
 };
 
+export const skipCache = Symbol("skip-cache");
+export type SkipCache = typeof skipCache;
+
 export class Cache<TKeyBase extends string> {
   private readonly cacheAdapter: ICacheAdapter<TKeyBase>;
 
@@ -49,14 +52,16 @@ export class Cache<TKeyBase extends string> {
     this.cacheAdapter = adapter;
   }
 
-  entry<TKey extends TKeyBase, TValue>(
-    key: TKey,
-    schema: StandardSchemaV1<TValue>
+  entry<TValue>(
+    key: TKeyBase | typeof skipCache,
+    schema?: StandardSchemaV1<TValue>
   ): CacheEntry<TValue> {
     return {
       get: async () => {
+        if (key === skipCache) return;
         const value = await this.cacheAdapter.get(key);
-        if (!value) return;
+        if (value === undefined) return;
+        if (!schema) return value as TValue;
         const result = await schema["~standard"].validate(value);
         if (result.issues) {
           console.warn(
@@ -68,6 +73,8 @@ export class Cache<TKeyBase extends string> {
         return result.value;
       },
       set: async (value: TValue) => {
+        if (key === skipCache) return;
+        if (!schema) return await this.cacheAdapter.set(key, value);
         const validatedValue = await schema["~standard"].validate(value);
         if (validatedValue.issues) {
           throw new Error(`cache set: Value not matching schema: key:${key}`, {
@@ -77,6 +84,7 @@ export class Cache<TKeyBase extends string> {
         await this.cacheAdapter.set(key, validatedValue.value);
       },
       del: async () => {
+        if (key === skipCache) return;
         await this.cacheAdapter.del(key);
       },
     };

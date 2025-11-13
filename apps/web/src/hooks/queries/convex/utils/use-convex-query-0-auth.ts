@@ -15,8 +15,12 @@ export function useCvxQueryAuth<Query extends FunctionReference<"query">>(
   query: Query,
   ...queryArgs: OptionalRestArgsOrSkip<Query>
 ): FunctionReturnType<Query> | undefined {
-  const { isFullyReady } = useAuth();
-  const result = useQuery(query, ...(isFullyReady ? queryArgs : ["skip"]));
+  const { isReadyToUseConvex } = useAuth();
+
+  const result = useQuery(
+    query,
+    ...(isReadyToUseConvex ? queryArgs : ["skip"])
+  );
 
   return result;
 }
@@ -29,10 +33,10 @@ export function useCvxPaginatedQueryAuth<Query extends PaginatedQueryReference>(
     // latestPageSize?: "grow" | "fixed";
   }
 ): UsePaginatedQueryReturnType<Query> {
-  const { isFullyReady } = useAuth();
+  const { isReadyToUseConvex } = useAuth();
   const result = usePaginatedQuery(
     query,
-    isFullyReady ? args : "skip",
+    isReadyToUseConvex ? args : "skip",
     options
   );
 

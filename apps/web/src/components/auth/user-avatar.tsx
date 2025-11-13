@@ -51,10 +51,8 @@ export function UserProfileButton({ className }: UserProfileButtonProps) {
         lastName: clerkUser.lastName,
         emailAddresses: [], // not cloneable
       });
-    } else {
-      cacheEntry.del();
     }
-  }, [clerkUser, cacheEntry.set, cacheEntry.del]);
+  }, [clerkUser, cacheEntry.set]);
 
   const disabled = !isFullyReady;
 

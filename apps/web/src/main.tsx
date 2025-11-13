@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import ReactDom from "react-dom/client";
 import Loader from "./components/loader";
 import { AuthProvider } from "./hooks/use-auth";
-import { ConvexProvider } from "./hooks/use-convex";
 import { UserCacheProvider } from "./hooks/use-user-cache";
 import { routeTree } from "./routeTree.gen";
 import { TanstackQueryClientProvider } from "./utils/tanstack-query/query-client-provider";
@@ -29,17 +28,18 @@ const router = createRouter({
      */
     return (
       <AuthProvider>
-        <ConvexProvider>
-          <ConvexQueryCacheProvider
-            debug={false}
-            expiration={120_000}
-            maxIdleEntries={100}
-          >
-            <TanstackQueryClientProvider>
-              <UserCacheProvider>{children}</UserCacheProvider>
-            </TanstackQueryClientProvider>
-          </ConvexQueryCacheProvider>
-        </ConvexProvider>
+        {/* TODO: see todo from use-auth.tsx where I talk about the confusion of separation of concern between convex an auth. */}
+        {/* <ConvexProvider> */}
+        <ConvexQueryCacheProvider
+          debug={false}
+          expiration={120_000}
+          maxIdleEntries={100}
+        >
+          <TanstackQueryClientProvider>
+            <UserCacheProvider>{children}</UserCacheProvider>
+          </TanstackQueryClientProvider>
+        </ConvexQueryCacheProvider>
+        {/* </ConvexProvider> */}
       </AuthProvider>
     );
   },

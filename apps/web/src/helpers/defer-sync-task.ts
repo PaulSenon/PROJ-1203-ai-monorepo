@@ -1,16 +1,19 @@
-export function deferSyncTask<T>(task: () => T): Promise<T> {
+export function deferSyncTask<T>(
+  task: () => T,
+  options: { timeout?: number } = {}
+): Promise<T> {
   return new Promise((resolve, reject) => {
     if ("requestIdleCallback" in window) {
       requestIdleCallback(
         () => {
           try {
             const result = task();
-            setTimeout(() => resolve(result), 1000);
+            setTimeout(() => resolve(result), options.timeout ?? 0);
           } catch (error) {
             reject(error);
           }
         },
-        { timeout: 0 }
+        { timeout: options.timeout ?? 0 }
       );
     } else {
       setTimeout(() => {
@@ -20,7 +23,7 @@ export function deferSyncTask<T>(task: () => T): Promise<T> {
         } catch (error) {
           reject(error);
         }
-      }, 0);
+      }, options.timeout ?? 0);
     }
   });
 }

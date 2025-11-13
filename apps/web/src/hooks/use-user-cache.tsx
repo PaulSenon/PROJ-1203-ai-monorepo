@@ -1,5 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import {
   createContext,
   useContext,
@@ -8,11 +8,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { idbAdapter } from "@/lib/cache/adapters/idbAdapter";
-import { inMemoryEntryLimitedBufferAdapter } from "@/lib/cache/adapters/inMemoryEntryLimitedBufferAdapter";
-import { localStorageAdapter } from "@/lib/cache/adapters/localStorageAdapter";
-import { multiLayerCacheAdapter } from "@/lib/cache/adapters/multiLayerCacheAdapter";
-import { Cache } from "@/lib/cache/Cache";
+import { type Cache, type SkipCache, skipCache } from "@/lib/cache/Cache";
+import { UserCache } from "@/lib/cache/UserCache";
 import { useAuth } from "./use-auth";
 import { useEmergencySave } from "./utils/use-emergency-save";
 
@@ -20,19 +17,6 @@ export const lastLoggedInUserIdCache = {
   get: () => localStorage.getItem("lastLoggedInUserId"),
   set: (userId: string) => localStorage.setItem("lastLoggedInUserId", userId),
 };
-
-function createUserCache(cacheScope: string) {
-  return new Cache(
-    multiLayerCacheAdapter([
-      inMemoryEntryLimitedBufferAdapter(localStorageAdapter, {
-        maxKeys: 500,
-        storageKey: cacheScope,
-      }),
-      idbAdapter(cacheScope),
-      // cacheDebuggerAdapter,
-    ])
-  );
-}
 
 type CacheState = {
   cache: Cache<string>;
@@ -47,7 +31,7 @@ export function UserCacheProvider({ children }: { children: React.ReactNode }) {
     [clerkUser]
   );
 
-  const cache = useMemo(() => createUserCache(cacheScope), [cacheScope]);
+  const cache = useMemo(() => UserCache.newInstance(cacheScope), [cacheScope]);
 
   useEffect(() => {
     if (isLoadingClerk) return;
@@ -93,9 +77,10 @@ function passThroughSchema<T>(): StandardSchemaV1<T> {
 }
 
 export function useUserCacheEntryOnce<T>(
-  key: string, // TODO: make it string[]
+  key: string | SkipCache, // TODO: make it string[]
   schema?: StandardSchemaV1<T>
 ) {
+  const isSkip = key === skipCache;
   const schemaRef = useRef(schema);
 
   // null: loaded but null
@@ -103,11 +88,12 @@ export function useUserCacheEntryOnce<T>(
   const [snapshot, setSnapshot] = useState<T | null | undefined>(undefined);
   const { cache } = useUserCache();
   const entry = useMemo(
-    () => cache.entry(key, schemaRef.current ?? passThroughSchema<T>()),
+    () => cache.entry(key, schemaRef.current),
     [cache, key]
   );
 
   useEffect(() => {
+    if (isSkip) return;
     // reset loading state if cache changes
     setSnapshot(undefined);
     entry.get().then((value) => {
@@ -115,7 +101,7 @@ export function useUserCacheEntryOnce<T>(
       // otherwise it will says "it's still loading"
       setSnapshot(value ?? null);
     });
-  }, [entry]);
+  }, [entry, isSkip]);
 
   return useMemo(
     () => ({
@@ -128,24 +114,28 @@ export function useUserCacheEntryOnce<T>(
 }
 
 export function useUserCacheEntry<T>(
-  key: string, // TODO: make it string[]
+  key: string | SkipCache, // TODO: make it string[]
   schema?: StandardSchemaV1<T>
 ) {
+  const isSkip = key === skipCache;
   const schemaRef = useRef(schema);
   const { cache, scope } = useUserCache();
   const entry = useMemo(
-    () => cache.entry(key, schemaRef.current ?? passThroughSchema<T>()),
+    () => cache.entry(key, schemaRef.current),
     [cache, key]
   );
+  // narrowing down type
 
   const queryKey = ["user-cache-entry", scope, key];
 
   const { data, isPending } = useQuery({
     queryKey,
-    queryFn: async () => {
-      const res = await entry.get();
-      return res ?? null;
-    },
+    queryFn: isSkip
+      ? skipToken
+      : async () => {
+          const res = await entry.get();
+          return res ?? null;
+        },
     retry: false,
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -153,6 +143,7 @@ export function useUserCacheEntry<T>(
   const set = useMutation({
     retry: false,
     mutationFn: async (input: T) => {
+      if (isSkip) return;
       await entry.set(input);
       return input;
     },
@@ -174,6 +165,7 @@ export function useUserCacheEntry<T>(
   const del = useMutation({
     retry: false,
     mutationFn: async () => {
+      if (isSkip) return;
       await entry.del();
     },
     onMutate: async (_next, context) => {
@@ -195,7 +187,7 @@ export function useUserCacheEntry<T>(
     key: queryKey.join(":"),
     data,
     restoreCallback: (restored) => restored && set.mutate(restored),
-    isInEmergencyState: () => set.isPending,
+    isInEmergencyState: () => set.isPending && !isSkip,
   });
 
   return useMemo(

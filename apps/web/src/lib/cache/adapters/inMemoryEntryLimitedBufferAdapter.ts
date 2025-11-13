@@ -33,10 +33,13 @@ export function inMemoryEntryLimitedBufferAdapter<
   options: {
     maxKeys?: number;
     storageKey?: string;
+    // allow skipping storing null, because we limit number of keys so might be a choice to skip null/undefined values to save space
+    skipNullishValues?: boolean;
   } = {}
 ): ICacheAdapter<TKey, TValue> {
   const maxKeys = options.maxKeys ?? 1000;
   const storageKey = `cache-buffer:${options.storageKey}`;
+  const skipNullishValues = options.skipNullishValues ?? true;
 
   // In-memory Map: key -> value
   let memoryCache: Map<TKey, TValue> = new Map();
@@ -136,9 +139,17 @@ export function inMemoryEntryLimitedBufferAdapter<
         }
       }
 
+      // NB: double const for readability of double negation complexity
+      const shouldSkip =
+        (skipNullishValues && value === null) ||
+        (skipNullishValues && value === undefined);
+      const shouldSetValue = !shouldSkip;
+
       // Add/update entry
-      memoryCache.set(key, value);
-      keyOrder.push(key);
+      if (shouldSetValue) {
+        memoryCache.set(key, value);
+        keyOrder.push(key);
+      }
 
       // Schedule debounced persistence
       schedulePersistence();

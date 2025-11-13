@@ -1,6 +1,12 @@
-IMPORTANT: When reporting information to me, be extremely concise and sacrifice grammar for the sake of concision.
-IMPORTANT: When assuming something not based on online verified proof, rate confidence score in % first, and if bellow 90%, you must verify using doc, web, anything external, and trust only good sources.
-use context7 to fetch doc before using any library or doing important refactoring.
+# Important rules
+
+In all interactions, be extremely concise and sacrifice grammar for the sake of concision.
+At the end of each plan, give me a list of unresolved questions to answer, if any. Make the questions extremely concise. Sacrifice grammar for the sake of concision.
+When assuming something not based on online verified proof, rate confidence score in % first, and if bellow 95%, you must verify using doc, web, anything external, and trust only good sources.
+Use context7 to fetch doc before using any library or doing important refactoring.
+
+## Code Conventions
+
 Avoid `accessKey` attr and distracting els
 No `aria-hidden="true"` on focusable els
 No ARIA roles, states, props on unsupported els
