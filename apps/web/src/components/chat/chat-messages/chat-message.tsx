@@ -1,5 +1,6 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import { RefreshCwIcon } from "lucide-react";
+import type { ComponentProps } from "react";
 import { Action, Actions } from "@/components/ai-elements/actions";
 import {
   Message as AIElementsMessage,
@@ -11,11 +12,14 @@ import { ChatMessageError } from "./chat-message-error";
 import { ChatMessagePartReasoning } from "./chat-message-parts/chat-message-part-reasoning";
 import { ChatMessagePartText } from "./chat-message-parts/chat-message-part-text";
 
-export function ChatMessage({ message }: { message: MyUIMessage }) {
+export function ChatMessage({
+  message,
+  ...props
+}: { message: MyUIMessage } & ComponentProps<"div">) {
   const { regenerate } = useActiveThreadActions();
   const { selectedModelId } = useModelSelectorState(); // TODO: tmp while not "retry with model" feature
   return (
-    <div className="flex flex-col items-start gap-2">
+    <div className="flex flex-col items-start gap-2" {...props}>
       <AIElementsMessage from={message.role} key={message.id}>
         <AIElementsMessageContent variant={"contained"}>
           {message.parts.map((part, i) => {

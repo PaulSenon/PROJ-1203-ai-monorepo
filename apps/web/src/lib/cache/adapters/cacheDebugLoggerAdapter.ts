@@ -217,18 +217,20 @@ const createAPI = (): CacheDebugAPI => ({
     prefixStats.clear();
   },
 
-  getLogs: (options = {}) => {
+  getLogs: (options) => {
     let filtered = logs;
 
-    if (options.prefix) {
-      filtered = filtered.filter((log) => log.key?.startsWith(options.prefix));
+    if (options?.prefix) {
+      // TODO: TS weird thing: why the above it not enough to narrow down the type ?
+      const prefix = options.prefix;
+      filtered = filtered.filter((log) => log.key?.startsWith(prefix));
     }
 
-    if (options.operation) {
+    if (options?.operation) {
       filtered = filtered.filter((log) => log.operation === options.operation);
     }
 
-    if (options.status) {
+    if (options?.status) {
       filtered = filtered.filter((log) => log.status === options.status);
     }
 

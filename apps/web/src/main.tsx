@@ -3,6 +3,7 @@ import { ConvexQueryCacheProvider } from "convex-helpers/react/cache/provider";
 import type { ReactNode } from "react";
 import ReactDom from "react-dom/client";
 import Loader from "./components/loader";
+import { AppLoadStatusProvider } from "./hooks/use-app-load-status";
 import { AuthProvider } from "./hooks/use-auth";
 import { UserCacheProvider } from "./hooks/use-user-cache";
 import { routeTree } from "./routeTree.gen";
@@ -27,20 +28,22 @@ const router = createRouter({
      *   - I18N provider
      */
     return (
-      <AuthProvider>
-        {/* TODO: see todo from use-auth.tsx where I talk about the confusion of separation of concern between convex an auth. */}
-        {/* <ConvexProvider> */}
-        <ConvexQueryCacheProvider
-          debug={false}
-          expiration={120_000}
-          maxIdleEntries={100}
-        >
-          <TanstackQueryClientProvider>
-            <UserCacheProvider>{children}</UserCacheProvider>
-          </TanstackQueryClientProvider>
-        </ConvexQueryCacheProvider>
-        {/* </ConvexProvider> */}
-      </AuthProvider>
+      <AppLoadStatusProvider>
+        <AuthProvider>
+          {/* TODO: see todo from use-auth.tsx where I talk about the confusion of separation of concern between convex an auth. */}
+          {/* <ConvexProvider> */}
+          <ConvexQueryCacheProvider
+            debug={false}
+            expiration={120_000}
+            maxIdleEntries={100}
+          >
+            <TanstackQueryClientProvider>
+              <UserCacheProvider>{children}</UserCacheProvider>
+            </TanstackQueryClientProvider>
+          </ConvexQueryCacheProvider>
+          {/* </ConvexProvider> */}
+        </AuthProvider>
+      </AppLoadStatusProvider>
     );
   },
   InnerWrap({ children }) {

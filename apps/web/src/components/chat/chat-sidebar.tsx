@@ -2,7 +2,7 @@
 
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { MessageCircle, Plus } from "lucide-react";
-import { memo } from "react";
+import { memo, useLayoutEffect } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,14 +12,29 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { usePreviousThreadHistoryPaginated } from "@/hooks/queries/use-chat-listing-queries";
+import {
+  useAppLoadStatus,
+  useAppLoadStatusActions,
+} from "@/hooks/use-app-load-status";
 import { useChatNav } from "@/hooks/use-chat-nav";
-import { cn } from "@/lib/utils";
+import {
+  preloadThreadMessages,
+  preloadThreadMetadata,
+} from "@/hooks/use-preload";
+import {
+  useMouseEnterOnce,
+  useViewportOnce,
+} from "@/hooks/utils/use-event-triggers";
+import { UserCache } from "@/lib/cache/UserCache";
+import { cn, mergeRefs } from "@/lib/utils";
 import { UserProfileButton } from "../auth/user-avatar";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { Skeleton } from "../ui/skeleton";
 
 export function ChatSidebar({ className }: { className?: string }) {
+  const appUiStatus = useAppLoadStatusActions();
+  const { isInitialUIStateReady } = useAppLoadStatus();
   const chatNav = useChatNav();
   const handleNewChat = () => chatNav.openNewChat();
   const handleClickThread = (threadUuid: string) =>
@@ -30,8 +45,13 @@ export function ChatSidebar({ className }: { className?: string }) {
 
   const history = usePreviousThreadHistoryPaginated();
 
+  useLayoutEffect(() => {
+    if (history.isPending) return;
+    appUiStatus.setSidebarUIReady();
+  }, [history.isPending, appUiStatus.setSidebarUIReady]);
+
   return (
-    <Sidebar className={className}>
+    <Sidebar className={cn(className, !isInitialUIStateReady && "opacity-0")}>
       <SidebarHeader className="space-y-3 p-4 pb-0">
         <div className="flex items-center justify-center">
           <h1 className="font-semibold text-lg tracking-tight">
@@ -43,9 +63,13 @@ export function ChatSidebar({ className }: { className?: string }) {
           <Plus className="h-4 w-4" />
           New Chat
         </Button>
-        {/* <Button className="w-full" onClick={inputActions.focus} size="sm">
-          Focus Input
-        </Button> */}
+        <Button
+          className="w-full"
+          onClick={() => UserCache.getInstance().clear()}
+          size="sm"
+        >
+          Debug: clear cache
+        </Button>
         {/* <Button
           className="w-full"
           disabled={inputState.isSaveDraftPending}
@@ -126,6 +150,16 @@ const ThreadItem = memo(
     isActive: boolean;
     onClick: () => void;
   }) => {
+    const viewportRef = useViewportOnce<HTMLButtonElement>(thread.uuid, () => {
+      preloadThreadMetadata(thread.uuid);
+    });
+    const mouseEnterRef = useMouseEnterOnce<HTMLButtonElement>(
+      thread.uuid,
+      () => {
+        preloadThreadMessages(thread.uuid);
+      }
+    );
+
     return (
       <button
         className={cn(
@@ -134,6 +168,7 @@ const ThreadItem = memo(
           isActive && "bg-accent"
         )}
         onClick={onClick}
+        ref={mergeRefs(viewportRef, mouseEnterRef)}
         type="button"
       >
         <div className="relative flex w-full items-center gap-2">

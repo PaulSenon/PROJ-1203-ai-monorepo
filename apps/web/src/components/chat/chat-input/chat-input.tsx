@@ -1,7 +1,12 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
+import {
+  useAppLoadStatus,
+  useAppLoadStatusActions,
+} from "@/hooks/use-app-load-status";
 import { useActiveThreadActions } from "@/hooks/use-chat-active";
 import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
 import { useModelSelectorState } from "@/hooks/use-user-preferences";
+import { cn } from "@/lib/utils";
 import {
   PromptInput,
   PromptInputAttachment,
@@ -17,6 +22,8 @@ import {
 import { ChatModelSelector } from "./chat-model-selector";
 
 export function ChatInput() {
+  const { isInitialUIStateReady } = useAppLoadStatus();
+  const appUiStatus = useAppLoadStatusActions();
   const inputState = useChatInputState();
   const inputActions = useChatInputActions();
   const { sendMessage } = useActiveThreadActions();
@@ -34,13 +41,18 @@ export function ChatInput() {
   };
 
   // TODO: perhaps we need better autofocus logic
-  useEffect(() => {
+  useLayoutEffect(() => {
+    appUiStatus.setInputUIReady(!inputState.isPending);
     if (inputState.isPending) return;
     inputActions.focus();
-  }, [inputState.isPending, inputActions.focus]);
+  }, [inputState.isPending, inputActions.focus, appUiStatus.setInputUIReady]);
 
   return (
-    <PromptInput className="relative mt-4" onSubmit={handleSubmit}>
+    // TODO: improve initial loader UI and remove this opacity thing
+    <PromptInput
+      className={cn("relative mt-4", !isInitialUIStateReady && "opacity-0")}
+      onSubmit={handleSubmit}
+    >
       <PromptInputHeader>
         <PromptInputAttachments>
           {(attachment) => <PromptInputAttachment data={attachment} />}

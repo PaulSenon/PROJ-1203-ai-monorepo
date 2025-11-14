@@ -1,29 +1,31 @@
 export function deferSyncTask<T>(
-  task: () => T,
-  options: { timeout?: number } = {}
+  task: () => T | Promise<T>,
+  options: { delay?: number } = {}
 ): Promise<T> {
   return new Promise((resolve, reject) => {
+    const executeTask = async () => {
+      try {
+        await new Promise((r) => setTimeout(r, options.delay ?? 0));
+        const result = await task();
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
     if ("requestIdleCallback" in window) {
       requestIdleCallback(
         () => {
-          try {
-            const result = task();
-            setTimeout(() => resolve(result), options.timeout ?? 0);
-          } catch (error) {
-            reject(error);
-          }
+          executeTask();
         },
-        { timeout: options.timeout ?? 0 }
+        { timeout: undefined } // never force calling
       );
     } else {
-      setTimeout(() => {
-        try {
-          const result = task();
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      }, options.timeout ?? 0);
+      // Polyfill: use requestAnimationFrame + setTimeout to approximate idle period
+      // If timeout is provided, use it as maximum delay; otherwise use 0 for next frame
+      requestAnimationFrame(() => {
+        executeTask();
+      });
     }
   });
 }

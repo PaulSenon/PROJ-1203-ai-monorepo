@@ -5,18 +5,32 @@
 @custom-variant light (&:where(.light, .light *));
 
 @theme {
-  --duration-base: 250ms;
+  --duration-base: 150ms;
   --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-subtle-overshoot: cubic-bezier(0, 0.88, 0.37, 1.2);
 
   --font-sans:
     "Inter", "Geist", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-  --duration-fastest: 100ms;
-  --duration-fast: calc(var(--duration-base) * 0.8);
+  --duration-fastest: calc(var(--duration-base) * 0.5);
+  --duration-fast: calc(var(--duration-base) * 0.75);
   --duration-normal: var(--duration-base);
-  --duration-slow: calc(var(--duration-base) * 1.2);
-  --duration-slowest: calc(var(--duration-base) * 1.2);
+  --duration-slow: calc(var(--duration-base) * 1.25);
+  --duration-slowest: calc(var(--duration-base) * 1.5);
+
+  --animate-subtle-slide-up: subtle-slide-up var(--duration-slowest) backwards
+    var(--ease-subtle-overshoot);
+  @keyframes subtle-slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(3px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 html,

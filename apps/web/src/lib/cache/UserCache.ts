@@ -50,6 +50,7 @@ export class UserCache extends Cache<string> {
     }
     UserCache.instance = new UserCache(
       cacheDebugLoggerAdapter(
+        // cachePassthroughAdapter(),
         multiLayerCacheAdapter([
           inMemoryEntryLimitedBufferAdapter(localStorageAdapter, {
             maxKeys: 500,
