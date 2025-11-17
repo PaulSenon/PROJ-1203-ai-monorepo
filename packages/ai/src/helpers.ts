@@ -11,5 +11,11 @@ export function createOptimisticStepStartMessage(
         type: "step-start",
       },
     ],
+    metadata: {
+      liveStatus: "streaming",
+      lifecycleState: "active",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    },
   };
 }

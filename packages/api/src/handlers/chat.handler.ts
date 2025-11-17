@@ -1,9 +1,14 @@
+import { waitUntil } from "cloudflare:workers";
 import { createOptimisticStepStartMessage } from "@ai-monorepo/ai/helpers";
+import { DeltaStreamChunker } from "@ai-monorepo/ai/libs/deltaStreamChunker";
 import {
   createMyProviderRegistry,
   modelIdValidator,
 } from "@ai-monorepo/ai/model.registry";
-import { validateMyUIMessages } from "@ai-monorepo/ai/types/uiMessage";
+import {
+  type MyUIMessage,
+  validateMyUIMessages,
+} from "@ai-monorepo/ai/types/uiMessage";
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
 import type {
   ChatErrorMetadata,
@@ -15,6 +20,7 @@ import {
   AISDKError,
   APICallError,
   convertToModelMessages,
+  type InferUIMessageChunk,
   streamText,
   type TextStreamPart,
   type ToolSet,
@@ -192,10 +198,8 @@ export const chatProcedure = chatProcedures.chat
       });
     }
 
-    const optimisticUiMessages = [
-      ...validatedUiMessages,
-      createOptimisticStepStartMessage(newMessageUuid),
-    ];
+    const newMessage = createOptimisticStepStartMessage(newMessageUuid);
+    const optimisticUiMessages = [...validatedUiMessages, newMessage];
     const { thread, messages: messagesFromBackend } = await fetchMutation(
       api.chat.upsertThreadWithNewMessagesAndReturnHistory,
       {
@@ -208,6 +212,14 @@ export const chatProcedure = chatProcedures.chat
         },
       }
     );
+
+    const createdStreamPromise = fetchMutation(api.streams.createStream, {
+      threadId: thread._id,
+      messageUuid: newMessageUuid,
+    }).catch((error) => {
+      console.error("Error creating stream. Falling back to no stream.", error);
+      return { streamId: undefined };
+    });
 
     // 5. Generate title in background
     if (!thread.title || thread.title.trim() === "") {
@@ -242,9 +254,8 @@ export const chatProcedure = chatProcedures.chat
       sendReasoning: true,
       sendFinish: true,
       sendStart: true,
-
       onFinish: async ({ responseMessage, isAborted, isContinuation }) => {
-        console.log("on Stream Finish", {
+        console.log("toUIMessageStream.onFinish:", {
           responseMessage,
           isAborted,
           isContinuation,
@@ -277,7 +288,10 @@ export const chatProcedure = chatProcedures.chat
         });
       },
       messageMetadata({ part }) {
-        // console.log("messageMetadata", part);
+        // skip metadata computation for non-final parts
+        if (!["finish", "abort", "error"].includes(part.type)) {
+          return;
+        }
 
         const baseMetadata = {
           updatedAt: Date.now(),
@@ -303,5 +317,42 @@ export const chatProcedure = chatProcedures.chat
       },
     });
 
-    return streamToEventIterator(stream);
+    const [httpStream, persistStream] = stream.tee();
+
+    const streamSaver = async () => {
+      const { streamId } = await createdStreamPromise;
+      if (!streamId) return;
+      const deltaSaver = new DeltaStreamChunker<
+        InferUIMessageChunk<MyUIMessage>
+      >({
+        config: {
+          compress: true,
+          throttleMs: 1000,
+        },
+        onDelta: async (delta) => {
+          await fetchMutation(api.streams.pushStreamDelta, {
+            streamId,
+            start: delta.start,
+            end: delta.end,
+            chunks: delta.chunks,
+          });
+        },
+        onFinish: async (args) => {
+          console.log("DeltaSaver finished", args);
+          await fetchMutation(api.streams.deleteStream, {
+            streamId,
+          });
+        },
+        onError: (error) => {
+          console.error("Error saving deltas:", error);
+        },
+      });
+
+      await deltaSaver.consumeStream(persistStream);
+    };
+
+    // TODO: env agnostic waituntil
+    waitUntil(streamSaver());
+
+    return streamToEventIterator(httpStream);
   });

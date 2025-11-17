@@ -122,6 +122,42 @@ async function rlsRules(ctx: QueryCtx) {
         return true;
       },
     },
+
+    userChatPreferences: {
+      read: async (_, userChatPreferencesDoc) => {
+        if (!user) return false;
+        if (userChatPreferencesDoc.userId !== user._id) return false;
+        return true;
+      },
+      insert: async (_, userChatPreferencesDoc) => {
+        if (!user) return false;
+        if (userChatPreferencesDoc.userId !== user._id) return false;
+        return true;
+      },
+      modify: async (_, userChatPreferencesDoc) => {
+        if (!user) return false;
+        if (userChatPreferencesDoc.userId !== user._id) return false;
+        return true;
+      },
+    },
+
+    messageStreams: {
+      read: async (_, messageStreamDoc) => {
+        if (!user) return false;
+        if (messageStreamDoc.userId !== user._id) return false;
+        return true;
+      },
+      insert: async (_, messageStreamDoc) => {
+        if (!user) return false;
+        if (messageStreamDoc.userId !== user._id) return false;
+        return true;
+      },
+      modify: async (_, messageStreamDoc) => {
+        if (!user) return false;
+        if (messageStreamDoc.userId !== user._id) return false;
+        return true;
+      },
+    },
   } satisfies Rules<QueryCtx, DataModel>;
 }
 

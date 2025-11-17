@@ -11,3 +11,7 @@
 - [ ] little flicker on loading state on cvx paginated query cached when no cache (first log in)
 
 - [x] noticed a little weird behavior: when switching chat, the draft from convex is stale for a short time. But should not happen because using the convex useQuery from helper lib that cache queries, still reactives in background. So once loaded it should always be fresh.Perhaps the issue comes from my useCvxQueryCached hook. To quickly test, we could just use useQuery from helpers in place of useCvxQueryCached in useChatDraftState. => **was because of useAuth issue. was not contextualized and was awaiting ensureUser from convex every time a query was rerendered (bursting the convex/helper cache)**
+
+- [ ] login with different google account is not working (if only one google account logged in browser, then it always login to it an never reprompt the googl auth prompt with account selection)
+
+- [ ] logged out state is broken (UI is in loading state, nothing visible)

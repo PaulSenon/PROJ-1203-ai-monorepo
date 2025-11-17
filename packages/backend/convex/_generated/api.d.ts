@@ -12,6 +12,7 @@ import type * as chat from "../chat.js";
 import type * as lib from "../lib.js";
 import type * as migrations from "../migrations.js";
 import type * as rls from "../rls.js";
+import type * as streams from "../streams.js";
 import type * as users from "../users.js";
 
 import type {
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   lib: typeof lib;
   migrations: typeof migrations;
   rls: typeof rls;
+  streams: typeof streams;
   users: typeof users;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

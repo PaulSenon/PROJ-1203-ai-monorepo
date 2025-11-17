@@ -711,6 +711,7 @@ export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
       userId: user._id,
       patch: threadPatch,
     });
+    // TODO: could skip runtime validation to save compute
     const validatedMessagesPromise = validateMyUIMessages(uiMessages);
 
     const [threadId, validatedMessages] = await Promise.all([

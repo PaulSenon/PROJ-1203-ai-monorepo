@@ -6,6 +6,10 @@
     "./*": {
       "types": "./dist/*.d.ts",
       "default": "./src/*.ts"
+    },
+    "./libs/deltaStreamChunker": {
+      "types": "./dist/libs/deltaStreamChunker.d.ts",
+      "default": "./src/libs/deltaStreamChunker.ts"
     }
   },
   "type": "module",

@@ -141,6 +141,23 @@ const schema = defineSchema({
       })
     ),
   }).index("byUserIdMessageId", ["userId", "messageId"]),
+
+  messageStreams: defineTable({
+    userId: v.id("users"),
+    threadId: v.id("threads"),
+    messageId: v.id("messages"),
+  }).index("byUserIdThreadIdMessageId", ["userId", "threadId", "messageId"]),
+
+  streamDeltas: defineTable({
+    streamId: v.id("messageStreams"),
+    start: v.number(), // index of the first chunk in the delta
+    end: v.number(), // exclusive index of the last chunk in the delta
+    encodedChunks: v.object({
+      source: v.literal("inline"),
+      encoding: v.literal("json"),
+      data: v.string(),
+    }),
+  }).index("byStreamIdStartEnd", ["streamId", "start", "end"]),
 });
 
 export const vv = typedV(schema);
