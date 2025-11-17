@@ -4,6 +4,9 @@ My ai-related monorepo to contain chat app and many api ai feature I can reuse a
 WIP stage, reimplementing from scratch a fully optimized llm chat web app inspired on t3.chat.
 This starts from the rewrite of my participation to the t3.chat cloeathon.
 
+> [!WARNING]
+> This project is absolutely not ready. No UI work is done yet, currently working on the core features and codebase structure. Will finish with UI work.
+
 ## Features
 
 - **TypeScript** - For type safety and improved developer experience
