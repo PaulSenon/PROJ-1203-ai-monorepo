@@ -1,11 +1,5 @@
-import {
-  type AllowedModelIds,
-  defaultModelId,
-  isAllowedModelId,
-} from "@ai-monorepo/ai/model.registry";
+import type { AllowedModelIds } from "@ai-monorepo/ai/model.registry";
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import { useChat } from "@ai-sdk/react";
-import { eventIteratorToUnproxiedDataStream } from "@orpc/client";
 import { nanoid } from "nanoid";
 import {
   createContext,
@@ -14,18 +8,19 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { cvx } from "@/lib/convex/queries";
 import type { MaybePromise } from "@/lib/utils";
-import { chatRpc } from "@/utils/orpc/orpc";
+import { useCvxMutationAuthV3 } from "./queries/convex/utils/use-convex-mutation-0-auth";
+import { setPaginatedQueryCache } from "./queries/convex/utils/use-convex-query-2-cached";
 import {
   useActiveThreadMessagesQuery,
   useActiveThreadQuery,
 } from "./queries/use-chat-active-queries";
 import { useChatInputActions } from "./use-chat-input";
 import { useChatNav } from "./use-chat-nav";
+import { useChatContext, useMessages } from "./use-messages";
 
 type ActiveThreadState = {
   uuid: string;
@@ -33,6 +28,7 @@ type ActiveThreadState = {
   dataStatus: "pending" | "stale" | "fresh" | "error";
   messages: MyUIMessage[];
   isPending: boolean;
+  isStale: boolean;
   messagesQueue: MyUIMessage[];
 };
 
@@ -104,101 +100,52 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const chatNav = useChatNav();
   const isSkip = chatNav.isNew;
   // TODO: perhaps we should handle stale case ???
-  const { data: thread, isPending: isThreadPending } = useActiveThreadQuery();
-  const { data: messagesPersisted, isPending: isMessagesPending } =
-    useActiveThreadMessagesQuery();
-  const isQueryPending = isSkip ? false : isThreadPending || isMessagesPending;
+  const {
+    data: thread,
+    isPending: isThreadPending,
+    isStale: isThreadStale,
+  } = useActiveThreadQuery();
+  const {
+    messages,
+    isPending: isMessagesPending,
+    isStale: isMessagesStale,
+  } = useMessages(isSkip ? "skip" : chatNav.id);
+  useActiveThreadMessagesQuery();
+  const isPending = isSkip ? false : isThreadPending || isMessagesPending;
+  const isStale = isSkip ? false : isThreadStale || isMessagesStale;
 
-  const upsertThread = cvx.mutations.upsertThread();
+  const upsertThread = useCvxMutationAuthV3(
+    ...cvx.mutationV3.threads.upsert.options()
+  );
 
   // console.log("messagesPersisted", messagesPersisted);
   // console.log("thread", thread);
 
   const [messagesQueue, setMessagesQueue] = useState<MyUIMessage[]>([]);
 
+  useEffect(() => {
+    setPaginatedQueryCache(
+      messages,
+      ...cvx.query
+        .threadMessagesPaginated({ threadUuid: chatNav.id })
+        .options.neverSkip()
+    );
+  }, [messages, chatNav.id]);
+
+  // const { chat } = useSharedChat();
   const {
-    messages: messagesStreamed,
     sendMessage: sdkSendMessage,
     regenerate: sdkRegenerate,
-    status: sdkStatus,
     setMessages: sdkSetMessages,
-  } = useChat<MyUIMessage>({
-    messages: messagesPersisted,
-    id: chatNav.id,
-    transport: {
-      async sendMessages(options) {
-        const optionsMetadata = options.metadata as
-          | {
-              selectedModelId?: string;
-            }
-          | undefined;
-        console.log("sendMessages", options);
-        const lastMessage = options.messages.at(-1);
-        if (!lastMessage) throw new Error("No message to send");
-        const selectedModelId =
-          optionsMetadata?.selectedModelId ??
-          lastMessage.metadata?.modelId ??
-          defaultModelId;
-        if (!isAllowedModelId(selectedModelId))
-          throw new Error("Invalid model ID");
-        return eventIteratorToUnproxiedDataStream(
-          await chatRpc.chat(
-            {
-              threadUuid: options.chatId,
-              messageUuid: options.messageId,
-              lastMessageToKeep: lastMessage,
-              trigger: options.trigger,
-              selectedModelId,
-            },
-            { signal: options.abortSignal }
-          )
-        );
-      },
-      reconnectToStream() {
-        throw new Error("Unsupported");
-      },
-    },
-    generateId: () => nanoid(),
-    onFinish: ({ isAbort, isDisconnect, isError }) => {
-      if (!(isAbort || isDisconnect || isError)) {
-        trySendNextQueuedMessage();
-      }
+  } = useChatContext({
+    onFinish: () => {
+      console.log("DEBUG123: onFinish !!!!!!");
+      // sdkSetMessages([]);
     },
   });
 
-  useEffect(() => {
-    // TODO this is fully broken. We need to clarify when to set messages
-    // if (sdkStatus === "streaming") return;
-    // if (thread?.liveStatus !== "completed") return;
-    if (!messagesPersisted) return;
-    sdkSetMessages(messagesPersisted);
-  }, [messagesPersisted, sdkSetMessages]);
-
-  const lastSentMessageIdRef = useRef<string | null>(null);
-  // TODO: rewrite this, it's not working (don't show streaming messages)
-  const messages = useMemo(() => {
-    if (!messagesPersisted) return [];
-    if (sdkStatus === "ready") return messagesPersisted;
-
-    const incompleteAiMessage =
-      sdkStatus === "streaming" || sdkStatus === "submitted"
-        ? messagesStreamed.findLast(
-            (m) => m.id === lastSentMessageIdRef.current
-          )
-        : undefined;
-    const combinedMessages = messagesPersisted.map((m) => {
-      if (incompleteAiMessage?.id === m.id) {
-        return incompleteAiMessage;
-      }
-      return m;
-    });
-
-    return combinedMessages;
-  }, [messagesPersisted, messagesStreamed, sdkStatus]);
-
   const __sendMessageInternal = useCallback(
     (uiMessage: MyUIMessage) => {
-      lastSentMessageIdRef.current = uiMessage.id;
       if (chatNav.isNew) chatNav.persistNewChatIdToUrl();
       inputActions.clear();
       upsertThread({
@@ -208,6 +155,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
           lastUsedModelId: uiMessage?.metadata?.modelId,
         },
       });
+      sdkSetMessages([]);
       return sdkSendMessage(uiMessage);
     },
     [
@@ -217,15 +165,16 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       inputActions.clear,
       upsertThread,
       chatNav.id,
+      sdkSetMessages,
     ]
   );
 
-  const trySendNextQueuedMessage = useCallback(() => {
-    const nextMessage = messagesQueue[0];
-    if (!nextMessage) return;
-    setMessagesQueue((prev) => prev.slice(1));
-    return __sendMessageInternal(nextMessage);
-  }, [messagesQueue, __sendMessageInternal]);
+  // const trySendNextQueuedMessage = useCallback(() => {
+  //   const nextMessage = messagesQueue[0];
+  //   if (!nextMessage) return;
+  //   setMessagesQueue((prev) => prev.slice(1));
+  //   return __sendMessageInternal(nextMessage);
+  // }, [messagesQueue, __sendMessageInternal]);
 
   const sendMessage = useCallback(
     (params: SendMessageParams) => {
@@ -259,56 +208,87 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const regenerate = useCallback(
-    (messageId: string, options?: RegenerateMessageOptions) => {
-      upsertThread({
+    async (messageId: string, options?: RegenerateMessageOptions) => {
+      const upsertPromise = upsertThread({
         threadUuid: chatNav.id,
         patch: {
           liveStatus: "streaming",
           lastUsedModelId: options?.selectedModelId,
         },
       });
-      sdkRegenerate({
-        messageId,
-        metadata: {
-          selectedModelId: options?.selectedModelId,
-        },
-      });
+      try {
+        let messageIndex = messages.findIndex((m) => m.id === messageId);
+        while (
+          messageIndex > 0 &&
+          messages[messageIndex]?.role === "assistant"
+        ) {
+          messageIndex--;
+        }
+        const message = messages[messageIndex];
+        if (!message) {
+          console.error(
+            "Cannot regenerate: message user message not found before",
+            {
+              messageId,
+              messages,
+              messageIndex,
+            }
+          );
+          return;
+        }
+        sdkSetMessages([message]);
+        await sdkRegenerate({
+          messageId: message.id,
+          metadata: {
+            selectedModelId: options?.selectedModelId,
+          },
+        });
+      } catch (error) {
+        console.error("error while regenerating message", error);
+        await upsertPromise;
+        await upsertThread({
+          threadUuid: chatNav.id,
+          patch: {
+            liveStatus: "error",
+          },
+        });
+      } finally {
+        await upsertPromise;
+      }
     },
-    [sdkRegenerate, upsertThread, chatNav.id]
+    [sdkRegenerate, upsertThread, chatNav.id, messages, sdkSetMessages]
   );
 
-  // useEffect(() => {
-  //   console.log("messagesStreamed", messagesStreamed);
-  // }, [messagesStreamed]);
-
-  // TODO tmb because we only use streamedMessages for now
-  const isUseChatPending = isSkip ? false : messagesStreamed.length === 0;
-  const isPending = isQueryPending || isUseChatPending;
-
-  const actions = {
-    sendMessage,
-    cancel,
-    regenerate,
-  } satisfies ActiveThreadActions;
+  const actions = useMemo(
+    () =>
+      ({
+        sendMessage,
+        cancel,
+        regenerate,
+      }) satisfies ActiveThreadActions,
+    [sendMessage, cancel, regenerate]
+  );
 
   const state = useMemo(
     () =>
       ({
         uuid: chatNav.id,
         streamStatus: thread?.liveStatus ?? "pending",
-        dataStatus: thread === undefined ? "pending" : "fresh",
+        dataStatus: isThreadPending ? "pending" : "fresh",
         messagesQueue,
         isPending,
+        isStale,
       }) satisfies Omit<ActiveThreadState, "messages">,
-    [chatNav.id, thread, messagesQueue, isPending]
+    [chatNav.id, thread, messagesQueue, isPending, isThreadPending, isStale]
   );
 
   const messagesState = useMemo(
     () => ({
-      messages: messagesStreamed,
+      messages,
       isPending,
+      isStale,
     }),
-    [messagesStreamed, isPending]
+    [messages, isPending, isStale]
   );
 
   return (

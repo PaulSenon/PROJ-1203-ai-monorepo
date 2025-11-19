@@ -240,10 +240,17 @@ export const chatProcedure = chatProcedures.chat
     const result = streamText({
       model: registry.languageModel(modelId),
       messages: modelMessages,
+      onError: (error) => {
+        console.error("Error streamText:", error);
+      },
     });
 
     // 7. Consume stream to survive client disconnect
-    result.consumeStream(); // no await
+    result.consumeStream({
+      onError: (error) => {
+        console.error("Error consumeStream:", error);
+      },
+    }); // no await
 
     // 8. Create returned stream
     const stream = result.toUIMessageStream({
@@ -286,6 +293,15 @@ export const chatProcedure = chatProcedures.chat
           uiMessage: responseMessage,
           liveStatus: lastMessageStatus,
         });
+
+        // const { streamId } = await createdStreamPromise;
+        // if (streamId) {
+        //   await fetchMutation(api.streams.deleteStream, {
+        //     streamId,
+        //   });
+        // }
+
+        console.log("DONE !");
       },
       messageMetadata({ part }) {
         // skip metadata computation for non-final parts
@@ -330,6 +346,7 @@ export const chatProcedure = chatProcedures.chat
           throttleMs: 1000,
         },
         onDelta: async (delta) => {
+          console.log("DeltaSaver onDelta", delta.start);
           await fetchMutation(api.streams.pushStreamDelta, {
             streamId,
             start: delta.start,

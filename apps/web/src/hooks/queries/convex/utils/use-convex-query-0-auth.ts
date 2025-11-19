@@ -2,10 +2,15 @@ import type {
   OptionalRestArgsOrSkip,
   PaginatedQueryArgs,
   PaginatedQueryReference,
+  RequestForQueries,
   UsePaginatedQueryReturnType,
 } from "convex/react";
 import type { FunctionReference, FunctionReturnType } from "convex/server";
-import { usePaginatedQuery, useQuery } from "convex-helpers/react/cache/hooks";
+import {
+  usePaginatedQuery,
+  useQueries,
+  useQuery,
+} from "convex-helpers/react/cache/hooks";
 import { useAuth } from "@/hooks/use-auth";
 
 /**
@@ -41,4 +46,14 @@ export function useCvxPaginatedQueryAuth<Query extends PaginatedQueryReference>(
   );
 
   return result;
+}
+
+// TODO: also do cache for queries
+export function useCvxQueriesAuth(
+  queries: RequestForQueries
+  // biome-ignore lint/suspicious/noExplicitAny: needed any
+): Record<string, any | undefined | Error> {
+  const { isReadyToUseConvex } = useAuth();
+  const results = useQueries(isReadyToUseConvex ? queries : {});
+  return results;
 }

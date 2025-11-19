@@ -196,6 +196,43 @@ function createCacheKey<Query extends FunctionReference<"query">>(
   return ["cvxQueryCached", createQueryKey(query, queryArgs)].join(":");
 }
 
+// TODO: check it works because haven't tested it yet
+export function setQueryCache<Query extends FunctionReference<"query">>(
+  data: FunctionReturnType<Query>,
+  query: Query,
+  ...queryArgs: OptionalRestArgs<Query>
+): void {
+  const keyString = createCacheKey(query, queryArgs);
+  const userCache = UserCache.getInstance();
+  const cacheEntry = userCache.entry<FunctionReturnType<Query>>(keyString);
+  cacheEntry.set(data);
+}
+
+// TODO: check it works because haven't tested it yet
+export function setPaginatedQueryCache<Query extends PaginatedQueryReference>(
+  data: PaginatedQueryItem<Query>[],
+  query: Query,
+  ...argsAndOptions: [
+    PaginatedQueryArgs<Query>,
+    options: {
+      initialNumItems: number;
+      // latestPageSize?: "grow" | "fixed";
+    },
+  ]
+): void {
+  const [args, options] = argsAndOptions;
+  const keyString = createCacheKey(query, {
+    ...args,
+    paginationOpts: {
+      numItems: options.initialNumItems,
+      cursor: null,
+    },
+  });
+  const userCache = UserCache.getInstance();
+  const cacheEntry = userCache.entry<PaginatedQueryItem<Query>[]>(keyString);
+  cacheEntry.set(data);
+}
+
 /**
  * If query has stale data (local cache), skip
  * If missing local cache, fetch it and store it
@@ -252,12 +289,15 @@ export async function ensurePaginatedQueryCached<
   Query extends PaginatedQueryReference,
 >(
   query: Query,
-  args: PaginatedQueryArgs<Query>,
-  options: {
-    initialNumItems: number;
-    // latestPageSize?: "grow" | "fixed";
-  }
+  ...argsAndOptions: [
+    PaginatedQueryArgs<Query>,
+    options: {
+      initialNumItems: number;
+      // latestPageSize?: "grow" | "fixed";
+    },
+  ]
 ): Promise<PaginatedQueryItem<Query>[]> {
+  const [args, options] = argsAndOptions;
   const keyString = createCacheKey(query, {
     ...args,
     paginationOpts: {

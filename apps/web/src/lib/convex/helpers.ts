@@ -117,7 +117,18 @@ export function mutationBuilder<
   });
 }
 
-type PaginatedQueryOptions<TQuery extends PaginatedQueryReference> = [
+export function mutationBuilderV3<
+  TMutation extends FunctionReference<"mutation">,
+>(mutation: TMutation, options: MutationOptions<FunctionArgs<TMutation>>) {
+  return {
+    options: (): [TMutation, MutationOptions<FunctionArgs<TMutation>>] => [
+      mutation,
+      options,
+    ],
+  };
+}
+
+export type PaginatedQueryOptions<TQuery extends PaginatedQueryReference> = [
   TQuery,
   PaginatedQueryArgs<TQuery>,
   {
@@ -156,7 +167,7 @@ export function paginatedQueryBuilder<
           ] as PaginatedQueryOptionsOrSkip<TQuery>;
         return [query, args, paginationArgs];
       },
-      neverSkip(): PaginatedQueryOptionsOrSkip<TQuery> {
+      neverSkip(): PaginatedQueryOptions<TQuery> {
         return [query, args, paginationArgs];
       },
     },

@@ -1,6 +1,6 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import { RefreshCwIcon } from "lucide-react";
-import type { ComponentProps } from "react";
+import { type ComponentProps, useCallback } from "react";
 import { Action, Actions } from "@/components/ai-elements/actions";
 import {
   Message as AIElementsMessage,
@@ -18,6 +18,10 @@ export function ChatMessage({
 }: { message: MyUIMessage } & ComponentProps<"div">) {
   const { regenerate } = useActiveThreadActions();
   const { selectedModelId } = useModelSelectorState(); // TODO: tmp while not "retry with model" feature
+
+  const handleRegenerate = useCallback(() => {
+    regenerate(message.id, { selectedModelId });
+  }, [regenerate, message.id, selectedModelId]);
   return (
     <div className="flex flex-col items-start gap-2" {...props}>
       <AIElementsMessage from={message.role} key={message.id}>
@@ -43,16 +47,13 @@ export function ChatMessage({
           {message.metadata?.error ? (
             <ChatMessageError
               errorMetadata={message.metadata.error}
-              onRetry={() => regenerate(message.id, { selectedModelId })}
+              onRetry={handleRegenerate}
             />
           ) : null}
         </AIElementsMessageContent>
         {/* TODO: tmp for debug purpose UI is fully broken. */}
         <Actions>
-          <Action
-            onClick={() => regenerate(message.id, { selectedModelId })}
-            tooltip="Regenerate"
-          >
+          <Action onClick={handleRegenerate} tooltip="Regenerate">
             <RefreshCwIcon />
           </Action>
         </Actions>

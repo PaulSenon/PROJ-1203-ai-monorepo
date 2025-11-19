@@ -1,5 +1,9 @@
 import type { OptimisticUpdate } from "convex/browser";
-import { type ReactMutation, useMutation } from "convex/react";
+import {
+  type MutationOptions,
+  type ReactMutation,
+  useMutation,
+} from "convex/react";
 import type {
   FunctionArgs,
   FunctionReference,
@@ -48,4 +52,18 @@ export function useCvxMutationAuth<T extends FunctionReference<"mutation">>(
   }, [isFullyReady]);
 
   return useMemo(() => createMutationWithAuth(rawMutation), [rawMutation]);
+}
+
+// TODO: this is the new way of doing I guess
+export function useCvxMutationAuthV3<
+  TMutation extends FunctionReference<"mutation">,
+>(
+  mutation: TMutation,
+  options: MutationOptions<FunctionArgs<TMutation>>
+): ReactMutation<TMutation> {
+  const m = useMutation(mutation);
+  if (options.optimisticUpdate) {
+    m.withOptimisticUpdate(options.optimisticUpdate);
+  }
+  return m;
 }

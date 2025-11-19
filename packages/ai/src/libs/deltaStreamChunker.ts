@@ -6,7 +6,7 @@ type Delta<T extends UIMessageChunk> = {
   chunks: T[];
 };
 type DeltaSaverOptions = {
-  chunking: RegExp;
+  chunking?: RegExp;
   throttleMs: number;
   compress: boolean;
 };
@@ -19,7 +19,7 @@ const DEFAULT_DELTA_SAVER_OPTIONS = {
 
 type MaybePromise<T> = T | Promise<T>;
 type DeltaSaverArgs<T extends UIMessageChunk> = {
-  config?: Partial<DeltaSaverOptions>;
+  config?: DeltaSaverOptions;
   onDelta?: (delta: Delta<T>) => MaybePromise<void>;
   onFinish?: (args: {
     reason: "finish" | "abort" | "error";
@@ -36,7 +36,7 @@ export class DeltaStreamChunker<T extends UIMessageChunk> {
   private nextChunks: T[] = [];
 
   private cursor = 0;
-  private lastFlush = Date.now();
+  private lastFlush = 0; // To force immediate first chunk flush on start
   private ongoingFlush: Promise<void> = Promise.resolve();
   private isFinished = false;
   private lastMetadataChunk: (T & { type: "message-metadata" }) | undefined;
@@ -49,7 +49,7 @@ export class DeltaStreamChunker<T extends UIMessageChunk> {
   readonly abortController: AbortController;
 
   constructor(params: DeltaSaverArgs<T>) {
-    this.config = { ...DEFAULT_DELTA_SAVER_OPTIONS, ...params.config };
+    this.config = params.config ?? DEFAULT_DELTA_SAVER_OPTIONS;
     this.handlePersistDelta = params.onDelta;
     this.handleFinish = params.onFinish;
     this.handleError = params.onError;
@@ -176,6 +176,7 @@ export class DeltaStreamChunker<T extends UIMessageChunk> {
       lastCompressedChunk?.type === "reasoning-delta";
     if (!isTextDelta) return true; // always flush non-text-like chunks
 
+    if (!this.config.chunking) return true;
     const isChunkMatching = this.config.chunking.test(
       lastCompressedChunk.delta
     );

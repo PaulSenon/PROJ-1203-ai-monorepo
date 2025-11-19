@@ -10,6 +10,10 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { INTERNAL_getCurrentUserOrThrow } from "./lib";
 import { mutationWithRLS, queryWithRLS } from "./rls";
 import { lifecycleStates, liveStatuses, vv } from "./schema";
+import {
+  INTERNAL_FindMessageStream,
+  INTERNAL_ListStreamDeltas,
+} from "./streams";
 import { INTERNAL_upsertUserChatPreferences } from "./users";
 
 async function InternalDeleteMessageWithParts(
@@ -306,6 +310,39 @@ async function InternalGetMessageParts(
   return decodedParts;
 }
 
+// Reconstruct message with parts and metadata for frontend
+async function InternalRetrieveUiMessage(
+  ctx: QueryCtx | MutationCtx,
+  args: {
+    userId: Id<"users">;
+    messageId: Id<"messages">;
+  }
+): Promise<MyUIMessage> {
+  const message = await ctx.db.get(args.messageId);
+  if (!message) throw new ConvexError("message not found");
+
+  const parts = await InternalGetMessageParts(ctx, {
+    userId: args.userId,
+    messageId: message._id,
+  });
+
+  return {
+    id: message.uuid,
+    // biome-ignore lint/suspicious/noExplicitAny: will be checked bellow with validateMyUIMessages
+    parts: parts as any,
+    // biome-ignore lint/suspicious/noExplicitAny: will be checked bellow with validateMyUIMessages
+    role: message.role as any,
+    metadata: {
+      modelId: message.modelId,
+      createdAt: message.createdAt,
+      updatedAt: message.updatedAt,
+      lifecycleState: message.lifecycleState,
+      liveStatus: message.liveStatus,
+      error: message.error,
+    },
+  } satisfies MyUIMessage;
+}
+
 // DONE
 // 1. get messages from threadId and userId by createdAt asc
 // 2. for each message get its parts and reconstruct UIMessage object
@@ -330,25 +367,11 @@ async function InternalGetAllThreadMessagesAsc(
 
   const messagesWithParts = await Promise.all(
     messages.map(async (message) => {
-      const parts = await InternalGetMessageParts(ctx, {
+      const fullMessage = await InternalRetrieveUiMessage(ctx, {
         userId: args.userId,
         messageId: message._id,
       });
-      return {
-        id: message.uuid,
-        // biome-ignore lint/suspicious/noExplicitAny: will be checked bellow with validateMyUIMessages
-        parts: parts as any,
-        // biome-ignore lint/suspicious/noExplicitAny: will be checked bellow with validateMyUIMessages
-        role: message.role as any,
-        metadata: {
-          modelId: message.modelId,
-          createdAt: message.createdAt,
-          updatedAt: message.updatedAt,
-          lifecycleState: message.lifecycleState,
-          liveStatus: message.liveStatus,
-          error: message.error,
-        },
-      } satisfies MyUIMessage;
+      return fullMessage;
     })
   );
 
@@ -382,6 +405,184 @@ export const getAllThreadMessagesAsc = queryWithRLS({
       userId: user._id,
     });
     return messages;
+  },
+});
+
+export function InternalFindThreadByUuid(
+  ctx: QueryCtx | MutationCtx,
+  args: {
+    userId: Id<"users">;
+    threadUuid: string;
+  }
+) {
+  return ctx.db
+    .query("threads")
+    .withIndex("byUserIdUuid", (q) =>
+      q.eq("userId", args.userId).eq("uuid", args.threadUuid)
+    )
+    .unique();
+}
+
+export function InternalFindMessageByUuid(
+  ctx: QueryCtx | MutationCtx,
+  args: {
+    userId: Id<"users">;
+    threadId: Id<"threads">;
+    messageUuid: string;
+  }
+) {
+  return ctx.db
+    .query("messages")
+    .withIndex("byUserIdThreadIdUuid", (q) =>
+      q
+        .eq("userId", args.userId)
+        .eq("threadId", args.threadId)
+        .eq("uuid", args.messageUuid)
+    )
+    .unique();
+}
+export const listThreadUiMessagesPaginated = queryWithRLS({
+  args: {
+    threadUuid: v.string(),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const user = await INTERNAL_getCurrentUserOrThrow(ctx);
+
+    // 1. resolve thread id from uuid
+    const thread = await InternalFindThreadByUuid(ctx, {
+      userId: user._id,
+      threadUuid: args.threadUuid,
+    });
+
+    if (!thread) throw new ConvexError("Thread not found");
+    if (thread.lifecycleState === "deleted")
+      throw new ConvexError("Thread is deleted");
+
+    // 2. get messages page from thread id
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("byUserIdThreadIdStateOrdered", (q) =>
+        q
+          .eq("userId", user._id)
+          .eq("threadId", thread._id)
+          .eq("lifecycleState", "active")
+      )
+      .order("desc")
+      .paginate(args.paginationOpts);
+
+    // 3. retrieve message parts for each message
+    const uiMessages = await Promise.all(
+      messages.page.map((message) =>
+        InternalRetrieveUiMessage(ctx, {
+          userId: user._id,
+          messageId: message._id,
+        })
+      )
+    );
+
+    return {
+      ...messages,
+      page: uiMessages,
+    };
+  },
+});
+
+// TODO find a way to have stream delta without 2 roundtrip + find a way to cache them
+// export const listThreadStreamingMessagesPaginated = queryWithRLS({
+//   args: {
+//     threadUuid: v.string(),
+//     paginationOpts: paginationOptsValidator,
+//   },
+//   handler: async (ctx, args) => {
+//     const user = await INTERNAL_getCurrentUserOrThrow(ctx);
+
+//     // 1. resolve thread id from uuid
+//     const thread = await InternalFindThreadByUuid(ctx, {
+//       userId: user._id,
+//       threadUuid: args.threadUuid,
+//     });
+
+//     if (!thread) throw new ConvexError("Thread not found");
+//     if (thread.lifecycleState === "deleted")
+//       throw new ConvexError("Thread is deleted");
+
+//     // 2. get messages page from thread id
+//     const messages = await ctx.db
+//       .query("messages")
+//       .withIndex("byUserIdThreadIdStateOrdered", (q) =>
+//         q
+//           .eq("userId", user._id)
+//           .eq("threadId", thread._id)
+//           .eq("lifecycleState", "active")
+//       )
+//       .order("desc")
+//       .paginate(args.paginationOpts);
+
+//     // 3. retrieve stream deltas for each message
+//     const streams = await Promise.all(
+//       messages.page.map((message) =>
+//         INTERNAL_FindMessageStream(ctx, {
+//           userId: user._id,
+//           threadId: thread._id,
+//           messageId: message._id,
+//         })
+//       )
+//     );
+
+//     // 4. retrieve stream deltas for existing streams
+//     const streamDeltas = await Promise.all(
+//       streams.map((stream) =>
+//         stream === null
+//           ? null
+//           : INTERNAL_ListStreamDeltas(ctx, {
+//               streamId: stream._id,
+//             })
+//       )
+//     );
+
+//     return {};
+//   },
+// });
+
+// DONE
+// for frontend, for when we encounter a message in a streaming status, to retrieve stream deltas
+// in a reactive way. Those UIMessageChunks can be merged back into a UIMessage object using readUIMessageStream
+export const findMessageStream = queryWithRLS({
+  args: {
+    threadUuid: v.string(),
+    messageUuid: v.string(),
+  },
+  async handler(ctx, args) {
+    const user = await INTERNAL_getCurrentUserOrThrow(ctx);
+
+    const thread = await InternalFindThreadByUuid(ctx, {
+      userId: user._id,
+      threadUuid: args.threadUuid,
+    });
+
+    if (!thread) throw new ConvexError("Thread not found");
+
+    const message = await InternalFindMessageByUuid(ctx, {
+      userId: user._id,
+      threadId: thread._id,
+      messageUuid: args.messageUuid,
+    });
+    if (!message) throw new ConvexError("Message not found");
+
+    const stream = await INTERNAL_FindMessageStream(ctx, {
+      userId: user._id,
+      threadId: thread._id,
+      messageId: message._id,
+    });
+
+    if (!stream) return null;
+
+    const deltas = await INTERNAL_ListStreamDeltas(ctx, {
+      streamId: stream._id,
+    });
+
+    return deltas;
   },
 });
 

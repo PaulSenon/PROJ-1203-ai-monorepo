@@ -46,7 +46,8 @@
         "useExhaustiveDependencies": "warn"
       },
       "nursery": {
-        "noShadow": "warn"
+        "noShadow": "warn",
+        "noUselessUndefined": "off"
       },
       "complexity": {
         "noExcessiveCognitiveComplexity": "warn"

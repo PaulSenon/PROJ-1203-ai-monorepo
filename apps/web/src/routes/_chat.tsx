@@ -4,6 +4,7 @@ import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ChatDraftProvider } from "@/hooks/use-chat-draft";
 import { ChatInputProvider } from "@/hooks/use-chat-input";
+import { UseChatProvider } from "@/hooks/use-messages";
 import { preloadUserPreferences } from "@/hooks/use-preload";
 import { ModelSelectorProvider } from "@/hooks/use-user-preferences";
 import { cn } from "@/lib/utils";
@@ -15,11 +16,13 @@ export const Route = createFileRoute("/_chat")({
 
 function ChatProviders({ children }: { children: React.ReactNode }) {
   return (
-    <ChatDraftProvider>
-      <ModelSelectorProvider>
-        <ChatInputProvider>{children}</ChatInputProvider>
-      </ModelSelectorProvider>
-    </ChatDraftProvider>
+    <UseChatProvider>
+      <ChatDraftProvider>
+        <ModelSelectorProvider>
+          <ChatInputProvider>{children}</ChatInputProvider>
+        </ModelSelectorProvider>
+      </ChatDraftProvider>
+    </UseChatProvider>
   );
 }
 
