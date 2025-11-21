@@ -24,7 +24,13 @@ const convexQueries = {
       initialNumItems: 10,
     }
   ),
-  findMessageStream: queryBuilder(api.chat.findMessageStream),
+  threadStreamingMessagesPaginated: paginatedQueryBuilder(
+    api.chat.listThreadStreamingMessagesPaginated,
+    {
+      initialNumItems: 10,
+    }
+  ),
+  // findMessageStream: queryBuilder(api.chat.findMessageStream),
   getChatPreferences: queryBuilder(api.users.getUserChatPreferences),
   getThread: queryBuilder(api.chat.getThread),
   getAllThreadMessagesAsc: queryBuilder(api.chat.getAllThreadMessagesAsc),

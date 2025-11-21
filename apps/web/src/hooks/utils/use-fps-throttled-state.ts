@@ -60,7 +60,7 @@
  *    (but limited impact as it does not do anything but calling our throttle logic we would have called anyway)
  */
 
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import type { RefObject, SetStateAction } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type FpsThrottlerOptions = {
@@ -172,6 +172,25 @@ export class FpsThrottler<T> {
     }
   }
 
+  setInstant(newValue: T) {
+    this.pendingValue = newValue;
+    if (this.isDebug) {
+      this.nbRequestedUpdates++;
+    }
+
+    // cancel any pending update
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+
+    // reset states
+    this.lastUpdateTime = 0;
+    this.framesSinceLastUpdate = 0;
+
+    this.processUpdate(performance.now());
+  }
+
   subscribe(listener: (value: T) => void): () => void {
     this.listeners.add(listener);
     // If subscribed late but we have a value, we don't auto-fire
@@ -234,7 +253,16 @@ export class FpsThrottler<T> {
 export function useFpsThrottledState<T>(
   initialState: T | (() => T),
   options?: FpsThrottlerOptions
-): [T, Dispatch<SetStateAction<T>>, RefObject<FpsThrottler<T>>] {
+): [
+  T,
+  (
+    valueOrUpdater: SetStateAction<T>,
+    opts?: {
+      instant?: boolean;
+    }
+  ) => void,
+  RefObject<FpsThrottler<T>>,
+] {
   // Resolve initial state once
   const [initialValue] = useState(() =>
     initialState instanceof Function ? initialState() : initialState
@@ -271,19 +299,20 @@ export function useFpsThrottledState<T>(
   }, [throttler]);
 
   // Stable setter function
-  const setThrottledState = useCallback<Dispatch<SetStateAction<T>>>(
-    (valueOrUpdater) => {
+  const setThrottledState = useCallback(
+    (valueOrUpdater: SetStateAction<T>, opts: { instant?: boolean } = {}) => {
+      const isInstant = opts.instant ?? false;
       let newValue: T;
       if (valueOrUpdater instanceof Function) {
-        // CRITICAL FIX: Use .latest to allow batching-like behavior
-        // If we call set(p => p+1); set(p => p+1); rapidly,
-        // we want the second one to see the result of the first pending one.
-        // This mimics standard React batching within the same event loop tick/frame.
-        newValue = (valueOrUpdater as (prev: T) => T)(throttler.latest);
+        newValue = valueOrUpdater(throttler.latest);
       } else {
         newValue = valueOrUpdater;
       }
-      throttler.set(newValue);
+      if (isInstant) {
+        throttler.setInstant(newValue);
+      } else {
+        throttler.set(newValue);
+      }
     },
     [throttler]
   );
@@ -299,31 +328,57 @@ export function useFpsThrottledState<T>(
  * A hook that throttles a value from another source (e.g. another hook).
  */
 export function useFpsThrottledValue<T>(
-  value: T,
+  value: T | "skip",
   options?: FpsThrottlerOptions
-): T {
+): T | undefined {
+  const isSkip = value === "skip";
+  const wasSkipped = useRef(false);
+
   const [throttledState, setThrottledState] = useFpsThrottledState(
-    value,
+    isSkip ? undefined : value,
     options
   );
 
   useEffect(() => {
+    if (isSkip) {
+      wasSkipped.current = true;
+      return;
+    }
+    if (wasSkipped.current) {
+      wasSkipped.current = false;
+      setThrottledState(value, { instant: true });
+      return;
+    }
     setThrottledState(value);
-  }, [value, setThrottledState]);
+  }, [value, setThrottledState, isSkip]);
 
   return throttledState;
 }
 
 export function useFpsThrottledValueDEBUG<T>(
-  value: T,
+  value: T | "skip",
   options?: Omit<FpsThrottlerOptions, "isDebug">
-): [T, FpsThrottler<T>] {
+): [T | undefined, FpsThrottler<T | undefined>] {
+  const isSkip = value === "skip";
+  const wasSkipped = useRef(false);
   const [throttledState, setThrottledState, throttlerRef] =
-    useFpsThrottledState(value, { ...options, isDebug: true });
+    useFpsThrottledState(isSkip ? undefined : value, {
+      ...options,
+      isDebug: true,
+    });
 
   useEffect(() => {
+    if (isSkip) {
+      wasSkipped.current = true;
+      return;
+    }
+    if (wasSkipped.current) {
+      wasSkipped.current = false;
+      setThrottledState(value, { instant: true });
+      return;
+    }
     setThrottledState(value);
-  }, [value, setThrottledState]);
+  }, [value, setThrottledState, isSkip]);
 
   return [throttledState, throttlerRef.current];
 }

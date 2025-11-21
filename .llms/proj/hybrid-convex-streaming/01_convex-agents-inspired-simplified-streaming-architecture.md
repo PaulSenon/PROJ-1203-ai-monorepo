@@ -28,7 +28,11 @@ export default defineSchema({
   messages: defineTable({
     // UIMessage fields
     id: v.string(), // AI SDK message ID
-    role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system")),
+    role: v.union(
+      v.literal("user"),
+      v.literal("assistant"),
+      v.literal("system")
+    ),
     parts: v.array(v.any()), // UIPart[] - text, tool calls, etc.
     text: v.string(), // Extracted text for convenience
     status: v.union(
@@ -37,16 +41,16 @@ export default defineSchema({
       v.literal("success"), // Completed
       v.literal("failed") // Failed
     ),
-    
+
     // Threading
     threadId: v.id("threads"),
-    
+
     // Optional metadata
     streamId: v.optional(v.string()), // Only present when status is "pending" or "streaming"
     agentName: v.optional(v.string()),
     model: v.optional(v.string()),
     metadata: v.optional(v.any()),
-    
+
     // Timestamps
     _creationTime: v.number(),
   })
@@ -71,12 +75,11 @@ export default defineSchema({
       v.object({
         kind: v.literal("aborted"),
         reason: v.string(),
-      }),
+      })
     ),
-    format: v.optional(v.union(
-      v.literal("UIMessageChunk"),
-      v.literal("TextStreamPart")
-    )),
+    format: v.optional(
+      v.union(v.literal("UIMessageChunk"), v.literal("TextStreamPart"))
+    ),
   })
     .index("by_threadId_status", ["threadId", "status.kind"])
     .index("by_streamId", ["streamId"]),
@@ -87,8 +90,7 @@ export default defineSchema({
     start: v.number(), // Cursor start (inclusive)
     end: v.number(), // Cursor end (exclusive)
     parts: v.array(v.any()), // UIMessageChunk[] or TextStreamPart[]
-  })
-    .index("by_streamId_start_end", ["streamId", "start", "end"]),
+  }).index("by_streamId_start_end", ["streamId", "start", "end"]),
 
   // Threads table
   threads: defineTable({
@@ -151,7 +153,7 @@ export const getStreamDeltas = query({
     // Fetch all deltas from cursor onwards
     const deltas = await ctx.db
       .query("streamDeltas")
-      .withIndex("by_streamId_start_end", (q) => 
+      .withIndex("by_streamId_start_end", (q) =>
         q.eq("streamId", streamId).gte("start", cursor)
       )
       .collect();
@@ -394,11 +396,13 @@ export const cleanupStream = internalMutation({
 ### 4.1 HTTP Route Handler (Custom Setup with streamToEventIterator)
 
 **Your Setup:**
+
 - `result.consumeStream()` (no await) - handles client disconnects
 - `result.toUIMessageStream()` - get the stream
 - `streamToEventIterator(stream)` - your infrastructure requirement
 
 **The Challenge:** `toUIMessageStream()` can only be consumed once, but you need to:
+
 1. Save deltas to Convex (consume the stream)
 2. Return it via `streamToEventIterator` (consume the stream again)
 
@@ -517,38 +521,38 @@ export async function POST(req: Request) {
         isAborted,
         isContinuation,
       });
-      
+
       // ✅ Wait for delta saving to complete before proceeding
       // This ensures all deltas are saved before we save the final message
       await deltaSavePromise.catch((error) => {
         console.error("Delta saving failed:", error);
         // Continue anyway - don't block onFinish
       });
-      
+
       // Wait for shell creation (should be done by now)
       await createShellPromise;
-      
+
       // ✅ Your existing onFinish logic (upsertThread, upsertMessage, etc.)
       // make sure all deferred promises are settled
       await Promise.allSettled(__deferredPromises);
-      
+
       const lastMessageStatus = isAborted
         ? "cancelled"
-        : (responseMessage.metadata?.liveStatus ?? "completed");
-      
+        : responseMessage.metadata?.liveStatus ?? "completed";
+
       await fetchMutation(api.chat.upsertThread, {
         threadUuid: thread.uuid,
         patch: {
           liveStatus: lastMessageStatus,
         },
       });
-      
+
       await fetchMutation(api.chat.upsertMessage, {
         threadId: thread._id,
         uiMessage: responseMessage,
         liveStatus: lastMessageStatus,
       });
-      
+
       // ✅ Also save final message to Convex (if not aborted)
       if (!isAborted) {
         await convex.mutation(api.messages.finishMessage, {
@@ -614,10 +618,10 @@ export async function POST(req: Request) {
   // ✅ Use httpStream (from the tee) - it has all the same options/behaviors as the original
   // The only change from your original code: use httpStream instead of stream
   return streamToEventIterator(httpStream);
-  
+
   // ❌ This WON'T work:
   // return streamToEventIterator(stream); // stream is already consumed by tee
-  
+
   // ✅ This works - httpStream preserves all your toUIMessageStream() options:
   // - originalMessages
   // - generateMessageId
@@ -637,6 +641,7 @@ export async function POST(req: Request) {
 3. **Delta Saving**: Runs in parallel (fire-and-forget) and doesn't block the HTTP stream.
 
 4. **Result Helpers Still Available**: After teeing, you still have access to:
+
    - `result.text` - Promise of final text
    - `result.usage` - Promise of token usage
    - `result.finishReason` - Promise of finish reason
@@ -645,17 +650,17 @@ export async function POST(req: Request) {
    - `result.textStream` - Text-only stream (can be consumed separately)
    - `result.toDataStream()` - Creates a NEW data stream (doesn't conflict)
    - `result.toTextStreamResponse()` - Creates a NEW text stream response (doesn't conflict)
-   
+
    **Why Tee/Fork?** Async iterables are single-consumption. Once you start consuming `stream`, you can't consume it again. The tee/fork pattern creates two independent streams from one source.
-   
+
    **Key Point**: All your `toUIMessageStream()` options (callbacks, metadata, etc.) are preserved in both teed streams because they're applied when you call `toUIMessageStream()`, not when you consume the stream.
-   
+
    ```typescript
    // ❌ This WON'T work - can't consume same stream twice:
    const stream = result.toUIMessageStream({ /* options */ });
    for await (const chunk of stream) { /* save to Convex */ }
    for await (const chunk of stream) { /* send to HTTP - EMPTY! */ }
-   
+
    // ✅ This WORKS - tee creates two independent streams with same behaviors:
    const stream = result.toUIMessageStream({ /* all your options */ });
    const [httpStream, deltaStream] = teeAsyncIterable(stream);
@@ -663,9 +668,9 @@ export async function POST(req: Request) {
    for await (const chunk of deltaStream) { /* save to Convex */ }
    return streamToEventIterator(httpStream); /* send to HTTP - WORKS! */ }
    ```
-   
+
    **Important**: After teeing, you must use `httpStream` (not the original `stream`) for HTTP, because the original stream is consumed internally by the tee function. But `httpStream` has all the same behaviors as the original!
-   
+
    **Note**: Don't call `result.toUIMessageStream()` again after teeing - it returns the same stream reference that's already been consumed.
 
 5. **`onFinish` Only Fires Once**: The `onFinish` callback in `toUIMessageStream()` is tied to the stream's lifecycle, not to individual consumers. Even though you tee the stream into two consumers (`httpStream` and `deltaStream`), `onFinish` will only fire **once** when the underlying stream completes. This is the correct behavior - you don't need to worry about it firing twice.
@@ -726,7 +731,7 @@ export class DeltaSaver {
     const end = this.cursor + parts.length;
 
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-    
+
     await convex.mutation(api.messages.addStreamDelta, {
       streamId: this.streamId,
       start,
@@ -739,9 +744,7 @@ export class DeltaSaver {
     this.lastWrite = Date.now();
   }
 
-  private compressUIMessageChunks(
-    parts: UIMessageChunk[]
-  ): UIMessageChunk[] {
+  private compressUIMessageChunks(parts: UIMessageChunk[]): UIMessageChunk[] {
     const compressed: UIMessageChunk[] = [];
 
     for (const part of parts) {
@@ -762,7 +765,6 @@ export class DeltaSaver {
   }
 }
 ```
-
 
 ---
 
@@ -891,7 +893,11 @@ export function useOptimizedMerge(
       // Update from streamed messages
       streamedMessages.forEach((msg, streamId) => {
         const existing = messageMapRef.current.get(msg.id);
-        if (!existing || existing.text !== msg.text || existing.status !== msg.status) {
+        if (
+          !existing ||
+          existing.text !== msg.text ||
+          existing.status !== msg.status
+        ) {
           messageMapRef.current.set(msg.id, msg);
           hasChanges = true;
         }
@@ -900,7 +906,10 @@ export function useOptimizedMerge(
       // Update from useChat (HTTP stream)
       if (chatMessages.length > 0) {
         const lastChatMessage = chatMessages[chatMessages.length - 1];
-        if (lastChatMessage.status === "streaming" || lastChatMessage.status === "pending") {
+        if (
+          lastChatMessage.status === "streaming" ||
+          lastChatMessage.status === "pending"
+        ) {
           const existing = messageMapRef.current.get(lastChatMessage.id);
           if (!existing || existing.text !== lastChatMessage.text) {
             messageMapRef.current.set(lastChatMessage.id, lastChatMessage);
@@ -980,11 +989,13 @@ interface DeltaSaverConfig {
 ### 6.2 How It Works
 
 **Throttling:**
+
 - Accumulates chunks in `pendingParts` array
 - Only writes to Convex when `throttleMs` has passed since last write
 - Ensures we don't write too frequently (reduces database load)
 
 **Compression:**
+
 - Within each batch (between writes), concatenates consecutive `text-delta` chunks with the same `id`
 - Example:
   ```
@@ -999,6 +1010,7 @@ interface DeltaSaverConfig {
   ```
 
 **Cursor Tracking:**
+
 - Each delta has `start` and `end` cursor positions
 - `start`: inclusive, `end`: exclusive
 - Allows clients to resume from specific positions
@@ -1026,6 +1038,7 @@ const maxEfficiencyConfig = {
 ```
 
 **Tradeoffs:**
+
 - Lower `throttleMs`: More responsive, more database writes
 - Higher `throttleMs`: Less responsive, fewer database writes
 - Compression: Always recommended (reduces parts without losing data)
@@ -1037,6 +1050,7 @@ const maxEfficiencyConfig = {
 ### 7.1 The Challenge
 
 We need to:
+
 1. Stream to HTTP client via `toUIMessageStreamResponse()` (critical path)
 2. Simultaneously save deltas to Convex (non-blocking, fire-and-forget)
 3. Never block the HTTP stream on Convex operations
@@ -1045,6 +1059,7 @@ We need to:
 ### 7.2 Solution: Use `createUIMessageStream`
 
 **Critical**: `toUIMessageStream()` can only be consumed once. We use `createUIMessageStream` to:
+
 1. Consume `toUIMessageStream()` once
 2. Save deltas to Convex as we iterate (non-blocking)
 3. Forward chunks to HTTP stream via `writer.write()`
@@ -1058,7 +1073,7 @@ const stream = createUIMessageStream({
     for await (const chunk of result.toUIMessageStream()) {
       // Save delta (non-blocking, fire-and-forget)
       deltaSaver.addChunk(chunk).catch(console.error);
-      
+
       // Forward to HTTP stream
       writer.write(chunk);
     }
@@ -1073,6 +1088,7 @@ return stream.toDataStreamResponse();
 ```
 
 **Why This Works:**
+
 - ✅ **Single consumption**: `toUIMessageStream()` is consumed once in `execute()`
 - ✅ **Non-blocking deltas**: `deltaSaver.addChunk()` is fire-and-forget
 - ✅ **HTTP stream never blocked**: Delta saving errors don't affect HTTP response
@@ -1088,12 +1104,12 @@ This architecture provides:
 ✅ **Performant**: Throttled delta writes, compressed chunks, RAF-throttled UI updates  
 ✅ **Resilient**: HTTP stream never blocked by Convex operations  
 ✅ **Reactive**: Clients automatically see updates via Convex queries  
-✅ **Flexible**: Supports HTTP streaming, resumed streaming, and REST patterns  
+✅ **Flexible**: Supports HTTP streaming, resumed streaming, and REST patterns
 
 **Key Files:**
+
 - `convex/schema.ts`: Database schema
 - `convex/messages.ts`: Queries and mutations
 - `app/api/chat/route.ts`: HTTP route handler with teeing
 - `hooks/useMessages.ts`: React hook for consuming messages
 - `lib/delta-saver.ts`: Delta saving logic with throttling/compression
-

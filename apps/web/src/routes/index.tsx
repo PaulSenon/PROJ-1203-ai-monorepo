@@ -47,7 +47,7 @@ function useFastCounter() {
 }
 
 const ThrottledContext = createContext<{
-  throttledCount: number;
+  throttledCount: number | undefined;
   debug: {
     lastUpdateTime: number;
     framesSinceLastUpdate: number;

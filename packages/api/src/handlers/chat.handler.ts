@@ -305,7 +305,7 @@ export const chatProcedure = chatProcedures.chat
       },
       messageMetadata({ part }) {
         // skip metadata computation for non-final parts
-        if (!["finish", "abort", "error"].includes(part.type)) {
+        if (!["finish", "abort", "error", "start"].includes(part.type)) {
           return;
         }
 
@@ -341,10 +341,6 @@ export const chatProcedure = chatProcedures.chat
       const deltaSaver = new DeltaStreamChunker<
         InferUIMessageChunk<MyUIMessage>
       >({
-        config: {
-          compress: true,
-          throttleMs: 1000,
-        },
         onDelta: async (delta) => {
           console.log("DeltaSaver onDelta", delta.start);
           await fetchMutation(api.streams.pushStreamDelta, {
@@ -356,6 +352,7 @@ export const chatProcedure = chatProcedures.chat
         },
         onFinish: async (args) => {
           console.log("DeltaSaver finished", args);
+          // TODO schedule delete in 1sec
           await fetchMutation(api.streams.deleteStream, {
             streamId,
           });

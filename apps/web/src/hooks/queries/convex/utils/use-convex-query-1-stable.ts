@@ -10,7 +10,7 @@ import type {
   UsePaginatedQueryReturnType,
 } from "convex/react";
 import type { FunctionReference, FunctionReturnType } from "convex/server";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import {
   useCvxPaginatedQueryAuth,
   useCvxQueryAuth,
@@ -38,7 +38,7 @@ export function useCvxPaginatedQueryStable<
     initialNumItems: number;
     // latestPageSize?: "grow" | "fixed";
   }
-): UsePaginatedQueryReturnType<Query> {
+): UsePaginatedQueryReturnType<Query> & { isPending: boolean } {
   const res = useCvxPaginatedQueryAuth(query, args, options);
 
   const stored = useRef(res.results);
@@ -47,8 +47,15 @@ export function useCvxPaginatedQueryStable<
     stored.current = res.results;
   }
 
-  return {
-    ...res,
-    results: stored.current,
-  };
+  return useMemo(
+    () =>
+      ({
+        isLoading: res.isLoading,
+        loadMore: res.loadMore,
+        results: stored.current,
+        status: res.status,
+        isPending: res.status === "LoadingFirstPage",
+      }) as UsePaginatedQueryReturnType<Query> & { isPending: boolean },
+    [res.isLoading, res.loadMore, res.status]
+  );
 }

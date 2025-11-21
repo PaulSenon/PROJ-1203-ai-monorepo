@@ -3,6 +3,11 @@ import { nanoid } from "nanoid";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Route as ChatRoute } from "../routes/_chat/chat.{-$id}";
 
+const ChatNavState = {
+  isNew: false,
+  id: nanoid(),
+};
+
 /**
  * @throws {Error} if used outside of /chat/{-$id} route
  */
@@ -10,9 +15,20 @@ export function useChatNav() {
   const router = useRouter();
   // this will throw an error if used outside of /chat/{-$id} route:
   const params = ChatRoute.useParams();
-
   const isNew = params.id === undefined;
-  const id = useMemo(() => params.id ?? nanoid(), [params.id]);
+
+  if (isNew && !ChatNavState.isNew) {
+    ChatNavState.isNew = true;
+    ChatNavState.id = nanoid();
+  } else if (params.id !== undefined) {
+    ChatNavState.isNew = false;
+    ChatNavState.id = params.id;
+  }
+  const id = ChatNavState.id;
+
+  useEffect(() => {
+    console.log("DEBUG123: NAV chat nav id", id);
+  }, [id]);
 
   const persistNewChatIdToUrl = useCallback(() => {
     if (!isNew) return;
@@ -79,7 +95,7 @@ export function ChatNavRerenderTrigger({
   }, [chatNav]);
 
   useEffect(() => {
-    console.log("ChatNavRerenderer: key changed !", { key });
+    console.log("DEBUG123: ChatNavRerenderer: key changed !", { key });
   }, [key]);
 
   return (

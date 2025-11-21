@@ -62,8 +62,8 @@ export class UserCache extends Cache<string> {
           idbAdapter(cacheScope),
         ]),
         {
-          enabled: true,
-          logToConsole: false,
+          enabled: false,
+          logToConsole: true,
           includeValue: true,
         }
       ),

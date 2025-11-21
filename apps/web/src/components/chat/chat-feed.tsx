@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { useAppLoadStatusActions } from "@/hooks/use-app-load-status";
 import { useActiveThreadMessages } from "@/hooks/use-chat-active";
+import { cn } from "@/lib/utils";
 import {
   Conversation,
   ConversationContent,
@@ -15,6 +16,7 @@ import { ChatMessage } from "./chat-messages/chat-message";
 function ScrollInitialPosition() {
   const { scrollToBottom } = useStickToBottomContext();
   useLayoutEffect(() => {
+    console.log("ScrollInitialPosition");
     scrollToBottom("instant");
   }, [scrollToBottom]);
 
@@ -23,7 +25,7 @@ function ScrollInitialPosition() {
 
 export function ChatFeed() {
   const appUiStatus = useAppLoadStatusActions();
-  const { messages, isPending } = useActiveThreadMessages();
+  const { messages, isPending, isStale } = useActiveThreadMessages();
 
   // TODO: effect or layout effect ?
   useEffect(() => {
@@ -32,8 +34,8 @@ export function ChatFeed() {
 
   return (
     <div>
-      <Conversation className="relative w-full" style={{ height: "500px" }}>
-        <ConversationContent>
+      <Conversation className="relative h-[calc(100vh-200px)] w-full">
+        <ConversationContent className="mt-20 mb-20">
           {!isPending && messages.length === 0 ? (
             <ConversationEmptyState
               description="Start a conversation to see messages here"
@@ -41,15 +43,23 @@ export function ChatFeed() {
               title="No messages yet"
             />
           ) : (
-            messages.map((message, index) => (
+            messages.map((message, _index) => (
               <ChatMessage
-                className="animate-subtle-slide-up"
+                className={cn(
+                  isStale ? "opacity-75" : ""
+                  // messages.length - 1 - index <= 5
+                  //   ? "animate-subtle-slide-up"
+                  //   : ""
+                )}
                 key={message.id}
                 message={message}
-                style={{
-                  // TODO: translate-y is messing up with scroll container and it glitches. Then hack here it's to start the first animation 100ms later but this is not a good solution.
-                  animationDelay: `${100 + (messages.length - 1 - index) * 15}ms`,
-                }}
+                // style={{
+                //   // TODO: translate-y is messing up with scroll container and it glitches. Then hack here it's to start the first animation 100ms later but this is not a good solution.
+                //   animationDelay:
+                //     messages.length - 1 - index <= 5
+                //       ? `${(messages.length - 1 - index) * 15}ms`
+                //       : undefined,
+                // }}
               />
             ))
           )}

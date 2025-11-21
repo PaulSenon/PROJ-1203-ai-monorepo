@@ -1,5 +1,8 @@
 import { createUiMessageFromChunks } from "@ai-monorepo/ai/libs/createUiMessageFromChunks";
-import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
+import type {
+  MetadataSchema,
+  MyUIMessage,
+} from "@ai-monorepo/ai/types/uiMessage";
 import { useChat } from "@ai-sdk/react";
 import type {
   ChatOnDataCallback,
@@ -7,7 +10,6 @@ import type {
   ChatOnFinishCallback,
   ChatOnToolCallCallback,
 } from "ai";
-import type { RequestForQueries } from "convex/react";
 import {
   createContext,
   type ReactNode,
@@ -21,197 +23,262 @@ import {
 import { OrpcChatTransport } from "@/lib/chat/OrpcChatTransport";
 import { cvx } from "@/lib/convex/queries";
 import type { Prettify } from "@/lib/utils";
-import { useCvxQueriesAuth } from "./queries/convex/utils/use-convex-query-0-auth";
-import { useCvxPaginatedQueryCached } from "./queries/convex/utils/use-convex-query-2-cached";
+import { useCvxPaginatedQueryAuth } from "./queries/convex/utils/use-convex-query-0-auth";
+import { useCvxPaginatedQueryStable } from "./queries/convex/utils/use-convex-query-1-stable";
 import { useChatNav } from "./use-chat-nav";
+import { useUserCacheEntryOnce } from "./use-user-cache";
 import { useFpsThrottledValue } from "./utils/use-fps-throttled-state";
 
-export function useMessages(threadUuid: string | "skip") {
+function useStreamingMessages(threadUuid: string | "skip") {
   const isSkip = threadUuid === "skip";
-
-  // 1. Paginated messages
-  const paginatedMessages = useCvxPaginatedQueryCached(
+  const streamingMessagesChunks = useCvxPaginatedQueryAuth(
     ...cvx.query
-      .threadMessagesPaginated({ threadUuid })
+      .threadStreamingMessagesPaginated({ threadUuid })
       .options.skipWhen(isSkip)
   );
 
-  // 2. Find streaming messages from paginated messages
-  const streamingMessages = useMemo(
+  const streamedMessagesPromises = useMemo(
     () =>
-      paginatedMessages.results.filter(
-        (m) =>
-          m.metadata?.liveStatus === "pending" ||
-          m.metadata?.liveStatus === "streaming"
+      Promise.all(
+        streamingMessagesChunks.results.map((chunks) =>
+          createUiMessageFromChunks<MyUIMessage>(chunks)
+        )
       ),
-    [paginatedMessages.results]
+    [streamingMessagesChunks.results]
   );
 
-  // 3. Query streams for pending messages (using useQueries)
-  const streamingMessageQueries = useMemo(() => {
-    const queries: RequestForQueries = {};
-    for (const m of streamingMessages) {
-      const q = cvx.query.findMessageStream({
-        threadUuid,
-        messageUuid: m.id,
-      });
-      queries[m.id] = {
-        query: q.query,
-        args: q.args[0],
-      };
-    }
-    return queries;
-  }, [streamingMessages, threadUuid]);
-  const streamQueries = useCvxQueriesAuth(streamingMessageQueries) as Record<
-    string,
-    ReturnType<typeof cvx.query.findMessageStream>["query"]["_returnType"]
-  >;
-
-  // 4. Materialize UIMessages from stream deltas
-  const streamedMessagesPromises = useMemo(async () => {
-    const messages = new Map<string, MyUIMessage>();
-    for (const [messageId, chunks] of Object.entries(streamQueries)) {
-      if (!chunks) continue;
-      // TODO parallelize
-      const message = await createUiMessageFromChunks<MyUIMessage>(chunks);
-      if (!message) continue;
-      messages.set(messageId, message);
-    }
-
-    return messages;
-  }, [streamQueries]);
-
-  const [streamedMessages, setStreamedMessages] = useState<MyUIMessage[]>([]);
+  const [streamedMessages, setStreamedMessages] = useState<
+    MyUIMessage[] | undefined
+  >(undefined);
   useEffect(() => {
+    if (isSkip) return;
+    if (streamingMessagesChunks.status === "LoadingFirstPage") return;
+
     streamedMessagesPromises.then((m) => {
-      setStreamedMessages(Array.from(m.values()));
+      const filteredMessages = m.filter(
+        (m2): m2 is MyUIMessage => m2 !== undefined
+      );
+      setStreamedMessages(filteredMessages);
     });
-  }, [streamedMessagesPromises]);
-
-  // 5. useChat for HTTP streaming (if initiated by this client)
-  // const { chat } = useSharedChat();
-  const { messages: sdkMessages, status: sdkStatus } = useChatContext();
-
-  const throttledSdkMessages = useFpsThrottledValue(sdkMessages, {
-    maxFps: 5,
-  });
-  const throttledStreamedMessages = useFpsThrottledValue(streamedMessages, {
-    maxFps: 5,
-  });
-
-  // 6. Merge all messages with throttling
-  const messages = useUnifiedMessages(
-    paginatedMessages.results,
-    throttledStreamedMessages,
-    throttledSdkMessages
-    // sdkStatus
-  );
-
-  useEffect(() => {
-    console.log("DEBUG123: messages", structuredClone(messages));
-  }, [messages]);
+  }, [streamedMessagesPromises, isSkip, streamingMessagesChunks.status]);
 
   return useMemo(
     () => ({
-      messages,
-      isPending: paginatedMessages.isPending,
-      isLoading: paginatedMessages.isLoading,
-      isStale: paginatedMessages.isStale,
-      loadMore: paginatedMessages.loadMore,
-      paginatedStatus: paginatedMessages.status,
-      streamingStatus: sdkStatus,
-      isStreaming: sdkStatus === "streaming" || streamingMessages.length > 0,
+      results: streamedMessages ?? [],
+      isLoading: streamingMessagesChunks.isLoading,
+      isPending: streamedMessages === undefined,
+      loadMore: streamingMessagesChunks.loadMore,
+      status: streamingMessagesChunks.status,
     }),
     [
-      messages,
-      paginatedMessages.isPending,
-      paginatedMessages.isLoading,
-      paginatedMessages.isStale,
-      paginatedMessages.loadMore,
-      paginatedMessages.status,
-      streamingMessages.length,
-      sdkStatus,
+      streamingMessagesChunks.isLoading,
+      streamingMessagesChunks.status,
+      streamingMessagesChunks.loadMore,
+      streamedMessages,
     ]
   );
 }
 
-// function areMessagesEqual<T extends UIMessage>(a: T, b: T) {
-//   return (
-//     a.id === b.id &&
-//     a.parts.length === b.parts.length &&
-//     JSON.stringify(a.parts) === JSON.stringify(b.parts)
-//   );
-// }
+function usePersistedMessages(threadUuid: string | "skip") {
+  const isSkip = threadUuid === "skip";
+  return useCvxPaginatedQueryStable(
+    ...cvx.query
+      .threadMessagesPaginated({ threadUuid })
+      .options.skipWhen(isSkip)
+  );
+}
 
-// function useUnifiedMessagesV1(
-//   persistedMessages: MyUIMessage[],
-//   streamingMessages: MyUIMessage[],
-//   httpStreamingMessages: MyUIMessage[]
-// ) {
-//   // ---------------------------------------------------------------------------
-//   // Tier 1: The Base (Rare updates)
-//   // Convert array to Map for efficient O(1) access by ID.
-//   // ---------------------------------------------------------------------------
-//   const baseMap = useMemo(() => {
-//     // We create a Map to index messages by ID.
-//     // JS Map preserves the order of insertion, so your sort order is safe.
-//     const map = new Map<string, MyUIMessage>();
-//     for (let i = persistedMessages.length - 1; i >= 0; i--) {
-//       const msg = persistedMessages[i];
-//       if (!msg) continue;
-//       map.set(msg.id, msg);
-//     }
-//     return map;
-//   }, [persistedMessages]);
+export function useMessages(threadUuid: string | "skip") {
+  const isSkip = threadUuid === "skip";
 
-//   // ---------------------------------------------------------------------------
-//   // Tier 2: The Patch (Frequent updates)
-//   // Clones the base and applies streaming updates.
-//   // ---------------------------------------------------------------------------
-//   const mergedWithStreamingMap = useMemo(() => {
-//     // Optimization: If no streaming messages, skip the clone overhead
-//     if (streamingMessages.length === 0) return baseMap;
+  // 1. Get persisted messages (no cache)
+  const paginatedMessages = usePersistedMessages(threadUuid);
 
-//     // Clone the base map (O(N)) to maintain immutability
-//     const map = new Map(baseMap);
+  // 2. Get streaming messages (no cache)
+  const streamedMessages = useStreamingMessages(threadUuid);
 
-//     // Apply patches.
-//     // - If ID exists: Updates in place (preserves order).
-//     // - If ID is new: Appends to the end.
-//     for (const msg of streamingMessages) {
-//       map.set(msg.id, msg);
-//     }
+  // 3. Get HTTP streaming messages (no cache)
+  const httpStreamingMessages = useChatContext();
 
-//     return map;
-//   }, [baseMap, streamingMessages]);
+  const loadMore = useCallback(
+    (numItems: number) => {
+      paginatedMessages.loadMore(numItems);
+      // TODO: I don't think we need to also load this but here is is just in case
+      streamedMessages.loadMore(numItems);
+    },
+    [paginatedMessages.loadMore, streamedMessages.loadMore]
+  );
 
-//   // ---------------------------------------------------------------------------
-//   // Tier 3: The Hot Path (Very frequent updates)
-//   // Clones the previous result and applies high-frequency updates.
-//   // ---------------------------------------------------------------------------
-//   const finalMessages = useMemo(() => {
-//     // If we have no http updates, we just convert the Tier 2 map to an array.
-//     if (httpStreamingMessages.length === 0) {
-//       return Array.from(mergedWithStreamingMap.values());
-//     }
+  const throttledStreamedMessages = useFpsThrottledValue(
+    streamedMessages.isPending ? "skip" : streamedMessages.results,
+    {
+      maxFps: 5,
+    }
+  );
+  const throttledSdkMessages = useFpsThrottledValue(
+    httpStreamingMessages.messages,
+    {
+      maxFps: 5,
+    }
+  );
 
-//     const map = new Map(mergedWithStreamingMap);
-//     for (const msg of httpStreamingMessages) {
-//       map.set(msg.id, msg);
-//     }
+  type PatchId = string;
+  const optimisticPatches = useRef<Map<PatchId, MyUIMessage[]>>(new Map());
+  const [optimisticPatchesArray, setOptimisticPatchesArray] = useState<
+    MyUIMessage[][]
+  >([]);
+  const applyOptimisticPatch = useCallback(
+    (patch: MyUIMessage[] | MyUIMessage): PatchId => {
+      const patchId = crypto.randomUUID();
+      const patchMessages = Array.isArray(patch) ? patch : [patch];
+      optimisticPatches.current.set(patchId, patchMessages);
+      setOptimisticPatchesArray(optimisticPatches.current.values().toArray());
+      return patchId;
+    },
+    []
+  );
+  const revertOptimisticPatch = useCallback((patchId: PatchId) => {
+    optimisticPatches.current.delete(patchId);
+    setOptimisticPatchesArray(optimisticPatches.current.values().toArray());
+  }, []);
 
-//     // Final output must be an array for React rendering
-//     const result = Array.from(map.values());
-//     return result.sort(compareMessages);
-//   }, [mergedWithStreamingMap, httpStreamingMessages]);
+  const patchedPersistedMessages = usePatchedMessages(
+    paginatedMessages.results,
+    optimisticPatchesArray
+  );
 
-//   return finalMessages;
-// }
+  // 6. Merge all messages with throttling
+  const messages = useUnifiedMessages(
+    patchedPersistedMessages,
+    // optimisticPatchesArray,
+    throttledStreamedMessages,
+    throttledSdkMessages
+  );
+
+  const cache = useUserCacheEntryOnce<MyUIMessage[]>(`messages:${threadUuid}`);
+
+  const isQueryPending = isSkip
+    ? false
+    : paginatedMessages.isPending || streamedMessages.isPending;
+  // (stable) pending must be false as soon as we have data to show (stale or fresh)
+  const isPending = isSkip ? false : cache.isPending;
+  // (stable) stale must be true when data are from cache
+  const isStale = isSkip ? false : isQueryPending && !cache.isPending;
+  // loading turns back to true whenever data loads
+  const isLoading = paginatedMessages.isLoading || streamedMessages.isLoading;
+
+  const isStreaming =
+    httpStreamingMessages.status === "streaming" ||
+    streamedMessages.results.length > 0;
+
+  const paginatedStatus = paginatedMessages.status; // only the persisted messages status
+
+  // Set cache only with fresh data
+  useEffect(() => {
+    if (isSkip) return;
+    if (isStale) return;
+    cache.set(messages);
+  }, [isSkip, isStale, messages, cache.set]);
+
+  useEffect(() => {
+    console.log("DEBUG123: SDLFKSKDJFLKSDJF", {
+      isQueryPending,
+      isPending,
+      isLoading,
+      isStale,
+      isStreaming,
+      messages,
+    });
+  }, [isQueryPending, isPending, isLoading, isStale, isStreaming, messages]);
+
+  const staleMessages = isStale ? (cache.snapshot ?? []) : messages;
+
+  return useMemo(
+    () => ({
+      messages: staleMessages,
+      isPending,
+      isLoading,
+      isStale,
+      loadMore,
+      paginatedStatus,
+      streamingStatus: httpStreamingMessages.status,
+      isStreaming,
+      applyOptimisticPatch,
+      revertOptimisticPatch,
+    }),
+    [
+      staleMessages,
+      isStale,
+      isLoading,
+      loadMore,
+      paginatedStatus,
+      isStreaming,
+      httpStreamingMessages.status,
+      isPending,
+      applyOptimisticPatch,
+      revertOptimisticPatch,
+    ]
+  );
+}
+
+export function usePatchedMessages(
+  baseMessages: MyUIMessage[],
+  optimisticPatches: MyUIMessage[][]
+) {
+  const patchedMessages = useMemo(() => {
+    // const list = [...baseMessages];
+    const list = baseMessages.map(
+      (msg): MyUIMessage =>
+        ({
+          ...msg,
+          metadata: {
+            ...(msg.metadata as MetadataSchema),
+            dataSource: "convex-persisted",
+          },
+        }) as MyUIMessage
+    );
+    const indexMap = new Map<string, number>();
+    for (const [index, msg] of list.entries()) {
+      indexMap.set(msg.id, index);
+    }
+
+    // apply optimistic patches in order patch > messages
+    for (const patch of optimisticPatches) {
+      for (const msg of patch) {
+        const newMsg = {
+          ...msg,
+          metadata: {
+            ...(msg.metadata as MetadataSchema),
+            dataSource: "optimistic",
+          },
+        } as MyUIMessage;
+        const existingIndex = indexMap.get(newMsg.id);
+        if (existingIndex !== undefined) {
+          list[existingIndex] = newMsg; // Update in place (preserves sorted position)
+        } else {
+          // Append to end. We DON'T sort yet.
+          const newIndex = list.push(newMsg) - 1;
+          indexMap.set(newMsg.id, newIndex);
+        }
+      }
+    }
+    // remove all messages that might have been patched to non active lifecycleState
+    // meaning we want to optimistically deleted them, so we remove them here.
+    return list.filter(
+      (msg) =>
+        msg.metadata?.lifecycleState !== "deleted" &&
+        msg.metadata?.lifecycleState !== "archived"
+    );
+  }, [baseMessages, optimisticPatches]);
+
+  return patchedMessages;
+}
 
 export function useUnifiedMessages(
   persistedMessages: MyUIMessage[],
-  streamingMessages: MyUIMessage[],
-  httpStreamingMessages: MyUIMessage[]
+  // optimisticPatches: MyUIMessage[][],
+  streamingMessages?: MyUIMessage[],
+  httpStreamingMessages?: MyUIMessage[]
 ) {
   // ---------------------------------------------------------------------------
   // Tier 1: The Base Index
@@ -239,22 +306,36 @@ export function useUnifiedMessages(
   }, [persistedMessages]);
 
   // ---------------------------------------------------------------------------
-  // Tier 2: The Buffer (Persisted + Streaming)
+  // Tier 3: The Buffer (Persisted + Streaming)
   // ---------------------------------------------------------------------------
   const { bufferedList, streamingAddedIndices } = useMemo(() => {
     const list = [...baseList];
     const addedIndices = new Map<string, number>();
+    if (!streamingMessages) {
+      return {
+        bufferedList: list,
+        streamingAddedIndices: addedIndices,
+      };
+    }
 
     for (const msg of streamingMessages) {
       const existingIndex = baseIdToIndex.get(msg.id);
 
+      const newMsg = {
+        ...msg,
+        metadata: {
+          ...(msg.metadata as MetadataSchema),
+          dataSource: "convex-stream",
+        },
+      };
+
       if (existingIndex !== undefined) {
-        list[existingIndex] = msg; // Update in place (preserves sorted position)
+        list[existingIndex] = newMsg;
       } else {
         // Append to end. We DON'T sort yet.
-        // This keeps 'baseIdToIndex' valid for the existing items.
-        const newIndex = list.push(msg) - 1;
-        addedIndices.set(msg.id, newIndex);
+        // This keeps 'optimisticIdToIndex' valid for the existing items.
+        const newIndex = list.push(newMsg) - 1;
+        addedIndices.set(newMsg.id, newIndex);
       }
     }
 
@@ -262,11 +343,14 @@ export function useUnifiedMessages(
   }, [baseList, baseIdToIndex, streamingMessages]);
 
   // ---------------------------------------------------------------------------
-  // Tier 3: The Final Merge (Buffer + HTTP -> Sorted)
+  // Tier 4: The Final Merge (Buffer + HTTP -> Sorted)
   // ---------------------------------------------------------------------------
   const finalMessages = useMemo(() => {
     // Fast path: if no HTTP messages, just return the buffer (sorted lightly)
-    if (httpStreamingMessages.length === 0) {
+    if (
+      httpStreamingMessages === undefined ||
+      httpStreamingMessages.length === 0
+    ) {
       // Ensure buffer is sorted before returning if it's the final output
       // Note: In a real high-perf scenario, we might cache this sort too,
       // but here we assume streamingMessages changes less than HTTP.
@@ -276,22 +360,30 @@ export function useUnifiedMessages(
     const list = [...bufferedList];
 
     for (const msg of httpStreamingMessages) {
+      const newMsg = {
+        ...msg,
+        metadata: {
+          ...(msg.metadata as MetadataSchema),
+          dataSource: "http-stream",
+        },
+      };
+
       // Check 1: Is it a "Streaming" item?
-      const streamingIndex = streamingAddedIndices.get(msg.id);
+      const streamingIndex = streamingAddedIndices.get(newMsg.id);
       if (streamingIndex !== undefined) {
-        list[streamingIndex] = msg;
+        list[streamingIndex] = newMsg;
         continue;
       }
 
       // Check 2: Is it a "Persisted" item?
-      const persistedIndex = baseIdToIndex.get(msg.id);
+      const persistedIndex = baseIdToIndex.get(newMsg.id);
       if (persistedIndex !== undefined) {
-        list[persistedIndex] = msg;
+        list[persistedIndex] = newMsg;
         continue;
       }
 
       // Check 3: Brand new
-      list.push(msg);
+      list.push(newMsg);
     }
 
     // FINAL STEP: The "Almost Sorted" Sort.
@@ -305,9 +397,14 @@ export function useUnifiedMessages(
     httpStreamingMessages,
   ]);
 
-  return useFpsThrottledValue(finalMessages, {
+  const throttledFinalMessages = useFpsThrottledValue(finalMessages, {
     maxFps: 5,
   });
+
+  return throttledFinalMessages !== undefined &&
+    throttledFinalMessages.length > 0
+    ? throttledFinalMessages
+    : finalMessages;
 }
 
 function compareMessages(a: MyUIMessage, b: MyUIMessage) {
@@ -329,13 +426,6 @@ type UseChatContextValue = Prettify<ReturnType<typeof useChat<MyUIMessage>>> & {
 };
 
 const UseChatContext = createContext<UseChatContextValue | null>(null);
-
-// function createChat(id: string) {
-//   return new Chat<MyUIMessage>({
-//     transport: new OrpcChatTransport(),
-//     id,
-//   });
-// }
 
 export function UseChatProvider({ children }: { children: ReactNode }) {
   const chatNav = useChatNav();
@@ -387,6 +477,11 @@ export function UseChatProvider({ children }: { children: ReactNode }) {
     onError: handleError,
     onToolCall: handleToolCall,
   });
+
+  useEffect(() => {
+    console.log("DEBUG123: chatOutput id", chatOutput.id);
+    console.log("DEBUG123: chat nav id", chatNav.id);
+  }, [chatOutput.id, chatNav.id]);
 
   // 4. Helper to register listeners
   const subscribeOnFinish = useCallback(
@@ -444,12 +539,14 @@ export const useChatContext = (
     onError?: ChatOnErrorCallback;
     onToolCall?: ChatOnToolCallCallback<MyUIMessage>;
   } = {}
-): Omit<
-  UseChatContextValue,
-  | "subscribeOnFinish"
-  | "subscribeOnData"
-  | "subscribeOnError"
-  | "subscribeOnToolCall"
+): Prettify<
+  Omit<
+    UseChatContextValue,
+    | "subscribeOnFinish"
+    | "subscribeOnData"
+    | "subscribeOnError"
+    | "subscribeOnToolCall"
+  >
 > => {
   const context = useContext(UseChatContext);
   if (!context) throw new Error("Must be used within UseChatProvider");

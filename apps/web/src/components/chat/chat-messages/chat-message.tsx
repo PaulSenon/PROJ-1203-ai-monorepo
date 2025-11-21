@@ -8,6 +8,7 @@ import {
 } from "@/components/ai-elements/message";
 import { useActiveThreadActions } from "@/hooks/use-chat-active";
 import { useModelSelectorState } from "@/hooks/use-user-preferences";
+import { cn } from "@/lib/utils";
 import { ChatMessageError } from "./chat-message-error";
 import { ChatMessagePartReasoning } from "./chat-message-parts/chat-message-part-reasoning";
 import { ChatMessagePartText } from "./chat-message-parts/chat-message-part-text";
@@ -22,9 +23,22 @@ export function ChatMessage({
   const handleRegenerate = useCallback(() => {
     regenerate(message.id, { selectedModelId });
   }, [regenerate, message.id, selectedModelId]);
+
+  const source = (message.metadata as Record<string, unknown>)
+    ?.dataSource as string;
   return (
     <div className="flex flex-col items-start gap-2" {...props}>
-      <AIElementsMessage from={message.role} key={message.id}>
+      <AIElementsMessage
+        className={cn(
+          message.metadata?.lifecycleState === "deleted" ? "bg-red-500" : "",
+          source === "http-stream" ? "bg-green-500" : "",
+          source === "convex-stream" ? "bg-blue-500" : "",
+          source === "convex-persisted" ? "bg-orange-500" : "",
+          source === "optimistic" ? "bg-purple-500" : ""
+        )}
+        from={message.role}
+        key={message.id}
+      >
         <AIElementsMessageContent variant={"contained"}>
           {message.parts.map((part, i) => {
             switch (part.type) {

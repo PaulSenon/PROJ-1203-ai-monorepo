@@ -1,35 +1,35 @@
 import type { AllowedModelIds } from "@ai-monorepo/ai/model.registry";
-import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
+import type {
+  MetadataSchema,
+  MyUIMessage,
+} from "@ai-monorepo/ai/types/uiMessage";
 import { nanoid } from "nanoid";
 import {
   createContext,
   type ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
 } from "react";
 import { cvx } from "@/lib/convex/queries";
 import type { MaybePromise } from "@/lib/utils";
 import { useCvxMutationAuthV3 } from "./queries/convex/utils/use-convex-mutation-0-auth";
-import { setPaginatedQueryCache } from "./queries/convex/utils/use-convex-query-2-cached";
-import {
-  useActiveThreadMessagesQuery,
-  useActiveThreadQuery,
-} from "./queries/use-chat-active-queries";
+import { useThread } from "./queries/use-chat-active-queries";
 import { useChatInputActions } from "./use-chat-input";
 import { useChatNav } from "./use-chat-nav";
 import { useChatContext, useMessages } from "./use-messages";
 
 type ActiveThreadState = {
   uuid: string;
-  streamStatus: "error" | "cancelled" | "pending" | "streaming" | "completed";
-  dataStatus: "pending" | "stale" | "fresh" | "error";
+  status: ActiveThreadStatus | undefined;
   messages: MyUIMessage[];
   isPending: boolean;
   isStale: boolean;
+  isStreaming: boolean;
   messagesQueue: MyUIMessage[];
+  isStreamingOptimistic: boolean;
+  isWaitingForFirstToken: boolean;
 };
 
 type SendMessageParams = {
@@ -53,14 +53,26 @@ type ActiveThreadActions = {
   ) => MaybePromise<void>;
 };
 
-const ActiveTheadMessagesContext = createContext<Pick<
+type ActiveThreadMessagesType = Pick<
   ActiveThreadState,
-  "messages" | "isPending"
-> | null>(null);
-const ActiveTheadStateContext = createContext<Pick<
+  "messages" | "isPending" | "isStale"
+>;
+const ActiveTheadMessagesContext =
+  createContext<ActiveThreadMessagesType | null>(null);
+type ActiveThreadStateType = Pick<
   ActiveThreadState,
-  "messagesQueue" | "dataStatus" | "streamStatus" | "uuid" | "isPending"
-> | null>(null);
+  | "messagesQueue"
+  | "status"
+  | "uuid"
+  | "isPending"
+  | "isStale"
+  | "isStreaming"
+  | "isStreamingOptimistic"
+  | "isWaitingForFirstToken"
+>;
+const ActiveTheadStateContext = createContext<ActiveThreadStateType | null>(
+  null
+);
 const ActiveTheadActionsContext = createContext<ActiveThreadActions | null>(
   null
 );
@@ -95,44 +107,54 @@ export function useActiveThreadActions() {
   return actions;
 }
 
+type ActiveThreadStatus =
+  | "new"
+  | "pending"
+  | "streaming"
+  | "completed"
+  | "error"
+  | "cancelled";
+
 export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const inputActions = useChatInputActions();
   const chatNav = useChatNav();
   const isSkip = chatNav.isNew;
-  // TODO: perhaps we should handle stale case ???
+
   const {
     data: thread,
     isPending: isThreadPending,
     isStale: isThreadStale,
-  } = useActiveThreadQuery();
+  } = useThread(isSkip ? "skip" : chatNav.id);
+
   const {
     messages,
     isPending: isMessagesPending,
     isStale: isMessagesStale,
+    applyOptimisticPatch,
+    revertOptimisticPatch,
   } = useMessages(isSkip ? "skip" : chatNav.id);
-  useActiveThreadMessagesQuery();
+
   const isPending = isSkip ? false : isThreadPending || isMessagesPending;
   const isStale = isSkip ? false : isThreadStale || isMessagesStale;
+  const isStreaming = thread?.liveStatus === "streaming";
+  const isWaitingForFirstToken =
+    thread?.liveStatus === "pending" && messages.at(-1)?.role === "user";
+  const isStreamingOptimistic = isStreaming || isWaitingForFirstToken;
+  const status: ActiveThreadStatus | undefined = useMemo(() => {
+    if (chatNav.isNew) return "new";
+    if (isThreadPending) return "pending";
+    if (thread?.liveStatus === "streaming") return "streaming";
+    if (thread?.liveStatus === "completed") return "completed";
+    if (thread?.liveStatus === "error") return "error";
+    if (thread?.liveStatus === "cancelled") return "cancelled";
+  }, [chatNav.isNew, isThreadPending, thread?.liveStatus]);
 
   const upsertThread = useCvxMutationAuthV3(
     ...cvx.mutationV3.threads.upsert.options()
   );
 
-  // console.log("messagesPersisted", messagesPersisted);
-  // console.log("thread", thread);
-
   const [messagesQueue, setMessagesQueue] = useState<MyUIMessage[]>([]);
 
-  useEffect(() => {
-    setPaginatedQueryCache(
-      messages,
-      ...cvx.query
-        .threadMessagesPaginated({ threadUuid: chatNav.id })
-        .options.neverSkip()
-    );
-  }, [messages, chatNav.id]);
-
-  // const { chat } = useSharedChat();
   const {
     sendMessage: sdkSendMessage,
     regenerate: sdkRegenerate,
@@ -140,23 +162,40 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   } = useChatContext({
     onFinish: () => {
       console.log("DEBUG123: onFinish !!!!!!");
-      // sdkSetMessages([]);
     },
   });
 
   const __sendMessageInternal = useCallback(
-    (uiMessage: MyUIMessage) => {
+    async (uiMessage: MyUIMessage) => {
       if (chatNav.isNew) chatNav.persistNewChatIdToUrl();
+      // TODO: save cleared input to restore in case of error
       inputActions.clear();
-      upsertThread({
+      const upsertPromise = upsertThread({
         threadUuid: chatNav.id,
         patch: {
-          liveStatus: "streaming",
+          liveStatus: "pending",
           lastUsedModelId: uiMessage?.metadata?.modelId,
         },
       });
-      sdkSetMessages([]);
-      return sdkSendMessage(uiMessage);
+      let patchId: string | undefined;
+      console.log("DEBUG123: __sendMessageInternal", chatNav.id);
+      try {
+        patchId = applyOptimisticPatch(uiMessage);
+        sdkSetMessages([]);
+        await sdkSendMessage(uiMessage);
+      } catch (error) {
+        console.error("error while sending message", error);
+        await upsertPromise;
+        await upsertThread({
+          threadUuid: chatNav.id,
+          patch: {
+            liveStatus: "error",
+          },
+        });
+      } finally {
+        if (patchId) revertOptimisticPatch(patchId);
+        await upsertPromise;
+      }
     },
     [
       sdkSendMessage,
@@ -168,13 +207,6 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       sdkSetMessages,
     ]
   );
-
-  // const trySendNextQueuedMessage = useCallback(() => {
-  //   const nextMessage = messagesQueue[0];
-  //   if (!nextMessage) return;
-  //   setMessagesQueue((prev) => prev.slice(1));
-  //   return __sendMessageInternal(nextMessage);
-  // }, [messagesQueue, __sendMessageInternal]);
 
   const sendMessage = useCallback(
     (params: SendMessageParams) => {
@@ -212,19 +244,43 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       const upsertPromise = upsertThread({
         threadUuid: chatNav.id,
         patch: {
-          liveStatus: "streaming",
+          liveStatus: "pending",
           lastUsedModelId: options?.selectedModelId,
         },
       });
+      let patchId: string | undefined;
       try {
+        // [U1, A1, U2, A2, U3, A3, A4, U4, A5, U5] => messageId === A4
+        // => messageIndex === 6 (A4)
         let messageIndex = messages.findIndex((m) => m.id === messageId);
         while (
           messageIndex > 0 &&
           messages[messageIndex]?.role === "assistant"
         ) {
+          // [U1, A1, U2, A2, U3, A3, A4, U4, A5, U5]
+          // => i === 6                ^
+          // [U1, A1, U2, A2, U3, A3, A4, U4, A5, U5]
+          // => i === 5            ^
+          // [U1, A1, U2, A2, U3, A3, A4, U4, A5, U5]
+          // => i === 4        ^
           messageIndex--;
         }
-        const message = messages[messageIndex];
+        // => messageIndex === 4 (U3)
+        const firstUserMessageBeforeMessageToRegenerate = messageIndex;
+        const message = messages[firstUserMessageBeforeMessageToRegenerate];
+        // => message === U3
+        const messagesToRemovePatched = messages
+          .slice(firstUserMessageBeforeMessageToRegenerate + 1)
+          .map(
+            (m): MyUIMessage => ({
+              ...m,
+              metadata: {
+                ...(m.metadata as MetadataSchema),
+                lifecycleState: "deleted",
+              },
+            })
+          );
+        // => messagesToRemovePatched === [A3, A4, U4, A5, U5]
         if (!message) {
           console.error(
             "Cannot regenerate: message user message not found before",
@@ -236,6 +292,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
           );
           return;
         }
+        patchId = applyOptimisticPatch(messagesToRemovePatched);
         sdkSetMessages([message]);
         await sdkRegenerate({
           messageId: message.id,
@@ -253,10 +310,19 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
           },
         });
       } finally {
+        if (patchId) revertOptimisticPatch(patchId);
         await upsertPromise;
       }
     },
-    [sdkRegenerate, upsertThread, chatNav.id, messages, sdkSetMessages]
+    [
+      sdkRegenerate,
+      upsertThread,
+      chatNav.id,
+      messages,
+      sdkSetMessages,
+      applyOptimisticPatch,
+      revertOptimisticPatch,
+    ]
   );
 
   const actions = useMemo(
@@ -273,21 +339,33 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     () =>
       ({
         uuid: chatNav.id,
-        streamStatus: thread?.liveStatus ?? "pending",
-        dataStatus: isThreadPending ? "pending" : "fresh",
+        status,
         messagesQueue,
         isPending,
         isStale,
-      }) satisfies Omit<ActiveThreadState, "messages">,
-    [chatNav.id, thread, messagesQueue, isPending, isThreadPending, isStale]
+        isStreaming,
+        isStreamingOptimistic,
+        isWaitingForFirstToken,
+      }) satisfies ActiveThreadStateType,
+    [
+      chatNav.id,
+      status,
+      messagesQueue,
+      isPending,
+      isStale,
+      isStreaming,
+      isStreamingOptimistic,
+      isWaitingForFirstToken,
+    ]
   );
 
   const messagesState = useMemo(
-    () => ({
-      messages,
-      isPending,
-      isStale,
-    }),
+    () =>
+      ({
+        messages,
+        isPending,
+        isStale,
+      }) satisfies ActiveThreadMessagesType,
     [messages, isPending, isStale]
   );
 

@@ -13,7 +13,7 @@ type DeltaSaverOptions = {
 const DEFAULT_DELTA_SAVER_OPTIONS = {
   // This chunks by sentences / clauses. Punctuation followed by whitespace.
   chunking: /[\p{P}\s]/u,
-  throttleMs: 250,
+  throttleMs: 500,
   compress: true,
 } satisfies DeltaSaverOptions;
 
@@ -194,7 +194,9 @@ export function compressUIMessageChunks<T extends UIMessageChunk>(
       if (last?.type === chunk.type && chunk.id === last.id) {
         last.delta += chunk.delta;
       } else {
-        compressed.push(chunk);
+        // FIX: Clone the chunk before pushing it to the new array
+        // This ensures 'last' refers to a new object, not the one in 'nextChunks'
+        compressed.push({ ...chunk });
       }
     } else {
       compressed.push(chunk);

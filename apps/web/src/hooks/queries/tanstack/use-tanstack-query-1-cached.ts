@@ -18,7 +18,7 @@ export function useTsQueryCached<
   >
 ): UseQueryResult<NoInfer<TQueryFnData>, TError> {
   const keyString = useMemo(
-    () => ["tsQueryCached", ...options.queryKey].join(":"),
+    () => createCacheKey(options.queryKey),
     [options.queryKey]
   );
   const cached = useUserCacheEntryOnce<TQueryFnData>(keyString);
@@ -32,9 +32,10 @@ export function useTsQueryCached<
   // Cache persistence
   useEffect(() => {
     if (query.isPending) return;
-    if (query.data) cached.set(query.data);
-    else cached.del();
-  }, [query.isPending, query.data, cached.set, cached.del]);
+    if (query.data !== undefined) cached.set(query.data);
+    // if (query.data) cached.set(query.data);
+    // else cached.del();
+  }, [query.isPending, query.data, cached.set]);
 
   const isStale = useMemo(() => {
     if (query.data !== undefined) return false;
@@ -49,4 +50,10 @@ export function useTsQueryCached<
     }),
     [query, isStale]
   );
+}
+
+function createCacheKey<
+  TQueryKey extends QueryKey & readonly string[] = readonly string[],
+>(queryKey: TQueryKey) {
+  return ["tsQueryCached", ...queryKey].join(":");
 }

@@ -136,16 +136,13 @@ export function useCvxPaginatedQueryCached<
   useEffect(() => {
     if (isSkip || convexIsPending) return;
     // this only cache the first page (initialNumItems)
-    // we want to persist empty arrays because it's explicit empty result
-    if (convexQueryResult.results.length <= options.initialNumItems) {
-      cacheEntry.set(convexQueryResult.results);
-    }
+    cacheEntry.set(convexQueryResult.results.slice(0, options.initialNumItems));
     // we do NOT want to delete cache. We should think of other mechanism to garbage collect it.
     // if (convexQueryResult.results.length === 0) cacheEntry.del();
   }, [
     isSkip,
     convexIsPending,
-    convexQueryResult,
+    convexQueryResult.results,
     cacheEntry.set,
     options.initialNumItems,
   ]);

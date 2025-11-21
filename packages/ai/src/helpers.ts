@@ -12,7 +12,7 @@ export function createOptimisticStepStartMessage(
       },
     ],
     metadata: {
-      liveStatus: "streaming",
+      liveStatus: "pending",
       lifecycleState: "active",
       createdAt: Date.now(),
       updatedAt: Date.now(),
