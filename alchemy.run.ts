@@ -25,6 +25,9 @@ export const server = await Worker("server", {
   cwd: "apps/server",
   entrypoint: "src/index.ts",
   compatibility: "node",
+  limits: {
+    cpu_ms: 60_000, // 1 minute
+  },
   placement: {
     mode: "smart",
   },
