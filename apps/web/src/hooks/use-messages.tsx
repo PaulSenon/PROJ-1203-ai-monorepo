@@ -62,11 +62,18 @@ function useStreamingMessages(threadUuid: string | "skip") {
     });
   }, [streamedMessagesPromises, isSkip, streamingMessagesChunks.status]);
 
+  const throttledStreamedMessages = useFpsThrottledValue(
+    streamedMessages === undefined ? "skip" : streamedMessages,
+    {
+      maxFps: 5,
+    }
+  );
+
   return useMemo(
     () => ({
-      results: streamedMessages ?? [],
+      results: throttledStreamedMessages ?? [],
       isLoading: streamingMessagesChunks.isLoading,
-      isPending: streamedMessages === undefined,
+      isPending: throttledStreamedMessages === undefined,
       loadMore: streamingMessagesChunks.loadMore,
       status: streamingMessagesChunks.status,
     }),
@@ -74,7 +81,7 @@ function useStreamingMessages(threadUuid: string | "skip") {
       streamingMessagesChunks.isLoading,
       streamingMessagesChunks.status,
       streamingMessagesChunks.loadMore,
-      streamedMessages,
+      throttledStreamedMessages,
     ]
   );
 }
@@ -109,19 +116,6 @@ export function useMessages(threadUuid: string | "skip") {
     [paginatedMessages.loadMore, streamedMessages.loadMore]
   );
 
-  const throttledStreamedMessages = useFpsThrottledValue(
-    streamedMessages.isPending ? "skip" : streamedMessages.results,
-    {
-      maxFps: 5,
-    }
-  );
-  const throttledSdkMessages = useFpsThrottledValue(
-    httpStreamingMessages.messages,
-    {
-      maxFps: 5,
-    }
-  );
-
   type PatchId = string;
   const optimisticPatches = useRef<Map<PatchId, MyUIMessage[]>>(new Map());
   const [optimisticPatchesArray, setOptimisticPatchesArray] = useState<
@@ -147,12 +141,11 @@ export function useMessages(threadUuid: string | "skip") {
     optimisticPatchesArray
   );
 
-  // 6. Merge all messages with throttling
+  // 6. Merge all messages
   const messages = useUnifiedMessages(
     patchedPersistedMessages,
-    // optimisticPatchesArray,
-    throttledStreamedMessages,
-    throttledSdkMessages
+    streamedMessages.results,
+    httpStreamingMessages.messages
   );
 
   const cache = useUserCacheEntryOnce<MyUIMessage[]>(`messages:${threadUuid}`);
@@ -180,6 +173,8 @@ export function useMessages(threadUuid: string | "skip") {
     cache.set(messages);
   }, [isSkip, isStale, messages, cache.set]);
 
+  const staleMessages = isStale ? (cache.snapshot ?? []) : messages;
+
   useEffect(() => {
     console.log("DEBUG123: SDLFKSKDJFLKSDJF", {
       isQueryPending,
@@ -188,10 +183,17 @@ export function useMessages(threadUuid: string | "skip") {
       isStale,
       isStreaming,
       messages,
+      staleMessages,
     });
-  }, [isQueryPending, isPending, isLoading, isStale, isStreaming, messages]);
-
-  const staleMessages = isStale ? (cache.snapshot ?? []) : messages;
+  }, [
+    isQueryPending,
+    isPending,
+    isLoading,
+    isStale,
+    isStreaming,
+    messages,
+    staleMessages,
+  ]);
 
   return useMemo(
     () => ({
@@ -397,14 +399,7 @@ export function useUnifiedMessages(
     httpStreamingMessages,
   ]);
 
-  const throttledFinalMessages = useFpsThrottledValue(finalMessages, {
-    maxFps: 5,
-  });
-
-  return throttledFinalMessages !== undefined &&
-    throttledFinalMessages.length > 0
-    ? throttledFinalMessages
-    : finalMessages;
+  return finalMessages;
 }
 
 function compareMessages(a: MyUIMessage, b: MyUIMessage) {
@@ -483,6 +478,10 @@ export function UseChatProvider({ children }: { children: ReactNode }) {
     console.log("DEBUG123: chat nav id", chatNav.id);
   }, [chatOutput.id, chatNav.id]);
 
+  const throttledSdkMessages = useFpsThrottledValue(chatOutput.messages, {
+    maxFps: 5,
+  });
+
   // 4. Helper to register listeners
   const subscribeOnFinish = useCallback(
     (callback: ChatOnFinishCallback<MyUIMessage>) => {
@@ -512,18 +511,38 @@ export function UseChatProvider({ children }: { children: ReactNode }) {
   );
   const value = useMemo(
     () => ({
-      ...chatOutput,
+      addToolResult: chatOutput.addToolResult,
+      clearError: chatOutput.clearError,
+      error: chatOutput.error,
+      id: chatOutput.id,
+      regenerate: chatOutput.regenerate,
+      resumeStream: chatOutput.resumeStream,
+      sendMessage: chatOutput.sendMessage,
+      setMessages: chatOutput.setMessages,
+      status: chatOutput.status,
+      stop: chatOutput.stop,
+      messages: throttledSdkMessages ?? [],
       subscribeOnFinish,
       subscribeOnData,
       subscribeOnError,
       subscribeOnToolCall,
     }),
     [
-      chatOutput,
+      chatOutput.addToolResult,
+      chatOutput.clearError,
+      chatOutput.error,
+      chatOutput.id,
+      chatOutput.regenerate,
+      chatOutput.resumeStream,
+      chatOutput.sendMessage,
+      chatOutput.setMessages,
+      chatOutput.status,
+      chatOutput.stop,
       subscribeOnFinish,
       subscribeOnData,
       subscribeOnError,
       subscribeOnToolCall,
+      throttledSdkMessages,
     ]
   );
 
