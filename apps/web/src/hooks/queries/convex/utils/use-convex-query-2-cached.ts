@@ -379,3 +379,44 @@ export async function preloadQuery<Query extends FunctionReference<"query">>(
     return;
   }
 }
+
+/**
+ * Simply fetch a convex query (with auth)
+ */
+export async function fetchQuery<Query extends FunctionReference<"query">>(
+  query: Query,
+  ...queryArgs: OptionalRestArgs<Query>
+): Promise<FunctionReturnType<Query>> {
+  await asyncSession.wait();
+  return convex.query(query, ...queryArgs);
+}
+
+/**
+ * Simply fetch a convex paginated query (with auth)
+ */
+export async function fetchPaginatedQuery<
+  Query extends PaginatedQueryReference,
+>(
+  query: Query,
+  ...argsAndOptions: [
+    PaginatedQueryArgs<Query>,
+    options: {
+      initialNumItems: number;
+      // latestPageSize?: "grow" | "fixed";
+    },
+  ]
+): Promise<PaginatedQueryItem<Query>[]> {
+  const [args, options] = argsAndOptions;
+  await asyncSession.wait();
+  const convexQueryResult = await convex.query(
+    query as PaginatedQueryReference,
+    {
+      ...args,
+      paginationOpts: {
+        numItems: options.initialNumItems,
+        cursor: null,
+      },
+    }
+  );
+  return convexQueryResult.page;
+}

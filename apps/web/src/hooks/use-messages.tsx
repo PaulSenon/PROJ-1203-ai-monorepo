@@ -20,11 +20,13 @@ import {
   useRef,
   useState,
 } from "react";
+import { UserCache } from "@/lib/cache/UserCache";
 import { OrpcChatTransport } from "@/lib/chat/OrpcChatTransport";
 import { cvx } from "@/lib/convex/queries";
 import type { Prettify } from "@/lib/utils";
 import { useCvxPaginatedQueryAuth } from "./queries/convex/utils/use-convex-query-0-auth";
 import { useCvxPaginatedQueryStable } from "./queries/convex/utils/use-convex-query-1-stable";
+import { fetchPaginatedQuery } from "./queries/convex/utils/use-convex-query-2-cached";
 import { useChatNav } from "./use-chat-nav";
 import { useUserCacheEntryOnce } from "./use-user-cache";
 import { useFpsThrottledValue } from "./utils/use-fps-throttled-state";
@@ -95,6 +97,69 @@ function usePersistedMessages(threadUuid: string | "skip") {
   );
 }
 
+function createCacheKey(threadUuid: string) {
+  return `messages:${threadUuid}` as const;
+}
+
+// TODO: we are not reusing things properly. If we change anything in the messages construct process without reflecting changes here, we will have discrepancies...
+// TODO: refactor with TS first mindset and then implement to react to we can reuse core.
+// Goals:
+// - single "useUnifiedMessages" logic
+// - single source of queries
+// - single source of streamingMessages query parsing (createUiMessageFromChunks)
+export async function preloadMessages(threadUuid: string) {
+  const cacheKey = createCacheKey(threadUuid);
+
+  // 1. check cache entry
+  const userCache = UserCache.getInstance();
+  const cacheEntry = userCache.entry<MyUIMessage[]>(cacheKey);
+  const value = await cacheEntry.get();
+  if (value !== undefined) {
+    console.log("DEBUG123: CACHE HIT", { cacheKey, value });
+    return value;
+  }
+
+  // 2. if not found, fetch it
+  // 2.1 fetch persisted messages
+  const persistedMessagesPromise = fetchPaginatedQuery(
+    ...cvx.query.threadMessagesPaginated({ threadUuid }).options.neverSkip()
+  );
+  const streamingMessagesPromise = fetchPaginatedQuery(
+    ...cvx.query
+      .threadStreamingMessagesPaginated({ threadUuid })
+      .options.neverSkip()
+  )
+    .then((deltas) =>
+      Promise.all(
+        deltas.map((chunks) => createUiMessageFromChunks<MyUIMessage>(chunks))
+      )
+    )
+    .then((messages) =>
+      messages.filter((m): m is MyUIMessage => m !== undefined)
+    );
+
+  const [persistedMessages, streamingMessages] = await Promise.all([
+    persistedMessagesPromise,
+    streamingMessagesPromise,
+  ]);
+
+  const { list, indexMap } = processPersistedMessages(persistedMessages);
+  for (const msg of streamingMessages) {
+    const existingIndex = indexMap.get(msg.id);
+    if (existingIndex !== undefined) {
+      list[existingIndex] = msg;
+    } else {
+      list.push(msg);
+    }
+  }
+
+  const res = list.sort(compareMessages);
+
+  cacheEntry.set(res);
+
+  return res;
+}
+
 export function useMessages(threadUuid: string | "skip") {
   const isSkip = threadUuid === "skip";
 
@@ -148,7 +213,8 @@ export function useMessages(threadUuid: string | "skip") {
     httpStreamingMessages.messages
   );
 
-  const cache = useUserCacheEntryOnce<MyUIMessage[]>(`messages:${threadUuid}`);
+  const cacheKey = useMemo(() => createCacheKey(threadUuid), [threadUuid]);
+  const cache = useUserCacheEntryOnce<MyUIMessage[]>(cacheKey);
 
   const isQueryPending = isSkip
     ? false
@@ -276,9 +342,30 @@ export function usePatchedMessages(
   return patchedMessages;
 }
 
+function processPersistedMessages(persistedMessages: MyUIMessage[]) {
+  const list: MyUIMessage[] = [];
+  const indexMap = new Map<string, number>();
+
+  // OPTIMIZATION: Single-pass reverse construction.
+  // We assume input is [Newest, ..., Oldest].
+  // We iterate backwards to build [Oldest, ..., Newest].
+  for (let i = persistedMessages.length - 1; i >= 0; i--) {
+    const msg = persistedMessages[i];
+    // Safety check for sparse arrays or undefined slots
+    if (!msg) continue;
+
+    // .push returns the new length, so index is length - 1
+    const newIndex = list.push(msg) - 1;
+
+    // Map ID -> Index (Pointer to position in baseList)
+    indexMap.set(msg.id, newIndex);
+  }
+
+  return { list, indexMap };
+}
+
 export function useUnifiedMessages(
   persistedMessages: MyUIMessage[],
-  // optimisticPatches: MyUIMessage[][],
   streamingMessages?: MyUIMessage[],
   httpStreamingMessages?: MyUIMessage[]
 ) {
@@ -286,24 +373,7 @@ export function useUnifiedMessages(
   // Tier 1: The Base Index
   // ---------------------------------------------------------------------------
   const { baseList, baseIdToIndex } = useMemo(() => {
-    const list: MyUIMessage[] = [];
-    const indexMap = new Map<string, number>();
-
-    // OPTIMIZATION: Single-pass reverse construction.
-    // We assume input is [Newest, ..., Oldest].
-    // We iterate backwards to build [Oldest, ..., Newest].
-    for (let i = persistedMessages.length - 1; i >= 0; i--) {
-      const msg = persistedMessages[i];
-      // Safety check for sparse arrays or undefined slots
-      if (!msg) continue;
-
-      // .push returns the new length, so index is length - 1
-      const newIndex = list.push(msg) - 1;
-
-      // Map ID -> Index (Pointer to position in baseList)
-      indexMap.set(msg.id, newIndex);
-    }
-
+    const { list, indexMap } = processPersistedMessages(persistedMessages);
     return { baseList: list, baseIdToIndex: indexMap };
   }, [persistedMessages]);
 

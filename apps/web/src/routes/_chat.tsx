@@ -4,6 +4,7 @@ import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ChatDraftProvider } from "@/hooks/use-chat-draft";
 import { ChatInputProvider } from "@/hooks/use-chat-input";
+import { ChatNavProvider } from "@/hooks/use-chat-nav";
 import { UseChatProvider } from "@/hooks/use-messages";
 import { preloadUserPreferences } from "@/hooks/use-preload";
 import { ModelSelectorProvider } from "@/hooks/use-user-preferences";
@@ -35,7 +36,7 @@ function PreloadCache() {
 
 function RouteComponent() {
   return (
-    <>
+    <ChatNavProvider>
       <PreloadCache />
       <ChatSidebar />
       <main
@@ -47,6 +48,6 @@ function RouteComponent() {
           <Outlet />
         </ChatProviders>
       </main>
-    </>
+    </ChatNavProvider>
   );
 }

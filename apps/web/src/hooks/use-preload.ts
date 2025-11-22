@@ -7,6 +7,7 @@ import { deferSyncTask } from "@/helpers/defer-sync-task";
 import { cvx } from "@/lib/convex/queries";
 import { ensureQueryCached } from "./queries/convex/utils/use-convex-query-2-cached";
 import { appLoadPromise } from "./use-app-load-status";
+import { preloadMessages } from "./use-messages";
 
 async function deferWhenInitialAppReadyAndCpuIdle<T>(task: () => Promise<T>) {
   await appLoadPromise.wait();
@@ -50,11 +51,8 @@ export async function preloadThreadMessages(threadUuid: string) {
     );
     const result = await Promise.allSettled([
       // preload thread messages
-      // TODO: preload messages (streaming and persisted)
-      // this is no longer relevant
-      // ensurePaginatedQueryCached(
-      //   ...cvx.query.threadMessagesPaginated({ threadUuid }).options.neverSkip()
-      // ),
+      // TODO: better naming and better function location
+      preloadMessages(threadUuid),
     ]);
     console.log(
       `preloadThreadMessages: === END PRELOAD THREAD MESSAGES [${threadUuid}] ===`

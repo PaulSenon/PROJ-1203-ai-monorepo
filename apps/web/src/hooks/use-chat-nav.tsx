@@ -1,30 +1,32 @@
 import { useRouter } from "@tanstack/react-router";
 import { nanoid } from "nanoid";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { Route as ChatRoute } from "../routes/_chat/chat.{-$id}";
 
-const ChatNavState = {
-  isNew: false,
-  id: nanoid(),
+type ChatNavState = {
+  isNew: boolean;
+  id: string;
+  persistNewChatIdToUrl: () => void;
+  openNewChat: () => void;
+  openExistingChat: (id: string) => void;
 };
 
-/**
- * @throws {Error} if used outside of /chat/{-$id} route
- */
-export function useChatNav() {
+const ChatNavContext = createContext<ChatNavState | null>(null);
+
+export function ChatNavProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   // this will throw an error if used outside of /chat/{-$id} route:
   const params = ChatRoute.useParams();
   const isNew = params.id === undefined;
-
-  if (isNew && !ChatNavState.isNew) {
-    ChatNavState.isNew = true;
-    ChatNavState.id = nanoid();
-  } else if (params.id !== undefined) {
-    ChatNavState.isNew = false;
-    ChatNavState.id = params.id;
-  }
-  const id = ChatNavState.id;
+  const id = params.id ?? nanoid();
 
   useEffect(() => {
     console.log("DEBUG123: NAV chat nav id", id);
@@ -56,13 +58,31 @@ export function useChatNav() {
     [router]
   );
 
-  return {
-    isNew,
-    id,
-    persistNewChatIdToUrl,
-    openNewChat,
-    openExistingChat,
-  };
+  const value = useMemo(
+    () =>
+      ({
+        isNew,
+        id,
+        persistNewChatIdToUrl,
+        openNewChat,
+        openExistingChat,
+      }) satisfies ChatNavState,
+    [isNew, id, persistNewChatIdToUrl, openNewChat, openExistingChat]
+  );
+  return (
+    <ChatNavContext.Provider value={value}>{children}</ChatNavContext.Provider>
+  );
+}
+
+/**
+ * @throws {Error} if used outside of /chat/{-$id} route
+ */
+export function useChatNav() {
+  const context = useContext(ChatNavContext);
+  if (!context) {
+    throw new Error("useChatNav must be used within ChatNavProvider");
+  }
+  return context;
 }
 
 /**
