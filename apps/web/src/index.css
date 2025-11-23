@@ -13,12 +13,6 @@
     "Inter", "Geist", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-  --duration-fastest: calc(var(--duration-base) * 0.5);
-  --duration-fast: calc(var(--duration-base) * 0.75);
-  --duration-normal: var(--duration-base);
-  --duration-slow: calc(var(--duration-base) * 1.25);
-  --duration-slowest: calc(var(--duration-base) * 1.5);
-
   --animate-subtle-slide-up: subtle-slide-up var(--duration-slowest) backwards
     var(--ease-subtle-overshoot);
   @keyframes subtle-slide-up {
@@ -35,7 +29,9 @@
 
 html,
 body {
-  @apply bg-gray-950 light:bg-white;
+  /*TODO: find a way to toggle body bg color when collapsing the sidebar*/
+  @apply bg-sidebar light:bg-sidebar;
+  @apply overflow-x-clip;
 
   @media (prefers-color-scheme: light) {
     color-scheme: light;
@@ -160,6 +156,11 @@ body {
 
 @layer utilities {
   * {
+    --duration-fastest: calc(var(--duration-base) * 0.5);
+    --duration-fast: calc(var(--duration-base) * 0.75);
+    --duration-normal: var(--duration-base);
+    --duration-slow: calc(var(--duration-base) * 1.25);
+    --duration-slowest: calc(var(--duration-base) * 1.5);
     --tw-duration: var(--duration-fastest);
     --tw-ease: var(--ease-default);
   }

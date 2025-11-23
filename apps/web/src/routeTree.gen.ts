@@ -8,18 +8,31 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
+import { createFileRoute } from '@tanstack/react-router'
+
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as DebugRouteImport } from './routes/_debug'
 import { Route as ChatRouteImport } from './routes/_chat'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ComponentsIndexRouteImport } from './routes/components/index'
+import { Route as ComponentsComponentsRouteImport } from './routes/components/_components'
 import { Route as ProtectedAiRouteImport } from './routes/_protected/ai'
+import { Route as ComponentsComponentsSidebarRouteImport } from './routes/components/_components/sidebar'
+import { Route as ComponentsComponentsButtonGroupRouteImport } from './routes/components/_components/button-group'
 import { Route as DebugDebugChar123IdChar125RouteImport } from './routes/_debug/debug.{-$id}'
 import { Route as ChatChatChar123IdChar125RouteImport } from './routes/_chat/chat.{-$id}'
 import { Route as AuthSignUpSplatRouteImport } from './routes/_auth/sign-up.$'
 import { Route as AuthSignInSplatRouteImport } from './routes/_auth/sign-in.$'
 
+const ComponentsRouteImport = createFileRoute('/components')()
+
+const ComponentsRoute = ComponentsRouteImport.update({
+  id: '/components',
+  path: '/components',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProtectedRoute = ProtectedRouteImport.update({
   id: '/_protected',
   getParentRoute: () => rootRouteImport,
@@ -41,11 +54,32 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ComponentsIndexRoute = ComponentsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ComponentsRoute,
+} as any)
+const ComponentsComponentsRoute = ComponentsComponentsRouteImport.update({
+  id: '/_components',
+  getParentRoute: () => ComponentsRoute,
+} as any)
 const ProtectedAiRoute = ProtectedAiRouteImport.update({
   id: '/ai',
   path: '/ai',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ComponentsComponentsSidebarRoute =
+  ComponentsComponentsSidebarRouteImport.update({
+    id: '/sidebar',
+    path: '/sidebar',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
+const ComponentsComponentsButtonGroupRoute =
+  ComponentsComponentsButtonGroupRouteImport.update({
+    id: '/button-group',
+    path: '/button-group',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
 const DebugDebugChar123IdChar125Route =
   DebugDebugChar123IdChar125RouteImport.update({
     id: '/debug/{-$id}',
@@ -72,18 +106,25 @@ const AuthSignInSplatRoute = AuthSignInSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai': typeof ProtectedAiRoute
+  '/components': typeof ComponentsComponentsRouteWithChildren
+  '/components/': typeof ComponentsIndexRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
   '/chat/{-$id}': typeof ChatChatChar123IdChar125Route
   '/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
+  '/components/button-group': typeof ComponentsComponentsButtonGroupRoute
+  '/components/sidebar': typeof ComponentsComponentsSidebarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai': typeof ProtectedAiRoute
+  '/components': typeof ComponentsIndexRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
   '/chat/{-$id}': typeof ChatChatChar123IdChar125Route
   '/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
+  '/components/button-group': typeof ComponentsComponentsButtonGroupRoute
+  '/components/sidebar': typeof ComponentsComponentsSidebarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -93,28 +134,40 @@ export interface FileRoutesById {
   '/_debug': typeof DebugRouteWithChildren
   '/_protected': typeof ProtectedRouteWithChildren
   '/_protected/ai': typeof ProtectedAiRoute
+  '/components': typeof ComponentsRouteWithChildren
+  '/components/_components': typeof ComponentsComponentsRouteWithChildren
+  '/components/': typeof ComponentsIndexRoute
   '/_auth/sign-in/$': typeof AuthSignInSplatRoute
   '/_auth/sign-up/$': typeof AuthSignUpSplatRoute
   '/_chat/chat/{-$id}': typeof ChatChatChar123IdChar125Route
   '/_debug/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
+  '/components/_components/button-group': typeof ComponentsComponentsButtonGroupRoute
+  '/components/_components/sidebar': typeof ComponentsComponentsSidebarRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/ai'
+    | '/components'
+    | '/components/'
     | '/sign-in/$'
     | '/sign-up/$'
     | '/chat/{-$id}'
     | '/debug/{-$id}'
+    | '/components/button-group'
+    | '/components/sidebar'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/ai'
+    | '/components'
     | '/sign-in/$'
     | '/sign-up/$'
     | '/chat/{-$id}'
     | '/debug/{-$id}'
+    | '/components/button-group'
+    | '/components/sidebar'
   id:
     | '__root__'
     | '/'
@@ -123,10 +176,15 @@ export interface FileRouteTypes {
     | '/_debug'
     | '/_protected'
     | '/_protected/ai'
+    | '/components'
+    | '/components/_components'
+    | '/components/'
     | '/_auth/sign-in/$'
     | '/_auth/sign-up/$'
     | '/_chat/chat/{-$id}'
     | '/_debug/debug/{-$id}'
+    | '/components/_components/button-group'
+    | '/components/_components/sidebar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -135,10 +193,18 @@ export interface RootRouteChildren {
   ChatRoute: typeof ChatRouteWithChildren
   DebugRoute: typeof DebugRouteWithChildren
   ProtectedRoute: typeof ProtectedRouteWithChildren
+  ComponentsRoute: typeof ComponentsRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/components': {
+      id: '/components'
+      path: '/components'
+      fullPath: '/components'
+      preLoaderRoute: typeof ComponentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_protected': {
       id: '/_protected'
       path: ''
@@ -174,12 +240,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/components/': {
+      id: '/components/'
+      path: '/'
+      fullPath: '/components/'
+      preLoaderRoute: typeof ComponentsIndexRouteImport
+      parentRoute: typeof ComponentsRoute
+    }
+    '/components/_components': {
+      id: '/components/_components'
+      path: '/components'
+      fullPath: '/components'
+      preLoaderRoute: typeof ComponentsComponentsRouteImport
+      parentRoute: typeof ComponentsRoute
+    }
     '/_protected/ai': {
       id: '/_protected/ai'
       path: '/ai'
       fullPath: '/ai'
       preLoaderRoute: typeof ProtectedAiRouteImport
       parentRoute: typeof ProtectedRoute
+    }
+    '/components/_components/sidebar': {
+      id: '/components/_components/sidebar'
+      path: '/sidebar'
+      fullPath: '/components/sidebar'
+      preLoaderRoute: typeof ComponentsComponentsSidebarRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
+    }
+    '/components/_components/button-group': {
+      id: '/components/_components/button-group'
+      path: '/button-group'
+      fullPath: '/components/button-group'
+      preLoaderRoute: typeof ComponentsComponentsButtonGroupRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
     }
     '/_debug/debug/{-$id}': {
       id: '/_debug/debug/{-$id}'
@@ -256,12 +350,40 @@ const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
   ProtectedRouteChildren,
 )
 
+interface ComponentsComponentsRouteChildren {
+  ComponentsComponentsButtonGroupRoute: typeof ComponentsComponentsButtonGroupRoute
+  ComponentsComponentsSidebarRoute: typeof ComponentsComponentsSidebarRoute
+}
+
+const ComponentsComponentsRouteChildren: ComponentsComponentsRouteChildren = {
+  ComponentsComponentsButtonGroupRoute: ComponentsComponentsButtonGroupRoute,
+  ComponentsComponentsSidebarRoute: ComponentsComponentsSidebarRoute,
+}
+
+const ComponentsComponentsRouteWithChildren =
+  ComponentsComponentsRoute._addFileChildren(ComponentsComponentsRouteChildren)
+
+interface ComponentsRouteChildren {
+  ComponentsComponentsRoute: typeof ComponentsComponentsRouteWithChildren
+  ComponentsIndexRoute: typeof ComponentsIndexRoute
+}
+
+const ComponentsRouteChildren: ComponentsRouteChildren = {
+  ComponentsComponentsRoute: ComponentsComponentsRouteWithChildren,
+  ComponentsIndexRoute: ComponentsIndexRoute,
+}
+
+const ComponentsRouteWithChildren = ComponentsRoute._addFileChildren(
+  ComponentsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
   ChatRoute: ChatRouteWithChildren,
   DebugRoute: DebugRouteWithChildren,
   ProtectedRoute: ProtectedRouteWithChildren,
+  ComponentsRoute: ComponentsRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
