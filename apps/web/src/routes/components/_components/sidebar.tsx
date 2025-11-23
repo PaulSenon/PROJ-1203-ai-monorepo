@@ -125,17 +125,18 @@ function RouteComponent() {
 function CollapsibleButtonGroupAnimated({
   ...props
 }: React.ComponentProps<typeof CollapsibleButtonGroup>) {
-  const { state: sidebarState } = useSidebar();
-  const showCollapsibleButtons = sidebarState === "collapsed";
+  const { open, isMobile } = useSidebar();
+  const isDesktop = !isMobile;
+  const isButtonGroupCollapsed = isDesktop && open;
 
   return (
     <CollapsibleButtonGroup
       {...props}
       className={cn(
-        "md:initial pointer-events-auto fixed top-3 top-safe-offset-2 left-3 z-50 flex origin-left items-center gap-0.5 overflow-hidden rounded-sm bg-foreground/5 p-1 backdrop-blur-xs",
+        "pointer-events-auto z-50 flex origin-left items-center gap-0.5 overflow-hidden rounded-sm bg-foreground/5 p-1 backdrop-blur-xs",
         props.className
       )}
-      collapsed={!showCollapsibleButtons}
+      collapsed={isButtonGroupCollapsed}
     >
       <SidebarTrigger className="size-8" />
       <CollapsibleButtonGroup.CollapsibleContent>
@@ -155,7 +156,7 @@ function Content() {
   const isCollapsed = sidebarState === "collapsed";
   return (
     <>
-      <CollapsibleButtonGroupAnimated />
+      <CollapsibleButtonGroupAnimated className="fixed top-3 top-safe-offset-2 left-3" />
       <header
         className={cn(
           "flex h-16 shrink-0 items-center gap-2 border-b px-4 transition-padding duration-(--duration-fast) ease-(--ease-default)",
@@ -185,7 +186,7 @@ function Content() {
         </div>
       </div>
       <div className="sticky bottom-0 flex min-h-28 w-full flex-col items-start justify-center gap-4 p-4">
-        <SidebarTrigger className="backdrop-blur-md md:hidden" />
+        <CollapsibleButtonGroupAnimated className="md:hidden" />
         <div className="w-full bg-accent">
           <p className="text-muted-foreground">
             Placeholder text for sticky bottom container
