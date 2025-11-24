@@ -27,8 +27,16 @@ services:
     #   - ../.env.local
     #   - ../.env.development
     command: pnpm dev
+    networks: [shared]
   #   depends_on:
   #     - convex
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --url http://app:3001
+    networks: [shared]
+  # links:
+  #   - app
 
   # # Local Convex Backend
   # convex:
@@ -56,6 +64,9 @@ services:
   #   depends_on:
   #     backend:
   #       condition: service_healthy
+
+networks:
+  shared:
 
 volumes:
   volume-pnpm-store: # Persist package manager cache

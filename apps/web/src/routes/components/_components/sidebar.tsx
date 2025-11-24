@@ -185,7 +185,7 @@ function Content() {
           ))}
         </div>
       </div>
-      <div className="sticky bottom-0 flex min-h-28 w-full flex-col items-start justify-center gap-4 p-4">
+      <div className="fixed bottom-1 flex min-h-28 w-full flex-col items-start justify-center gap-4 p-4">
         <CollapsibleButtonGroupAnimated className="md:hidden" />
         <div className="w-full bg-accent">
           <p className="text-muted-foreground">

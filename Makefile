@@ -10,7 +10,7 @@ define run_in_container_smart
 		$(COMPOSE) exec $(1) $(2); \
 	else \
 		echo "starting container and running command..."; \
-		$(COMPOSE) run --rm --service-ports $(1) $(2) && \
+		$(COMPOSE) run --rm --service-ports --use-aliases $(1) $(2) && \
 		$(MAKE) stop; \
 	fi
 endef
@@ -26,6 +26,9 @@ dev: ## Start development server
 
 bash: ## Access container shell
 	$(call run_in_container_smart,app,bash)
+
+tunnel: ## create cloudflare tunnel
+	$(COMPOSE) run --rm --service-ports tunnel
 
 run: ## Run arbitrary command in container (for LLM agents)
 	$(call run_in_container_smart,app,$(cmd))
