@@ -1,8 +1,10 @@
+import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   CalendarIcon,
   HomeIcon,
   InboxIcon,
+  MoreVerticalIcon,
   SearchIcon,
   SettingsIcon,
 } from "lucide-react";
@@ -22,6 +24,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { CollapsibleButtonGroup } from "@/components/ui-custom/button-group-collapsible";
+import { SidebarChatLink } from "@/components/ui-custom/sidebar-thread-item";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/components/_components/sidebar")({
@@ -56,6 +59,60 @@ const navItems = [
   },
 ];
 
+// const mockThreads = [
+//   {
+//     id: "1",
+//     title: "Project Brainstorming",
+//     active: true,
+//     liveState: "streaming" as const,
+//     readState: "read" as const,
+//   },
+//   {
+//     id: "2",
+//     title: "React Component Library",
+//     active: false,
+//     liveState: "none" as const,
+//     readState: "unread" as const,
+//   },
+//   {
+//     id: "3",
+//     title: "Meeting Notes",
+//     active: false,
+//     liveState: "none" as const,
+//     readState: "read" as const,
+//   },
+//   {
+//     id: "4",
+//     title: "New Feature Specs",
+//     active: false,
+//     liveState: "failure" as const,
+//     readState: "read" as const,
+//   },
+//   {
+//     id: "5",
+//     title: "Loading Title...",
+//     active: false,
+//     liveState: "none" as const,
+//     readState: "read" as const,
+//     titleState: "loading" as const,
+//   },
+//   {
+//     id: "6",
+//     title: "Title is way too long to fit the with available",
+//     active: true,
+//     liveState: "streaming" as const,
+//     readState: "read" as const,
+//   },
+//   {
+//     id: "7",
+//     title: "Loading Title...",
+//     active: false,
+//     liveState: "streaming" as const,
+//     readState: "unread" as const,
+//     titleState: "loading" as const,
+//   },
+// ];
+
 function MySidebarInset({ className, ...props }: React.ComponentProps<"main">) {
   return (
     <main
@@ -69,6 +126,78 @@ function MySidebarInset({ className, ...props }: React.ComponentProps<"main">) {
     />
   );
 }
+
+const threads = [
+  {
+    _id: "1" as Doc<"threads">["_id"],
+    _creationTime: Date.now(),
+    createdAt: Date.now(),
+    lifecycleState: "active",
+    liveStatus: "pending",
+    updatedAt: Date.now(),
+    userId: "1" as Doc<"users">["_id"],
+    uuid: "1",
+  },
+  {
+    _id: "2" as Doc<"threads">["_id"],
+    _creationTime: Date.now(),
+    createdAt: Date.now(),
+    lifecycleState: "active",
+    liveStatus: "streaming",
+    updatedAt: Date.now(),
+    userId: "2" as Doc<"users">["_id"],
+    uuid: "2",
+    title:
+      "This is a test title that is super long so it must end up truncated",
+  },
+  {
+    _id: "3" as Doc<"threads">["_id"],
+    _creationTime: Date.now(),
+    createdAt: Date.now(),
+    lifecycleState: "active",
+    liveStatus: "completed",
+    updatedAt: Date.now(),
+    userId: "3" as Doc<"users">["_id"],
+    uuid: "3",
+    title:
+      "This is a test title that is super long so it must end up truncated",
+  },
+  {
+    _id: "6" as Doc<"threads">["_id"],
+    _creationTime: Date.now(),
+    createdAt: Date.now(),
+    lifecycleState: "active",
+    liveStatus: "completed",
+    updatedAt: Date.now(),
+    userId: "6" as Doc<"users">["_id"],
+    uuid: "6",
+    title: "Short title",
+  },
+  {
+    _id: "4" as Doc<"threads">["_id"],
+    _creationTime: Date.now(),
+    createdAt: Date.now(),
+    lifecycleState: "active",
+    liveStatus: "error",
+    updatedAt: Date.now(),
+    userId: "4" as Doc<"users">["_id"],
+    uuid: "4",
+    title:
+      "This is a test title that is super long so it must end up truncated",
+  },
+  {
+    _id: "5" as Doc<"threads">["_id"],
+    _creationTime: Date.now(),
+    createdAt: Date.now(),
+    lifecycleState: "active",
+    liveStatus: "cancelled",
+    updatedAt: Date.now(),
+    userId: "5" as Doc<"users">["_id"],
+    uuid: "5",
+    title:
+      "This is a test title that is super long so it must end up truncated",
+  },
+] satisfies Doc<"threads">[];
 
 function RouteComponent() {
   return (
@@ -109,6 +238,20 @@ function RouteComponent() {
                       )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel>Previous Chats</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1.5">
+                {threads.map((thread) => (
+                  <SidebarChatLink
+                    endIcon={<MoreVerticalIcon className="size-4" />}
+                    key={thread._id}
+                    thread={thread}
+                  />
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
