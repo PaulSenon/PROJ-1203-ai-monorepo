@@ -16,6 +16,7 @@ import {
   ContextMenuShortcut,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useSelectionLock } from "@/hooks/utils/use-selection-lock";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +58,7 @@ type ActionMenuProps = {
 
 function ActionMenu({ children, items, onOpenChange }: ActionMenuProps) {
   const [open, setOpenInternal] = useState(false);
+  const isMobile = useIsMobile();
   const selectionLock = useSelectionLock();
 
   const setOpen = useCallback(
@@ -68,6 +70,8 @@ function ActionMenu({ children, items, onOpenChange }: ActionMenuProps) {
   );
 
   useEffect(() => {
+    if (!isMobile) return;
+
     if (open) {
       selectionLock.lock();
     } else {
@@ -76,7 +80,7 @@ function ActionMenu({ children, items, onOpenChange }: ActionMenuProps) {
     return () => {
       selectionLock.unlock();
     };
-  }, [open, selectionLock]);
+  }, [open, selectionLock, isMobile]);
 
   const contextValue = useMemo<ActionMenuContextValue>(
     () => ({ open, setOpen, items }),

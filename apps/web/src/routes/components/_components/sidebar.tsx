@@ -1,13 +1,5 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  CalendarIcon,
-  HomeIcon,
-  InboxIcon,
-  MoreVerticalIcon,
-  SearchIcon,
-  SettingsIcon,
-} from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -17,101 +9,18 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { CollapsibleButtonGroup } from "@/components/ui-custom/button-group-collapsible";
+import { ChatInput } from "@/components/ui-custom/chat-input";
 import { SidebarChatLink } from "@/components/ui-custom/sidebar-thread-item";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/components/_components/sidebar")({
   component: RouteComponent,
 });
-
-const navItems = [
-  {
-    title: "Home",
-    url: "/",
-    icon: HomeIcon,
-  },
-  {
-    title: "Inbox",
-    url: "#",
-    icon: InboxIcon,
-  },
-  {
-    title: "Calendar",
-    url: "#",
-    icon: CalendarIcon,
-  },
-  {
-    title: "Search",
-    url: "#",
-    icon: SearchIcon,
-  },
-  {
-    title: "Settings",
-    url: "#",
-    icon: SettingsIcon,
-  },
-];
-
-// const mockThreads = [
-//   {
-//     id: "1",
-//     title: "Project Brainstorming",
-//     active: true,
-//     liveState: "streaming" as const,
-//     readState: "read" as const,
-//   },
-//   {
-//     id: "2",
-//     title: "React Component Library",
-//     active: false,
-//     liveState: "none" as const,
-//     readState: "unread" as const,
-//   },
-//   {
-//     id: "3",
-//     title: "Meeting Notes",
-//     active: false,
-//     liveState: "none" as const,
-//     readState: "read" as const,
-//   },
-//   {
-//     id: "4",
-//     title: "New Feature Specs",
-//     active: false,
-//     liveState: "failure" as const,
-//     readState: "read" as const,
-//   },
-//   {
-//     id: "5",
-//     title: "Loading Title...",
-//     active: false,
-//     liveState: "none" as const,
-//     readState: "read" as const,
-//     titleState: "loading" as const,
-//   },
-//   {
-//     id: "6",
-//     title: "Title is way too long to fit the with available",
-//     active: true,
-//     liveState: "streaming" as const,
-//     readState: "read" as const,
-//   },
-//   {
-//     id: "7",
-//     title: "Loading Title...",
-//     active: false,
-//     liveState: "streaming" as const,
-//     readState: "unread" as const,
-//     titleState: "loading" as const,
-//   },
-// ];
 
 function MySidebarInset({ className, ...props }: React.ComponentProps<"main">) {
   return (
@@ -219,36 +128,12 @@ function RouteComponent() {
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      {item.url === "/" ? (
-                        <Link to={item.url}>
-                          <item.icon />
-                          <span>{item.title}</span>
-                        </Link>
-                      ) : (
-                        <a href={item.url}>
-                          <item.icon />
-                          <span>{item.title}</span>
-                        </a>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-          <SidebarGroup>
             <SidebarGroupLabel>Previous Chats</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-1.5">
                 {threads.map((thread) => (
                   <SidebarChatLink
-                    endIcon={<MoreVerticalIcon className="size-4" />}
+                    // endIcon={<MoreVerticalIcon className="size-4" />}
                     key={thread._id}
                     thread={thread}
                   />
@@ -308,7 +193,7 @@ function Content() {
       >
         <h1 className="font-semibold text-lg">Sidebar Component Demo</h1>
       </header>
-      <div className="flex flex-1 flex-col gap-4 p-4">
+      <div className="mx-auto flex max-w-3xl flex-1 flex-col gap-4 p-6">
         <div className="rounded-lg border bg-card p-6">
           <h2 className="mb-2 font-semibold text-xl">Sidebar Component</h2>
           <p className="text-muted-foreground">
@@ -317,23 +202,27 @@ function Content() {
             shortcut.
           </p>
         </div>
-        <div className="grid auto-rows-min gap-4 md:grid-cols-2">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div
-              className="flex aspect-video items-center justify-center rounded-xl bg-muted/50"
-              key={i}
-            >
-              <p>Hello {i}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="fixed bottom-1 flex min-h-28 w-full flex-col items-start justify-center gap-4 p-4">
-        <CollapsibleButtonGroupAnimated className="md:hidden" />
-        <div className="w-full bg-accent">
-          <p className="text-muted-foreground">
-            Placeholder text for sticky bottom container
+        {Array.from({ length: 6 }).map((_, i) => (
+          <p className="mb-4 last:mb-0" key={i}>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam
+            vehicula dolor et velit facilisis, non dictum felis maximus. Mauris
+            malesuada, ex in commodo tristique, turpis erat mattis erat, in
+            hendrerit justo mi id sapien. Proin laoreet metus leo, nec fermentum
+            nulla ligula eget elit. Vivamus tincidunt orci mi, ut interdum elit
+            tincidunt at. Fusce sed viverra sapien. Donec pellentesque pulvinar
+            orci, nec lobortis purus tempor non. Pellentesque tincidunt
+            facilisis massa, et ullamcorper orci dictum sed. Vestibulum ante
+            ipsum primis in faucibus orci luctus et ultrices posuere cubilia
+            curae.
           </p>
+        ))}
+      </div>
+      <div className="fixed bottom-1 mx-auto h-auto w-full md:sticky">
+        <div className="mx-auto flex w-full max-w-2xl flex-col items-start justify-center gap-4 p-4 pb-2 md:pb-4">
+          <CollapsibleButtonGroupAnimated className="md:hidden" />
+          <div className="w-full">
+            <ChatInput />
+          </div>
         </div>
       </div>
     </>

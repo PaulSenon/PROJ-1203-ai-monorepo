@@ -1,13 +1,5 @@
 import { useLayoutEffect } from "react";
 import {
-  useAppLoadStatus,
-  useAppLoadStatusActions,
-} from "@/hooks/use-app-load-status";
-import { useActiveThreadActions } from "@/hooks/use-chat-active";
-import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
-import { useModelSelectorState } from "@/hooks/use-user-preferences";
-import { cn } from "@/lib/utils";
-import {
   PromptInput,
   PromptInputAttachment,
   PromptInputAttachments,
@@ -18,7 +10,15 @@ import {
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
-} from "../../ai-elements/prompt-input";
+} from "@/components/ai-elements/prompt-input";
+import {
+  useAppLoadStatus,
+  useAppLoadStatusActions,
+} from "@/hooks/use-app-load-status";
+import { useActiveThreadActions } from "@/hooks/use-chat-active";
+import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
+import { useModelSelectorState } from "@/hooks/use-user-preferences";
+import { cn } from "@/lib/utils";
 import { ChatModelSelector } from "./chat-model-selector";
 
 export function ChatInput() {

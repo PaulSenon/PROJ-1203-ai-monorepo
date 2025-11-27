@@ -19,8 +19,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ComponentsIndexRouteImport } from './routes/components/index'
 import { Route as ComponentsComponentsRouteImport } from './routes/components/_components'
 import { Route as ProtectedAiRouteImport } from './routes/_protected/ai'
+import { Route as ComponentsComponentsTextareaRouteImport } from './routes/components/_components/textarea'
 import { Route as ComponentsComponentsSidebarRouteImport } from './routes/components/_components/sidebar'
+import { Route as ComponentsComponentsChatInputRouteImport } from './routes/components/_components/chat-input'
 import { Route as ComponentsComponentsButtonGroupRouteImport } from './routes/components/_components/button-group'
+import { Route as ComponentsComponentsActionMenuRouteImport } from './routes/components/_components/action-menu'
 import { Route as DebugDebugChar123IdChar125RouteImport } from './routes/_debug/debug.{-$id}'
 import { Route as ChatChatChar123IdChar125RouteImport } from './routes/_chat/chat.{-$id}'
 import { Route as AuthSignUpSplatRouteImport } from './routes/_auth/sign-up.$'
@@ -68,16 +71,34 @@ const ProtectedAiRoute = ProtectedAiRouteImport.update({
   path: '/ai',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ComponentsComponentsTextareaRoute =
+  ComponentsComponentsTextareaRouteImport.update({
+    id: '/textarea',
+    path: '/textarea',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
 const ComponentsComponentsSidebarRoute =
   ComponentsComponentsSidebarRouteImport.update({
     id: '/sidebar',
     path: '/sidebar',
     getParentRoute: () => ComponentsComponentsRoute,
   } as any)
+const ComponentsComponentsChatInputRoute =
+  ComponentsComponentsChatInputRouteImport.update({
+    id: '/chat-input',
+    path: '/chat-input',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
 const ComponentsComponentsButtonGroupRoute =
   ComponentsComponentsButtonGroupRouteImport.update({
     id: '/button-group',
     path: '/button-group',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
+const ComponentsComponentsActionMenuRoute =
+  ComponentsComponentsActionMenuRouteImport.update({
+    id: '/action-menu',
+    path: '/action-menu',
     getParentRoute: () => ComponentsComponentsRoute,
   } as any)
 const DebugDebugChar123IdChar125Route =
@@ -112,8 +133,11 @@ export interface FileRoutesByFullPath {
   '/sign-up/$': typeof AuthSignUpSplatRoute
   '/chat/{-$id}': typeof ChatChatChar123IdChar125Route
   '/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
+  '/components/action-menu': typeof ComponentsComponentsActionMenuRoute
   '/components/button-group': typeof ComponentsComponentsButtonGroupRoute
+  '/components/chat-input': typeof ComponentsComponentsChatInputRoute
   '/components/sidebar': typeof ComponentsComponentsSidebarRoute
+  '/components/textarea': typeof ComponentsComponentsTextareaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -123,8 +147,11 @@ export interface FileRoutesByTo {
   '/sign-up/$': typeof AuthSignUpSplatRoute
   '/chat/{-$id}': typeof ChatChatChar123IdChar125Route
   '/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
+  '/components/action-menu': typeof ComponentsComponentsActionMenuRoute
   '/components/button-group': typeof ComponentsComponentsButtonGroupRoute
+  '/components/chat-input': typeof ComponentsComponentsChatInputRoute
   '/components/sidebar': typeof ComponentsComponentsSidebarRoute
+  '/components/textarea': typeof ComponentsComponentsTextareaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -141,8 +168,11 @@ export interface FileRoutesById {
   '/_auth/sign-up/$': typeof AuthSignUpSplatRoute
   '/_chat/chat/{-$id}': typeof ChatChatChar123IdChar125Route
   '/_debug/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
+  '/components/_components/action-menu': typeof ComponentsComponentsActionMenuRoute
   '/components/_components/button-group': typeof ComponentsComponentsButtonGroupRoute
+  '/components/_components/chat-input': typeof ComponentsComponentsChatInputRoute
   '/components/_components/sidebar': typeof ComponentsComponentsSidebarRoute
+  '/components/_components/textarea': typeof ComponentsComponentsTextareaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -155,8 +185,11 @@ export interface FileRouteTypes {
     | '/sign-up/$'
     | '/chat/{-$id}'
     | '/debug/{-$id}'
+    | '/components/action-menu'
     | '/components/button-group'
+    | '/components/chat-input'
     | '/components/sidebar'
+    | '/components/textarea'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,8 +199,11 @@ export interface FileRouteTypes {
     | '/sign-up/$'
     | '/chat/{-$id}'
     | '/debug/{-$id}'
+    | '/components/action-menu'
     | '/components/button-group'
+    | '/components/chat-input'
     | '/components/sidebar'
+    | '/components/textarea'
   id:
     | '__root__'
     | '/'
@@ -183,8 +219,11 @@ export interface FileRouteTypes {
     | '/_auth/sign-up/$'
     | '/_chat/chat/{-$id}'
     | '/_debug/debug/{-$id}'
+    | '/components/_components/action-menu'
     | '/components/_components/button-group'
+    | '/components/_components/chat-input'
     | '/components/_components/sidebar'
+    | '/components/_components/textarea'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -261,6 +300,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedAiRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/components/_components/textarea': {
+      id: '/components/_components/textarea'
+      path: '/textarea'
+      fullPath: '/components/textarea'
+      preLoaderRoute: typeof ComponentsComponentsTextareaRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
+    }
     '/components/_components/sidebar': {
       id: '/components/_components/sidebar'
       path: '/sidebar'
@@ -268,11 +314,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComponentsComponentsSidebarRouteImport
       parentRoute: typeof ComponentsComponentsRoute
     }
+    '/components/_components/chat-input': {
+      id: '/components/_components/chat-input'
+      path: '/chat-input'
+      fullPath: '/components/chat-input'
+      preLoaderRoute: typeof ComponentsComponentsChatInputRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
+    }
     '/components/_components/button-group': {
       id: '/components/_components/button-group'
       path: '/button-group'
       fullPath: '/components/button-group'
       preLoaderRoute: typeof ComponentsComponentsButtonGroupRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
+    }
+    '/components/_components/action-menu': {
+      id: '/components/_components/action-menu'
+      path: '/action-menu'
+      fullPath: '/components/action-menu'
+      preLoaderRoute: typeof ComponentsComponentsActionMenuRouteImport
       parentRoute: typeof ComponentsComponentsRoute
     }
     '/_debug/debug/{-$id}': {
@@ -351,13 +411,19 @@ const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
 )
 
 interface ComponentsComponentsRouteChildren {
+  ComponentsComponentsActionMenuRoute: typeof ComponentsComponentsActionMenuRoute
   ComponentsComponentsButtonGroupRoute: typeof ComponentsComponentsButtonGroupRoute
+  ComponentsComponentsChatInputRoute: typeof ComponentsComponentsChatInputRoute
   ComponentsComponentsSidebarRoute: typeof ComponentsComponentsSidebarRoute
+  ComponentsComponentsTextareaRoute: typeof ComponentsComponentsTextareaRoute
 }
 
 const ComponentsComponentsRouteChildren: ComponentsComponentsRouteChildren = {
+  ComponentsComponentsActionMenuRoute: ComponentsComponentsActionMenuRoute,
   ComponentsComponentsButtonGroupRoute: ComponentsComponentsButtonGroupRoute,
+  ComponentsComponentsChatInputRoute: ComponentsComponentsChatInputRoute,
   ComponentsComponentsSidebarRoute: ComponentsComponentsSidebarRoute,
+  ComponentsComponentsTextareaRoute: ComponentsComponentsTextareaRoute,
 }
 
 const ComponentsComponentsRouteWithChildren =

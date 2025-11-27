@@ -1,10 +1,11 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import { RefreshCwIcon } from "lucide-react";
 import { type ComponentProps, useCallback } from "react";
-import { Action, Actions } from "@/components/ai-elements/actions";
 import {
   Message as AIElementsMessage,
   MessageContent as AIElementsMessageContent,
+  MessageAction,
+  MessageActions,
 } from "@/components/ai-elements/message";
 import { useActiveThreadActions } from "@/hooks/use-chat-active";
 import { useModelSelectorState } from "@/hooks/use-user-preferences";
@@ -39,7 +40,7 @@ export function ChatMessage({
         from={message.role}
         key={message.id}
       >
-        <AIElementsMessageContent variant={"contained"}>
+        <AIElementsMessageContent>
           {message.parts.map((part, i) => {
             switch (part.type) {
               case "reasoning":
@@ -66,11 +67,11 @@ export function ChatMessage({
           ) : null}
         </AIElementsMessageContent>
         {/* TODO: tmp for debug purpose UI is fully broken. */}
-        <Actions>
-          <Action onClick={handleRegenerate} tooltip="Regenerate">
+        <MessageActions>
+          <MessageAction onClick={handleRegenerate} tooltip="Regenerate">
             <RefreshCwIcon />
-          </Action>
-        </Actions>
+          </MessageAction>
+        </MessageActions>
       </AIElementsMessage>
       {/* TODO: tmp for debug purpose UI is fully broken. */}
       <span className="text-gray-500 text-sm">{message.id}</span>

@@ -13,6 +13,7 @@ import {
   ActionMenuTrigger,
 } from "@/components/ui-custom/action-menu";
 import { cn } from "@/lib/utils";
+import { Shimmer } from "../ai-elements/shimmer";
 import { Pulse2Icon } from "../ui/icons/svg-spinners-pulse-2";
 import { Skeleton } from "../ui/skeleton";
 
@@ -197,11 +198,13 @@ function TruncatedText({
   className,
   skeletonWidth = "w-3/4",
   srTitle,
+  shimmer,
 }: {
   text?: string;
   className?: string;
   skeletonWidth?: string;
   srTitle?: string;
+  shimmer?: boolean;
 }) {
   if (text === undefined) {
     return (
@@ -220,7 +223,7 @@ function TruncatedText({
       )}
       title={srTitle}
     >
-      {text}
+      {shimmer ? <Shimmer>{text}</Shimmer> : text}
     </span>
   );
 }
@@ -273,6 +276,9 @@ export function SidebarChatLink({
   longPressMs?: number;
 }) {
   const [debugThread, setDebugThread] = useState<Doc<"threads">>(thread);
+  const isLoading =
+    debugThread.liveStatus === "pending" ||
+    debugThread.liveStatus === "streaming";
   const tooltip = debugThread.title || "Loading title";
   const menuItems: ActionMenuItem[] = contextMenuItems ?? [
     {
@@ -349,7 +355,11 @@ export function SidebarChatLink({
             >
               <LiveStateIndicatorIcon thread={debugThread} />
               <span className="mx-1 min-w-0 flex-1">
-                <TruncatedText srTitle={tooltip} text={thread.title} />
+                <TruncatedText
+                  shimmer={isLoading}
+                  srTitle={tooltip}
+                  text={thread.title}
+                />
               </span>
               {endIcon && <span className="shrink-0">{endIcon}</span>}
 

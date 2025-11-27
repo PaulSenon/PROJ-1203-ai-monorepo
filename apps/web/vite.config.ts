@@ -28,6 +28,16 @@ export default defineConfig({
     //   openAnalyzer: false,
     // }),
   ],
+  server: {
+    allowedHosts: ["localhost", ".trycloudflare.com", "0.0.0.0"],
+    // proxy: {
+    //   "/api": {
+    //     target: "http://app:3000", // Resolves to the app container
+    //     changeOrigin: true,
+    //   },
+    // },
+    host: true, // Ensure Vite listens on all interfaces
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

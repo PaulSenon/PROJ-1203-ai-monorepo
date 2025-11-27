@@ -1,6 +1,7 @@
 "use client";
 
-import type { Element } from "hast";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import {
   type ComponentProps,
@@ -12,8 +13,6 @@ import {
   useState,
 } from "react";
 import { type BundledLanguage, codeToHtml, type ShikiTransformer } from "shiki";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
   code: string;
@@ -31,7 +30,7 @@ const CodeBlockContext = createContext<CodeBlockContextType>({
 
 const lineNumberTransformer: ShikiTransformer = {
   name: "line-numbers",
-  line(node: Element, line: number) {
+  line(node, line) {
     node.children.unshift({
       type: "element",
       tagName: "span",

@@ -7,6 +7,11 @@ import {
 } from "ai";
 import type { MockProviderV2 } from "ai/test";
 import z, { type ZodType } from "zod";
+import type { ProviderSlug } from "./types/providers.types";
+
+type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
 
 type ModelsRegistryParams = {
   GOOGLE_API_KEY: string;
@@ -107,14 +112,17 @@ const registryUtils = <const R extends ProviderRegistryProvider>() => ({
 });
 function createLanguageModelConfig<const T extends string>(
   config: LanguageModelConfig<T>
-): LanguageModelConfig<T> {
+): Prettify<LanguageModelConfig<T>> {
   return config;
 }
 
+// TODO: configurable entry type (from schema ?)
 export type LanguageModelConfig<T extends string> = {
   [K in T]: {
     id: K;
     label: string;
+    chef: ProviderSlug;
+    providers: ProviderSlug[];
   };
 };
 
@@ -166,10 +174,14 @@ export const modelsConfig = createLanguageModelConfig<AllowedModelIds>({
   "openai:gpt-5-mini": {
     id: "openai:gpt-5-mini",
     label: "GPT-5 Mini",
+    chef: "openai",
+    providers: ["openai"],
   },
   "google:gemini-2.5-flash-lite": {
     id: "google:gemini-2.5-flash-lite",
     label: "Gemini 2.5 Flash Lite",
+    chef: "google",
+    providers: ["google"],
   },
 });
 

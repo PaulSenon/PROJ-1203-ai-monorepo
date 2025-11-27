@@ -14,6 +14,18 @@ const components = [
     name: "Button Group",
     path: "/components/button-group",
   },
+  {
+    name: "Chat Input",
+    path: "/components/chat-input",
+  },
+  {
+    name: "Action Menu",
+    path: "/components/action-menu",
+  },
+  {
+    name: "Textarea",
+    path: "/components/textarea",
+  },
 ] as const;
 
 function RouteComponent() {

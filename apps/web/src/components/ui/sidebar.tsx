@@ -182,7 +182,6 @@ function Sidebar({
 
   if (isMobile) {
     return (
-      <>
       <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
         <SheetContent
           data-sidebar="sidebar"
@@ -203,7 +202,6 @@ function Sidebar({
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
       </Sheet>
-      </>
     )
   }
 
