@@ -16,6 +16,7 @@ import {
 import { CollapsibleButtonGroup } from "@/components/ui-custom/button-group-collapsible";
 import { ChatInput } from "@/components/ui-custom/chat-input";
 import { SidebarChatLink } from "@/components/ui-custom/sidebar-thread-item";
+import { StickyContainer } from "@/components/ui-custom/sticky-container";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/components/_components/sidebar")({
@@ -217,14 +218,14 @@ function Content() {
           </p>
         ))}
       </div>
-      <div className="fixed bottom-1 mx-auto h-auto w-full md:sticky">
+      <StickyContainer>
         <div className="mx-auto flex w-full max-w-2xl flex-col items-start justify-center gap-4 p-4 pb-2 md:pb-4">
           <CollapsibleButtonGroupAnimated className="md:hidden" />
           <div className="w-full">
             <ChatInput />
           </div>
         </div>
-      </div>
+      </StickyContainer>
     </>
   );
 }

@@ -181,3 +181,16 @@ body {
     --tw-ease: var(--ease-default);
   }
 }
+
+/*
+ * Fix sticky elements during overlay scroll-lock (Radix UI dialogs, sheets, etc.)
+ * Radix injects: body[data-scroll-locked] { overflow: hidden !important; }
+ * We override with higher specificity using html body selector
+ * overflow: clip hides content without creating scroll container, preserving sticky
+ */
+html body[data-scroll-locked],
+html body[data-scroll-locked][style] {
+  overflow: clip !important;
+  overflow-x: clip !important;
+  overflow-y: clip !important;
+}

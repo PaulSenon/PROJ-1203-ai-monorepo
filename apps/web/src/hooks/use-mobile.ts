@@ -17,3 +17,19 @@ export function useIsMobile() {
 
   return !!isMobile;
 }
+
+const IOS_USER_AGENT_REGEX = /iPad|iPhone|iPod/;
+export function useIsIos() {
+  const isMobile = useIsMobile();
+  const [isIos, setIsIos] = useState<boolean | undefined>(undefined);
+
+  useEffect(() => {
+    const _isIos =
+      isMobile &&
+      (IOS_USER_AGENT_REGEX.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+    setIsIos(_isIos);
+  }, [isMobile]);
+
+  return !!isIos;
+}
