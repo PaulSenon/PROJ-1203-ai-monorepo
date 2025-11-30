@@ -27,7 +27,7 @@ const chefs = Array.from(new Set(models.map((model) => model.chef)));
 export const ModelSelector = ({ onClose }: { onClose?: () => void }) => {
   const [open, setOpen] = useState(false);
   const [selectedModel, setSelectedModel] =
-    useState<AllowedModelIds>(defaultModelId);
+    useState<AllowedModelIds>(defaultModelId); // TODO: use selected model id from input context
   const inputRef = useRef<HTMLInputElement>(null);
 
   const selectedModelData = modelsConfig[selectedModel];
@@ -39,18 +39,8 @@ export const ModelSelector = ({ onClose }: { onClose?: () => void }) => {
     }
   }, [open]);
 
-  const handleOpenChange = (o: boolean) => {
-    if (o) {
-      // weird hack so it does not break on ios when fully scroll down
-      // this scroll top happens after the overflow clip of the dialog is applied
-      // so it has absolutely no visual impact. It just fixes some weird layout issues.
-      window.scrollTo({ top: 0, behavior: "instant" });
-    }
-    setOpen(o);
-  };
-
   return (
-    <ModelSelectorBase onOpenChange={handleOpenChange} open={open}>
+    <ModelSelectorBase onOpenChange={setOpen} open={open}>
       <ModelSelectorTrigger asChild>
         <PromptInputButton>
           <ModelSelectorLogo provider={selectedModelData.chef} />

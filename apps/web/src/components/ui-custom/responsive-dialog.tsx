@@ -1,6 +1,7 @@
 "use client";
 
 import type * as React from "react";
+import { useCallback } from "react";
 import {
   Dialog,
   DialogClose,
@@ -24,22 +25,43 @@ import { cn } from "@/lib/utils";
 
 function ResponsiveDialog({
   children,
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof Dialog>) {
   const isMobile = useIsMobile();
+
+  const handleMobileOpenChange = useCallback(
+    (open: boolean) => {
+      if (open && isMobile) {
+        // weird hack so it does not break on ios when fully scroll down
+        // this scroll top happens after the overflow clip of the dialog is applied
+        // so it has absolutely no visual impact. It just fixes some weird layout issues.
+        window.scrollTo({
+          top: 0,
+          behavior: "instant",
+        });
+      }
+      onOpenChange?.(open);
+    },
+    [isMobile, onOpenChange]
+  );
+
   return isMobile ? (
     <Drawer
       {...props}
       autoFocus={true}
-      disablePreventScroll={true}
-      preventScrollRestoration={true}
-      repositionInputs={false}
+      // disablePreventScroll={true}
+      // preventScrollRestoration={true}
+      onOpenChange={handleMobileOpenChange}
       // scrollLockTimeout={1000}
+      repositionInputs={false}
     >
       {children}
     </Drawer>
   ) : (
-    <Dialog {...props}>{children}</Dialog>
+    <Dialog onOpenChange={onOpenChange} {...props}>
+      {children}
+    </Dialog>
   );
 }
 
