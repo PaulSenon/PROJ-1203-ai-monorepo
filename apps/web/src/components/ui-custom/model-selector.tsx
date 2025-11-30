@@ -4,7 +4,7 @@ import {
   modelsConfig,
 } from "@ai-monorepo/ai/model.registry";
 import { CheckIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ModelSelector as ModelSelectorBase,
   ModelSelectorContent,
@@ -24,23 +24,53 @@ const models = Object.values(modelsConfig);
 
 const chefs = Array.from(new Set(models.map((model) => model.chef)));
 
-export const ModelSelector = () => {
+export const ModelSelector = ({ onClose }: { onClose?: () => void }) => {
   const [open, setOpen] = useState(false);
   const [selectedModel, setSelectedModel] =
     useState<AllowedModelIds>(defaultModelId);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const selectedModelData = modelsConfig[selectedModel];
 
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    if (!open) {
+      onCloseRef.current?.();
+    }
+  }, [open]);
+
+  const handleOpenChange = (o: boolean) => {
+    if (o) {
+      // weird hack so it does not break on ios when fully scroll down
+      // this scroll top happens after the overflow clip of the dialog is applied
+      // so it has absolutely no visual impact. It just fixes some weird layout issues.
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+    setOpen(o);
+  };
+
   return (
-    <ModelSelectorBase onOpenChange={setOpen} open={open}>
+    <ModelSelectorBase onOpenChange={handleOpenChange} open={open}>
       <ModelSelectorTrigger asChild>
         <PromptInputButton>
           <ModelSelectorLogo provider={selectedModelData.chef} />
           <ModelSelectorName>{selectedModelData.label}</ModelSelectorName>
         </PromptInputButton>
       </ModelSelectorTrigger>
-      <ModelSelectorContent>
-        <ModelSelectorInput placeholder="Search models..." />
+      <ModelSelectorContent
+        onCloseAutoFocus={(e) => {
+          // important to disable focus back on trigger on close (so we can restore focus on textarea)
+          e.preventDefault();
+        }}
+      >
+        <ModelSelectorInput
+          autoComplete="off"
+          autoCorrect="off"
+          inputMode="search"
+          placeholder="Search models..."
+          ref={inputRef}
+          spellCheck="false"
+        />
         <ModelSelectorList>
           <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
           {chefs.map((chef) => (

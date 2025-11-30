@@ -71,7 +71,11 @@ export function ChatInput({
               <PromptInputActionMenuContent>
                 <PromptInputActionAddAttachments />
               </PromptInputActionMenuContent>
-              <ModelSelector />
+              <ModelSelector
+                onClose={() => {
+                  textareaRef.current?.focus({ preventScroll: true });
+                }}
+              />
             </PromptInputActionMenu>
           </PromptInputTools>
           <PromptInputSubmit className="" status={status} variant={"ghost"} />

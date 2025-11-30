@@ -10,27 +10,32 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/ui-custom/responsive-dialog";
 import { cn } from "@/lib/utils";
-import type { ComponentProps, ReactNode } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { type ComponentProps, type ReactNode } from "react";
 
-export type ModelSelectorProps = ComponentProps<typeof Dialog>;
+export type ModelSelectorProps = ComponentProps<typeof ResponsiveDialog>;
 
 export const ModelSelector = (props: ModelSelectorProps) => (
-  <Dialog {...props} />
+  <ResponsiveDialog {...props} />
 );
 
-export type ModelSelectorTriggerProps = ComponentProps<typeof DialogTrigger>;
+export type ModelSelectorTriggerProps = ComponentProps<
+  typeof ResponsiveDialogTrigger
+>;
 
 export const ModelSelectorTrigger = (props: ModelSelectorTriggerProps) => (
-  <DialogTrigger {...props} />
+  <ResponsiveDialogTrigger {...props} />
 );
 
-export type ModelSelectorContentProps = ComponentProps<typeof DialogContent> & {
+export type ModelSelectorContentProps = ComponentProps<
+  typeof ResponsiveDialogContent
+> & {
   title?: ReactNode;
 };
 
@@ -39,14 +44,31 @@ export const ModelSelectorContent = ({
   children,
   title = "Model Selector",
   ...props
-}: ModelSelectorContentProps) => (
-  <DialogContent className={cn("p-0", className)} {...props}>
-    <DialogTitle className="sr-only">{title}</DialogTitle>
-    <Command className="**:data-[slot=command-input-wrapper]:h-auto">
-      {children}
-    </Command>
-  </DialogContent>
-);
+}: ModelSelectorContentProps) => {
+  const isMobile = useIsMobile();
+
+  return (
+    <ResponsiveDialogContent
+      className={cn(
+        isMobile
+          ? "p-0 flex flex-col h-full max-h-full"
+          : "p-0",
+        className
+      )}
+      {...props}
+    >
+      <ResponsiveDialogTitle className="sr-only">{title}</ResponsiveDialogTitle>
+      <Command
+        className={cn(
+          "**:data-[slot=command-input-wrapper]:h-auto",
+          isMobile && "flex flex-col h-full flex-1 min-h-0 bg-background px-6"
+        )}
+      >
+        {children}
+      </Command>
+    </ResponsiveDialogContent>
+  );
+};
 
 export type ModelSelectorDialogProps = ComponentProps<typeof CommandDialog>;
 
@@ -59,15 +81,37 @@ export type ModelSelectorInputProps = ComponentProps<typeof CommandInput>;
 export const ModelSelectorInput = ({
   className,
   ...props
-}: ModelSelectorInputProps) => (
-  <CommandInput className={cn("h-auto py-3.5", className)} {...props} />
-);
+}: ModelSelectorInputProps) => {
+  const isMobile = useIsMobile();
+  return (
+    <CommandInput
+      className={cn(
+        "h-auto py-3.5",
+        isMobile && "text-base",
+        className
+      )}
+      {...props}
+    />
+  );
+};
 
 export type ModelSelectorListProps = ComponentProps<typeof CommandList>;
 
-export const ModelSelectorList = (props: ModelSelectorListProps) => (
-  <CommandList {...props} />
-);
+export const ModelSelectorList = ({
+  className,
+  ...props
+}: ModelSelectorListProps) => {
+  const isMobile = useIsMobile();
+  return (
+    <CommandList
+      className={cn(
+        isMobile && "flex-1 overflow-y-auto",
+        className
+      )}
+      {...props}
+    />
+  );
+};
 
 export type ModelSelectorEmptyProps = ComponentProps<typeof CommandEmpty>;
 
@@ -83,8 +127,17 @@ export const ModelSelectorGroup = (props: ModelSelectorGroupProps) => (
 
 export type ModelSelectorItemProps = ComponentProps<typeof CommandItem>;
 
-export const ModelSelectorItem = (props: ModelSelectorItemProps) => (
-  <CommandItem {...props} />
+export const ModelSelectorItem = ({
+  onMouseDown,
+  ...props
+}: ModelSelectorItemProps) => (
+  <CommandItem
+    onMouseDown={(e) => {
+      e.preventDefault();
+      onMouseDown?.(e);
+    }}
+    {...props}
+  />
 );
 
 export type ModelSelectorShortcutProps = ComponentProps<typeof CommandShortcut>;
