@@ -2,7 +2,7 @@
 
 import { useClerk } from "@clerk/clerk-react";
 import { dark } from "@clerk/themes";
-import { ChevronDown, LogOut, Settings } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,7 @@ export function UserProfileButton({ className }: UserProfileButtonProps) {
       <DropdownMenuTrigger asChild>
         <Button
           className={cn(
-            "flex h-auto items-center gap-3 p-2 hover:border hover:bg-accent data-[state=open]:border data-[state=open]:bg-accent",
+            "flex h-auto items-center justify-start gap-3 border-none p-2 hover:bg-accent data-[state=open]:border data-[state=open]:bg-accent",
             className
           )}
           disabled={disabled}
@@ -74,7 +74,7 @@ export function UserProfileButton({ className }: UserProfileButtonProps) {
           <UserAvatar user={staleUser} />
           <UserInfos />
 
-          <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+          {/* <ChevronDown className="ml-auto h-4 w-4 opacity-50" /> */}
         </Button>
       </DropdownMenuTrigger>
 
