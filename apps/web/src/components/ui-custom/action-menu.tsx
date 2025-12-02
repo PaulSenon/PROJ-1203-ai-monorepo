@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -24,7 +25,7 @@ import { cn } from "@/lib/utils";
 // Types
 // ============================================================================
 
-type ActionMenuItem = {
+export type ActionMenuItem = {
   id: string;
   label: string;
   onSelect?: () => void;
@@ -36,8 +37,8 @@ type ActionMenuItem = {
 
 type ActionMenuContextValue = {
   open: boolean;
-  setOpen: (open: boolean) => void;
   items: ActionMenuItem[];
+  triggerRef: React.RefObject<HTMLElement | null>;
 };
 
 // ============================================================================
@@ -50,16 +51,17 @@ const ActionMenuContext = createContext<ActionMenuContextValue | null>(null);
 // ActionMenu (Root)
 // ============================================================================
 
-type ActionMenuProps = {
+export type ActionMenuProps = {
   children: ReactNode;
   items: ActionMenuItem[];
   onOpenChange?: (open: boolean) => void;
 };
 
-function ActionMenu({ children, items, onOpenChange }: ActionMenuProps) {
+export function ActionMenu({ children, items, onOpenChange }: ActionMenuProps) {
   const [open, setOpenInternal] = useState(false);
   const isMobile = useIsMobile();
   const selectionLock = useSelectionLock();
+  const triggerRef = useRef<HTMLElement>(null);
 
   const setOpen = useCallback(
     (nextOpen: boolean) => {
@@ -83,8 +85,8 @@ function ActionMenu({ children, items, onOpenChange }: ActionMenuProps) {
   }, [open, selectionLock, isMobile]);
 
   const contextValue = useMemo<ActionMenuContextValue>(
-    () => ({ open, setOpen, items }),
-    [open, setOpen, items]
+    () => ({ open, items, triggerRef }),
+    [open, items]
   );
 
   if (items.length === 0) {
@@ -105,12 +107,10 @@ function ActionMenu({ children, items, onOpenChange }: ActionMenuProps) {
 type ActionMenuTriggerProps = {
   children: React.ReactElement;
   longPressEnabled?: boolean;
-  longPressMs?: number;
-  longPressMoveThreshold?: number;
   className?: string;
 };
 
-function ActionMenuTrigger({
+export function ActionMenuTrigger({
   children,
   longPressEnabled = true,
   className,
@@ -132,14 +132,90 @@ function ActionMenuTrigger({
     return children;
   }
 
+  const { triggerRef } = context;
+
   return (
     <ContextMenuTrigger
       asChild
       className={className}
       onPointerDown={handlePointerDown}
+      ref={triggerRef}
     >
       {children}
     </ContextMenuTrigger>
+  );
+}
+
+// ============================================================================
+// ActionMenuButton (Keyboard-accessible trigger)
+// ============================================================================
+
+type ActionMenuButtonProps = ComponentProps<"button"> & {
+  className?: string;
+};
+
+export function ActionMenuButton({
+  className,
+  onClick,
+  onKeyDown,
+  ...props
+}: ActionMenuButtonProps) {
+  const context = useContext(ActionMenuContext);
+
+  const triggerContextMenu = useCallback(() => {
+    if (!context) return;
+    const triggerElement = context.triggerRef.current;
+    if (!triggerElement) return;
+
+    const rect = triggerElement.getBoundingClientRect();
+    const event = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: rect.right,
+      clientY: rect.top + rect.height / 2,
+    });
+    triggerElement.dispatchEvent(event);
+  }, [context]);
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerContextMenu();
+      onClick?.(e);
+    },
+    [triggerContextMenu, onClick]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerContextMenu();
+      }
+      onKeyDown?.(e);
+    },
+    [triggerContextMenu, onKeyDown]
+  );
+
+  if (!context) {
+    return null;
+  }
+
+  const isOpen = Boolean(context.open);
+
+  return (
+    <button
+      aria-expanded={isOpen}
+      aria-haspopup="menu"
+      aria-label="Thread options"
+      className={cn(className)}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      type="button"
+      {...props}
+    />
   );
 }
 
@@ -152,7 +228,10 @@ type ActionMenuContentProps = Omit<
   "children"
 >;
 
-function ActionMenuContent({ className, ...props }: ActionMenuContentProps) {
+export function ActionMenuContent({
+  className,
+  ...props
+}: ActionMenuContentProps) {
   const context = useContext(ActionMenuContext);
 
   // No context means items was empty - don't render anything
@@ -181,10 +260,3 @@ function ActionMenuContent({ className, ...props }: ActionMenuContentProps) {
     </ContextMenuContent>
   );
 }
-
-// ============================================================================
-// Exports
-// ============================================================================
-
-export { ActionMenu, ActionMenuTrigger, ActionMenuContent };
-export type { ActionMenuItem, ActionMenuProps };

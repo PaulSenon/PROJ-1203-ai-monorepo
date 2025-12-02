@@ -1,6 +1,12 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { Link } from "@tanstack/react-router";
-import { EditIcon, PinIcon, ShareIcon, XIcon } from "lucide-react";
+import {
+  EditIcon,
+  MoreVerticalIcon,
+  PinIcon,
+  ShareIcon,
+  XIcon,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type React from "react";
 import { useEffect, useState } from "react";
@@ -8,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import {
   ActionMenu,
+  ActionMenuButton,
   ActionMenuContent,
   type ActionMenuItem,
   ActionMenuTrigger,
@@ -77,84 +84,6 @@ function LiveStateIndicatorIcon({
   );
 }
 
-// export function SidebarThreadItem({
-//   title,
-//   active,
-//   liveState,
-//   readState,
-//   className,
-//   menu,
-//   children,
-//   onClick,
-//   ...props
-// }: SidebarThreadItemProps) {
-//   const button = (
-//     <SidebarMenuButton
-//       className={cn("group/menu-button relative overflow-hidden", className)}
-//       isActive={active}
-//       onClick={onClick}
-//       title={title} // Native tooltip as requested
-//       {...props}
-//     >
-//       <LiveStateIndicator liveState={liveState} readState={readState} />
-
-//       {title === undefined ? (
-//         <span className="h-4 w-2/3 flex-1 animate-pulse truncate rounded bg-muted" />
-//       ) : (
-//         <span
-//           className={cn(
-//             "flex-1 truncate transition-all duration-300",
-//             readState === "unread" && "font-medium" // Consistent weight, maybe medium for unread
-//           )}
-//         >
-//           {title}
-//         </span>
-//       )}
-//     </SidebarMenuButton>
-//   );
-
-//   const buttonWithTooltip = menu ? (
-//     <ContextMenuTrigger asChild>{button}</ContextMenuTrigger>
-//   ) : (
-//     button
-//   );
-
-//   return (
-//     <SidebarMenuItem className="group/thread-item relative overflow-hidden rounded-md">
-//       {menu ? (
-//         <ContextMenu>
-//           {buttonWithTooltip}
-//           {menu}
-//         </ContextMenu>
-//       ) : (
-//         buttonWithTooltip
-//       )}
-
-//       {/* Quick Actions Container */}
-//       {children && (
-//         <div
-//           className={cn(
-//             "absolute top-0 right-0 bottom-0 flex items-center gap-1 pr-1 pl-2",
-//             "translate-x-full transition-transform duration-200 ease-out group-hover/thread-item:translate-x-0",
-//             // Background to cover text. Using sidebar background or accent if active.
-//             active ? "bg-sidebar-accent" : "bg-sidebar"
-//           )}
-//         >
-//           {/* Gradient Mask on the left */}
-//           <div
-//             className={cn(
-//               "-translate-x-full pointer-events-none absolute top-0 bottom-0 left-0 w-4 bg-linear-to-l to-transparent",
-//               active ? "from-sidebar-accent" : "from-sidebar"
-//             )}
-//           />
-
-//           {children}
-//         </div>
-//       )}
-//     </SidebarMenuItem>
-//   );
-// }
-
 export function SidebarThreadActionButton({
   icon: Icon,
   label,
@@ -184,6 +113,7 @@ export function SidebarThreadActionButton({
         onClick?.(e);
       }}
       size="icon"
+      tabIndex={-1}
       title={label}
       variant={"default"}
     >
@@ -267,7 +197,6 @@ export function SidebarChatLink({
   className,
   endIcon,
   contextMenuItems,
-  longPressMs,
 }: {
   thread: Doc<"threads">;
   className?: string;
@@ -339,7 +268,7 @@ export function SidebarChatLink({
   return (
     <SidebarMenuItem className={cn("select-none", className)}>
       <ActionMenu items={menuItems}>
-        <ActionMenuTrigger longPressMs={longPressMs}>
+        <ActionMenuTrigger>
           <SidebarMenuButton asChild tooltip={tooltip}>
             <Link
               className="group/link relative flex h-10 w-full items-center gap-0! overflow-hidden md:h-9"
@@ -366,6 +295,17 @@ export function SidebarChatLink({
               <div className="pointer-events-auto absolute top-0 right-0 bottom-0 z-50 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100">
                 <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
                 <SidebarChatLinkQuickActions actions={quickActions} />
+              </div>
+
+              <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-50 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
+                <ActionMenuButton
+                  className={cn(
+                    "h-7 w-7 shrink-0 rounded-md bg-transparent p-1.5 text-foreground backdrop-blur-sm hover:bg-sidebar-ring/50 hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                  )}
+                >
+                  <MoreVerticalIcon className="size-4" />
+                  <span className="sr-only">Thread options</span>
+                </ActionMenuButton>
               </div>
             </Link>
           </SidebarMenuButton>
