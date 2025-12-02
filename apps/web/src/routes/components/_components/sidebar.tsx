@@ -1,9 +1,11 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { createFileRoute } from "@tanstack/react-router";
+import { UserProfileButton } from "@/components/auth/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -107,6 +109,17 @@ const threads = [
     title:
       "This is a test title that is super long so it must end up truncated",
   },
+  ...Array.from({ length: 20 }).map((_, i) => ({
+    _id: `${i + 6}` as Doc<"threads">["_id"],
+    _creationTime: Date.now(),
+    createdAt: Date.now(),
+    lifecycleState: "active" as const,
+    liveStatus: "completed" as const,
+    updatedAt: Date.now(),
+    userId: "7" as Doc<"users">["_id"],
+    uuid: `${i + 6}`,
+    title: `Thread ${i + 6}`,
+  })),
 ] satisfies Doc<"threads">[];
 
 function RouteComponent() {
@@ -119,7 +132,7 @@ function RouteComponent() {
         } as React.CSSProperties
       }
     >
-      <Sidebar variant="inset">
+      <Sidebar className="p-0" variant="inset">
         <SidebarHeader>
           <div className="min-h-8">
             <h2 className="h-full content-center text-center font-semibold text-lg">
@@ -127,10 +140,10 @@ function RouteComponent() {
             </h2>
           </div>
         </SidebarHeader>
-        <SidebarContent>
+        <SidebarContent className="overscroll-contain p-2">
           <SidebarGroup>
             <SidebarGroupLabel>Previous Chats</SidebarGroupLabel>
-            <SidebarGroupContent>
+            <SidebarGroupContent className="p-2">
               <SidebarMenu className="gap-1.5">
                 {threads.map((thread) => (
                   <SidebarChatLink
@@ -143,6 +156,9 @@ function RouteComponent() {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
+        <SidebarFooter className="p-4">
+          <UserProfileButton className="rounded-lg border" />
+        </SidebarFooter>
       </Sidebar>
       <MySidebarInset>
         <Content />
