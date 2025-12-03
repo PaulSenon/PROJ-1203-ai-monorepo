@@ -1,5 +1,6 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { createFileRoute } from "@tanstack/react-router";
+import React, { useRef } from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +20,10 @@ import { CollapsibleButtonGroup } from "@/components/ui-custom/button-group-coll
 import { ChatInput } from "@/components/ui-custom/chat-input";
 import { SidebarChatLink } from "@/components/ui-custom/sidebar-thread-item";
 import { StickyContainer } from "@/components/ui-custom/sticky-container";
+import {
+  ScrollEdgeProbe,
+  useScrollEdges,
+} from "@/hooks/utils/use-scroll-edges";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/components/_components/sidebar")({
@@ -122,7 +127,225 @@ const threads = [
   })),
 ] satisfies Doc<"threads">[];
 
+function BetterBackdropBlur({
+  position,
+  className,
+  thickness = "3px",
+  visible = true,
+}: {
+  position: "top" | "bottom";
+  fadeSize?: string;
+  className?: string;
+  thickness?: string;
+  visible?: boolean;
+}) {
+  return (
+    <>
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-x-0 h-[200%] max-h-screen contrast-more saturate-200 backdrop-blur-lg transition-background duration-(--duration-fast) ease-(--ease-default)",
+          position === "top" && "top-0",
+          position === "bottom" && "bottom-0",
+          visible ? "bg-transparent" : "bg-sidebar",
+          className
+        )}
+        style={
+          {
+            maskImage: `linear-gradient(to ${position === "top" ? "bottom" : "top"},black 0,black 50%,transparent 50%)`,
+          } as React.CSSProperties
+        }
+      />
+      <div
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-x-0 m-0 h-0 p-0",
+          position === "top" && "bottom-0",
+          position === "bottom" && "top-0"
+          // ,"h-[3px] bg-red-500/50"
+        )}
+        style={
+          {
+            "--thickness": thickness,
+          } as React.CSSProperties
+        }
+      >
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-x-0 h-[200px] max-h-screen brightness-100 saturate-200 backdrop-blur-md transition-all duration-(--duration-fast) ease-(--ease-default)",
+            visible
+              ? "opacity-100 brightness-150"
+              : "opacity-0 brightness-100 duration-0",
+            position === "top" && "top-0",
+            position === "bottom" && "bottom-0"
+          )}
+          style={
+            {
+              "--thickness": thickness,
+              maskImage: `linear-gradient(to ${position === "top" ? "bottom" : "top"},black 0,black var(--thickness),transparent var(--thickness)), linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)`,
+              WebkitMaskImage: `linear-gradient(to ${position === "top" ? "bottom" : "top"},black 0,black var(--thickness),transparent var(--thickness)), linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)`,
+              maskComposite: "intersect",
+              WebkitMaskComposite: "source-in",
+            } as React.CSSProperties
+          }
+        />
+      </div>
+      <div
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute right-0 left-0 m-0 h-full max-h-8 p-0",
+          position === "top" && "top-0",
+          position === "bottom" && "bottom-0"
+          // ,"bg-red-500/50"
+        )}
+        style={
+          {
+            background: `linear-gradient(
+              to ${position === "top" ? "bottom" : "top"},
+              color-mix(in srgb, var(--sidebar) 100%, transparent) 0%,
+              color-mix(in srgb, var(--sidebar) 90%, transparent) 30%,
+              color-mix(in srgb, var(--sidebar) 50%, transparent) 70%,
+              transparent 100%
+            )`,
+          } as React.CSSProperties
+        }
+      />
+    </>
+  );
+}
+
+/**
+ * Put this inside a scroll container if you need to bump z-index of the scrollbar.
+ * Because scrollbar z-index is always the max z-index of the container.
+ * But you might want to bump the z-index of the scrollbar to be higher than the container.
+ * (e.g. you have some fixed elements covering the scrollbar)
+ * So this basically create a dummy element with the desired z-index to bump the scrollbar z-index.
+ *
+ * @example
+ * ```tsx
+ * // this header must appear on top of EVERY items inside the scroll container
+ * // including the fixed button, but must remain underneath the scrollbar z-index
+ * <div className="fixed bottom-0 right-0 z-20">
+ *   <h2> Header </h2>
+ * </div>
+ *
+ * <div className="overflow-scroll">
+ *   // this dummy element will bump the scrollbar z-index to 30 while keeping the button
+ *   // z-index underneath our header z-index
+ *   <ScrollbarZIndexHack zIndex={30} />
+ *
+ *   <div className="h-100">
+ *     <p>Hello</p>
+ *     <p>World</p>
+ *     // this button must appear on top of items inside the scroll container
+ *     <button className="fixed bottom-0 right-0 z-10">Click me</button>
+ *   </div>
+ * </div>
+ * ```
+ */
+export function ScrollbarZIndexHack({ zIndex }: { zIndex: number }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={cn("pointer-events-none h-0 opacity-0", `z-${zIndex}`)}
+    />
+  );
+}
+
+function MySidebarHeader({
+  isOverflowing = false,
+  className,
+}: {
+  isOverflowing?: boolean;
+  className?: string;
+}) {
+  return (
+    <SidebarHeader className={className}>
+      <BetterBackdropBlur
+        position="top"
+        thickness="1px"
+        visible={isOverflowing}
+      />
+      <div className="z-10 mt-2 min-h-8">
+        <h2 className="h-full content-center text-center font-semibold text-lg">
+          Navigation
+        </h2>
+      </div>
+    </SidebarHeader>
+  );
+}
+const MySidebarHeaderSpacer = React.memo(
+  ({ className }: { className?: string }) => (
+    <SpacerFrom>
+      <MySidebarHeader className={className} />
+    </SpacerFrom>
+  )
+);
+MySidebarHeaderSpacer.displayName = "MySidebarHeaderSpacer";
+
+function MySidebarFooter({
+  isOverflowing = false,
+  className,
+}: {
+  isOverflowing?: boolean;
+  className?: string;
+}) {
+  return (
+    <SidebarFooter className={className}>
+      <BetterBackdropBlur
+        position="bottom"
+        thickness="1px"
+        visible={isOverflowing}
+      />
+      <UserProfileButton className="z-50 px-4" />
+    </SidebarFooter>
+  );
+}
+const MySidebarFooterSpacer = React.memo(
+  ({ className }: { className?: string }) => (
+    <SpacerFrom>
+      <MySidebarFooter className={className} />
+    </SpacerFrom>
+  )
+);
+MySidebarFooterSpacer.displayName = "MySidebarFooterSpacer";
+/**
+ * For when you need to reserve space of an element without hardcoding a spacer.
+ * You wrap your component again with this and you get the same layout footprint,
+ * with the same layout behavior of your component. So it makes harder to forget to
+ * update a spacer when you change the layout of your component.
+ *
+ * We use visibility: hidden to hint the browser to skip rendering the element.
+ * (only compute the layout (position/spacing), not the rendering (visual))
+ *
+ * @example
+ * ```tsx
+ * <div></div>
+ *   <MyComponent className="fixed top-0"/>
+ *   <SpacerFrom><MyComponent /></SpacerFrom>
+ *   <div>
+ *     <p>Hello</p>
+ *     <p>World</p>
+ *   </div>
+ * </div>
+ *
+ * ```
+ */
+function SpacerFrom({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none invisible"
+      role="presentation"
+    >
+      {children}
+    </div>
+  );
+}
+
 function RouteComponent() {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const { isAtTop, isAtBottom, topRef, bottomRef } =
+    useScrollEdges(viewportRef);
   return (
     <SidebarProvider
       style={
@@ -133,17 +356,20 @@ function RouteComponent() {
       }
     >
       <Sidebar className="p-0" variant="inset">
-        <SidebarHeader>
-          <div className="min-h-8">
-            <h2 className="h-full content-center text-center font-semibold text-lg">
-              Navigation
-            </h2>
-          </div>
-        </SidebarHeader>
-        <SidebarContent className="overscroll-contain p-2">
-          <SidebarGroup>
+        <MySidebarHeader
+          className="absolute top-0 z-50 w-full"
+          isOverflowing={!isAtTop}
+        />
+        <SidebarContent
+          className="gap-0 overscroll-contain p-0"
+          ref={viewportRef}
+        >
+          <ScrollEdgeProbe ref={topRef} />
+          <MySidebarHeaderSpacer />
+          <SidebarGroup className="px-2">
+            <ScrollbarZIndexHack zIndex={51} />
             <SidebarGroupLabel>Previous Chats</SidebarGroupLabel>
-            <SidebarGroupContent className="p-2">
+            <SidebarGroupContent className="px-2">
               <SidebarMenu className="gap-1.5">
                 {threads.map((thread) => (
                   <SidebarChatLink
@@ -155,10 +381,13 @@ function RouteComponent() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+          <MySidebarFooterSpacer />
+          <ScrollEdgeProbe ref={bottomRef} />
         </SidebarContent>
-        <SidebarFooter className="p-4">
-          <UserProfileButton className="rounded-lg border" />
-        </SidebarFooter>
+        <MySidebarFooter
+          className="absolute bottom-0 z-50 w-full"
+          isOverflowing={!isAtBottom}
+        />
       </Sidebar>
       <MySidebarInset>
         <Content />

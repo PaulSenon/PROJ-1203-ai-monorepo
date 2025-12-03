@@ -292,12 +292,12 @@ export function SidebarChatLink({
               </span>
               {endIcon && <span className="shrink-0">{endIcon}</span>}
 
-              <div className="pointer-events-auto absolute top-0 right-0 bottom-0 z-50 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100">
+              <div className="pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100">
                 <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
                 <SidebarChatLinkQuickActions actions={quickActions} />
               </div>
 
-              <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-50 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
+              <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
                 <ActionMenuButton
                   className={cn(
                     "h-7 w-7 shrink-0 rounded-md bg-transparent p-1.5 text-foreground backdrop-blur-sm hover:bg-sidebar-ring/50 hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"

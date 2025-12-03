@@ -4,6 +4,9 @@ In all interactions, be extremely concise and sacrifice grammar for the sake of 
 At the end of each plan, give me a list of unresolved questions to answer, if any. Make the questions extremely concise. Sacrifice grammar for the sake of concision.
 When assuming something not based on online verified proof, rate confidence score in % first, and if bellow 95%, you must verify using doc, web, anything external, and trust only good sources.
 Use context7 to fetch doc before using any library or doing important refactoring.
+We are using react19+ so forwardRef is not needed. Use ref as prop instead.
+We are using shadcn and tailwind
+Always start answer giving your name and version (e.g. "Claude Sonnet 4.5").
 
 ## Code Conventions
 

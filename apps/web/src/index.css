@@ -162,11 +162,11 @@ body {
 
 /* Sidebar background color tweak for mobile */
 :root {
-  --sidebar: var(--background);
+  --color-sidebar: var(--background);
 }
 @media (min-width: 768px) {
   :root {
-    --sidebar: initial;
+    --color-sidebar: var(--sidebar);
   }
 }
 
