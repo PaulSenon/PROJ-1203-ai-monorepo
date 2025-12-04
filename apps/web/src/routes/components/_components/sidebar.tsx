@@ -246,7 +246,8 @@ export function ScrollbarZIndexHack({ zIndex }: { zIndex: number }) {
   return (
     <div
       aria-hidden="true"
-      className={cn("pointer-events-none h-0 opacity-0", `z-${zIndex}`)}
+      className={cn("pointer-events-none h-0 opacity-0")}
+      style={{ zIndex }}
     />
   );
 }
@@ -366,8 +367,8 @@ function RouteComponent() {
         >
           <ScrollEdgeProbe ref={topRef} />
           <MySidebarHeaderSpacer />
+          <ScrollbarZIndexHack zIndex={51} />
           <SidebarGroup className="px-2">
-            <ScrollbarZIndexHack zIndex={51} />
             <SidebarGroupLabel>Previous Chats</SidebarGroupLabel>
             <SidebarGroupContent className="px-2">
               <SidebarMenu className="gap-1.5">
