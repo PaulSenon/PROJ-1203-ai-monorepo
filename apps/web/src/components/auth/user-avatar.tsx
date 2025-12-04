@@ -57,7 +57,7 @@ export function UserProfileButton({ className }: UserProfileButtonProps) {
   const disabled = !isFullyReady;
 
   if (isAnonymous) {
-    return <SignInButton />;
+    return <SignInButton className={cn("m-2", className)} />;
   }
 
   return (

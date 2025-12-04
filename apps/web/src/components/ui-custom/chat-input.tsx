@@ -58,7 +58,7 @@ export function ChatInput({
         </PromptInputAttachments>
         <PromptInputBody>
           <PromptInputTextarea
-            className="max-h-48 min-h-8"
+            className="max-h-48 not-focus-within:max-h-16 min-h-8"
             ref={textareaRef}
             rows={1}
             submitOnEnter={!isMobile}
