@@ -127,6 +127,10 @@ const threads = [
   })),
 ] satisfies Doc<"threads">[];
 
+/**
+ * Custom implementation based on Josh Comeau's amazing work here:
+ * https://www.joshwcomeau.com/css/backdrop-filter/
+ */
 function BetterBackdropBlur({
   position,
   className,
@@ -151,6 +155,7 @@ function BetterBackdropBlur({
           className
         )}
       />
+
       {/* bleeding backdrop blur */}
       <div
         className={cn(
@@ -200,6 +205,7 @@ function BetterBackdropBlur({
           }
         />
       </div>
+
       {/* fade mask */}
       <div
         aria-hidden="true"

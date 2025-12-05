@@ -161,12 +161,13 @@ body {
 }
 
 /* Sidebar background color tweak for mobile */
-:root {
-  --color-sidebar: var(--background);
-}
-@media (min-width: 768px) {
+/* On mobile, sidebar uses background color; on desktop (md+), uses original sidebar color */
+@media (max-width: 767px) {
   :root {
-    --color-sidebar: var(--sidebar);
+    --sidebar: var(--background);
+  }
+  .light {
+    --sidebar: var(--background);
   }
 }
 
