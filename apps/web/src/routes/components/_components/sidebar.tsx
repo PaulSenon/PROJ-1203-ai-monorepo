@@ -141,12 +141,23 @@ function BetterBackdropBlur({
 }) {
   return (
     <>
+      {/* background color */}
       <div
         className={cn(
-          "pointer-events-none absolute inset-x-0 h-[200%] max-h-screen contrast-more saturate-200 backdrop-blur-lg transition-background duration-(--duration-fast) ease-(--ease-default)",
+          "pointer-events-none absolute inset-x-0 h-full max-h-screen bg-sidebar transition-opacity duration-(--duration-fast) ease-(--ease-default)",
           position === "top" && "top-0",
           position === "bottom" && "bottom-0",
-          visible ? "bg-transparent" : "bg-sidebar",
+          visible ? "opacity-0" : "opacity-100",
+          className
+        )}
+      />
+      {/* bleeding backdrop blur */}
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-x-0 h-[200%] max-h-screen contrast-more saturate-200 backdrop-blur-lg",
+          position === "top" && "top-0",
+          position === "bottom" && "bottom-0",
+          visible ? "opacity-100" : "opacity-0",
           className
         )}
         style={
@@ -155,6 +166,8 @@ function BetterBackdropBlur({
           } as React.CSSProperties
         }
       />
+
+      {/* glass edge */}
       <div
         aria-hidden="true"
         className={cn(
@@ -172,9 +185,7 @@ function BetterBackdropBlur({
         <div
           className={cn(
             "pointer-events-none absolute inset-x-0 h-[200px] max-h-screen brightness-100 saturate-200 backdrop-blur-md transition-all duration-(--duration-fast) ease-(--ease-default)",
-            visible
-              ? "opacity-100 brightness-150"
-              : "opacity-0 brightness-100 duration-0",
+            visible ? "opacity-100 brightness-150" : "opacity-0 brightness-100",
             position === "top" && "top-0",
             position === "bottom" && "bottom-0"
           )}
@@ -189,6 +200,7 @@ function BetterBackdropBlur({
           }
         />
       </div>
+      {/* fade mask */}
       <div
         aria-hidden="true"
         className={cn(
