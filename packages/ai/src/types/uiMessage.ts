@@ -54,6 +54,27 @@ export const LifecycleState = z.enum([
   "deleted",
 ]) satisfies StandardSchemaV1<ConvexLifecycleState>;
 
+// time to first token = firstTokenReceivedAt - userSubmittedAt
+// time to first meaningful token = firstContentTokenReceivedAt - userSubmittedAt
+// thinking duration = lastThinkingTokenReceivedAt - firstThinkingTokenReceivedAt
+// token per second = totalTokens / (lastTokenReceivedAt - userSubmittedAt)
+export const MyUIMessageTimingStats = z.object({
+  userSubmittedAt: z.number().optional(),
+  firstThinkingTokenReceivedAt: z.number().optional(),
+  firstContentTokenReceivedAt: z.number().optional(),
+  firstTokenReceivedAt: z.number().optional(),
+  lastTokenReceivedAt: z.number().optional(),
+  lastContentTokenReceivedAt: z.number().optional(),
+  lastThinkingTokenReceivedAt: z.number().optional(),
+});
+export const MyUIMessageTokenUsage = z.object({
+  inputTokens: z.number().optional(),
+  outputTokens: z.number().optional(),
+  totalTokens: z.number().optional(),
+  reasoningTokens: z.number().optional(),
+  cachedInputTokens: z.number().optional(),
+});
+
 const metadataSchema = z.object({
   modelId: z.string().optional(),
   updatedAt: z.number(),
@@ -61,9 +82,70 @@ const metadataSchema = z.object({
   liveStatus: LiveStatus,
   lifecycleState: LifecycleState,
   error: AIErrorMetadata.optional(),
+  timing: MyUIMessageTimingStats.optional(),
+  usage: MyUIMessageTokenUsage.optional(),
 });
 
-export type MetadataSchema = z.infer<typeof metadataSchema>;
+export type MyUIMessageMetadata = z.infer<typeof metadataSchema>;
+export class MyMetadataHelper {
+  readonly #metadata: MyUIMessageMetadata | undefined;
+  constructor(metadata: MyUIMessageMetadata | undefined) {
+    this.#metadata = metadata ?? undefined;
+  }
+
+  get timeToFirstToken() {
+    const userSubmittedAt = this.#metadata?.timing?.userSubmittedAt;
+    const firstTokenReceivedAt = this.#metadata?.timing?.firstTokenReceivedAt;
+
+    if (userSubmittedAt === undefined) return undefined;
+    if (firstTokenReceivedAt === undefined) return undefined;
+    if (userSubmittedAt > firstTokenReceivedAt) return undefined;
+
+    return firstTokenReceivedAt - userSubmittedAt;
+  }
+
+  get timeToFirstMeaningfulToken() {
+    const userSubmittedAt = this.#metadata?.timing?.userSubmittedAt;
+    const firstContentTokenReceivedAt =
+      this.#metadata?.timing?.firstContentTokenReceivedAt;
+
+    if (userSubmittedAt === undefined) return undefined;
+    if (firstContentTokenReceivedAt === undefined) return undefined;
+    if (userSubmittedAt > firstContentTokenReceivedAt) return undefined;
+
+    return firstContentTokenReceivedAt - userSubmittedAt;
+  }
+
+  get thinkingDuration() {
+    const firstThinkingTokenReceivedAt =
+      this.#metadata?.timing?.firstThinkingTokenReceivedAt;
+    const lastThinkingTokenReceivedAt =
+      this.#metadata?.timing?.lastThinkingTokenReceivedAt;
+
+    if (firstThinkingTokenReceivedAt === undefined) return undefined;
+    if (lastThinkingTokenReceivedAt === undefined) return undefined;
+    if (firstThinkingTokenReceivedAt > lastThinkingTokenReceivedAt)
+      return undefined;
+
+    return lastThinkingTokenReceivedAt - firstThinkingTokenReceivedAt;
+  }
+
+  get tokenPerSecond() {
+    const lastTokenReceivedAt = this.#metadata?.timing?.lastTokenReceivedAt;
+    const userSubmittedAt = this.#metadata?.timing?.userSubmittedAt;
+    const totalTokens = this.#metadata?.usage?.totalTokens;
+
+    if (lastTokenReceivedAt === undefined) return undefined;
+    if (userSubmittedAt === undefined) return undefined;
+    if (totalTokens === undefined) return undefined;
+    if (lastTokenReceivedAt < userSubmittedAt) return undefined;
+    if (totalTokens === 0) return 0;
+    if (lastTokenReceivedAt - userSubmittedAt === 0)
+      return Number.POSITIVE_INFINITY;
+
+    return totalTokens / (lastTokenReceivedAt - userSubmittedAt);
+  }
+}
 
 const dataSchemas = {
   chart: z.object({
@@ -75,7 +157,7 @@ const dataSchemas = {
     caption: z.string(),
   }),
 };
-type DataSchemas = InferUIDataParts<typeof dataSchemas>;
+type MyUIMessageDataSchemas = InferUIDataParts<typeof dataSchemas>;
 
 const tools = {
   weather: tool({
@@ -88,7 +170,11 @@ const tools = {
 };
 type Tools = InferUITools<typeof tools>;
 
-export type MyUIMessage = UIMessage<MetadataSchema, DataSchemas, Tools>;
+export type MyUIMessage = UIMessage<
+  MyUIMessageMetadata,
+  MyUIMessageDataSchemas,
+  Tools
+>;
 export type MyUIMessageChunk = InferUIMessageChunk<MyUIMessage>;
 export async function validateMyUIMessages(messages: unknown[]) {
   return validateUIMessages<MyUIMessage>({ messages });

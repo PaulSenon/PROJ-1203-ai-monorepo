@@ -21,6 +21,8 @@ import { Route as ComponentsComponentsRouteImport } from './routes/components/_c
 import { Route as ProtectedAiRouteImport } from './routes/_protected/ai'
 import { Route as ComponentsComponentsTextareaRouteImport } from './routes/components/_components/textarea'
 import { Route as ComponentsComponentsSidebarRouteImport } from './routes/components/_components/sidebar'
+import { Route as ComponentsComponentsMessagesRouteImport } from './routes/components/_components/messages'
+import { Route as ComponentsComponentsConversationRouteImport } from './routes/components/_components/conversation'
 import { Route as ComponentsComponentsChatInputRouteImport } from './routes/components/_components/chat-input'
 import { Route as ComponentsComponentsButtonGroupRouteImport } from './routes/components/_components/button-group'
 import { Route as ComponentsComponentsActionMenuRouteImport } from './routes/components/_components/action-menu'
@@ -83,6 +85,18 @@ const ComponentsComponentsSidebarRoute =
     path: '/sidebar',
     getParentRoute: () => ComponentsComponentsRoute,
   } as any)
+const ComponentsComponentsMessagesRoute =
+  ComponentsComponentsMessagesRouteImport.update({
+    id: '/messages',
+    path: '/messages',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
+const ComponentsComponentsConversationRoute =
+  ComponentsComponentsConversationRouteImport.update({
+    id: '/conversation',
+    path: '/conversation',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
 const ComponentsComponentsChatInputRoute =
   ComponentsComponentsChatInputRouteImport.update({
     id: '/chat-input',
@@ -136,6 +150,8 @@ export interface FileRoutesByFullPath {
   '/components/action-menu': typeof ComponentsComponentsActionMenuRoute
   '/components/button-group': typeof ComponentsComponentsButtonGroupRoute
   '/components/chat-input': typeof ComponentsComponentsChatInputRoute
+  '/components/conversation': typeof ComponentsComponentsConversationRoute
+  '/components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/sidebar': typeof ComponentsComponentsSidebarRoute
   '/components/textarea': typeof ComponentsComponentsTextareaRoute
 }
@@ -150,6 +166,8 @@ export interface FileRoutesByTo {
   '/components/action-menu': typeof ComponentsComponentsActionMenuRoute
   '/components/button-group': typeof ComponentsComponentsButtonGroupRoute
   '/components/chat-input': typeof ComponentsComponentsChatInputRoute
+  '/components/conversation': typeof ComponentsComponentsConversationRoute
+  '/components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/sidebar': typeof ComponentsComponentsSidebarRoute
   '/components/textarea': typeof ComponentsComponentsTextareaRoute
 }
@@ -171,6 +189,8 @@ export interface FileRoutesById {
   '/components/_components/action-menu': typeof ComponentsComponentsActionMenuRoute
   '/components/_components/button-group': typeof ComponentsComponentsButtonGroupRoute
   '/components/_components/chat-input': typeof ComponentsComponentsChatInputRoute
+  '/components/_components/conversation': typeof ComponentsComponentsConversationRoute
+  '/components/_components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/_components/sidebar': typeof ComponentsComponentsSidebarRoute
   '/components/_components/textarea': typeof ComponentsComponentsTextareaRoute
 }
@@ -188,6 +208,8 @@ export interface FileRouteTypes {
     | '/components/action-menu'
     | '/components/button-group'
     | '/components/chat-input'
+    | '/components/conversation'
+    | '/components/messages'
     | '/components/sidebar'
     | '/components/textarea'
   fileRoutesByTo: FileRoutesByTo
@@ -202,6 +224,8 @@ export interface FileRouteTypes {
     | '/components/action-menu'
     | '/components/button-group'
     | '/components/chat-input'
+    | '/components/conversation'
+    | '/components/messages'
     | '/components/sidebar'
     | '/components/textarea'
   id:
@@ -222,6 +246,8 @@ export interface FileRouteTypes {
     | '/components/_components/action-menu'
     | '/components/_components/button-group'
     | '/components/_components/chat-input'
+    | '/components/_components/conversation'
+    | '/components/_components/messages'
     | '/components/_components/sidebar'
     | '/components/_components/textarea'
   fileRoutesById: FileRoutesById
@@ -312,6 +338,20 @@ declare module '@tanstack/react-router' {
       path: '/sidebar'
       fullPath: '/components/sidebar'
       preLoaderRoute: typeof ComponentsComponentsSidebarRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
+    }
+    '/components/_components/messages': {
+      id: '/components/_components/messages'
+      path: '/messages'
+      fullPath: '/components/messages'
+      preLoaderRoute: typeof ComponentsComponentsMessagesRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
+    }
+    '/components/_components/conversation': {
+      id: '/components/_components/conversation'
+      path: '/conversation'
+      fullPath: '/components/conversation'
+      preLoaderRoute: typeof ComponentsComponentsConversationRouteImport
       parentRoute: typeof ComponentsComponentsRoute
     }
     '/components/_components/chat-input': {
@@ -414,6 +454,8 @@ interface ComponentsComponentsRouteChildren {
   ComponentsComponentsActionMenuRoute: typeof ComponentsComponentsActionMenuRoute
   ComponentsComponentsButtonGroupRoute: typeof ComponentsComponentsButtonGroupRoute
   ComponentsComponentsChatInputRoute: typeof ComponentsComponentsChatInputRoute
+  ComponentsComponentsConversationRoute: typeof ComponentsComponentsConversationRoute
+  ComponentsComponentsMessagesRoute: typeof ComponentsComponentsMessagesRoute
   ComponentsComponentsSidebarRoute: typeof ComponentsComponentsSidebarRoute
   ComponentsComponentsTextareaRoute: typeof ComponentsComponentsTextareaRoute
 }
@@ -422,6 +464,8 @@ const ComponentsComponentsRouteChildren: ComponentsComponentsRouteChildren = {
   ComponentsComponentsActionMenuRoute: ComponentsComponentsActionMenuRoute,
   ComponentsComponentsButtonGroupRoute: ComponentsComponentsButtonGroupRoute,
   ComponentsComponentsChatInputRoute: ComponentsComponentsChatInputRoute,
+  ComponentsComponentsConversationRoute: ComponentsComponentsConversationRoute,
+  ComponentsComponentsMessagesRoute: ComponentsComponentsMessagesRoute,
   ComponentsComponentsSidebarRoute: ComponentsComponentsSidebarRoute,
   ComponentsComponentsTextareaRoute: ComponentsComponentsTextareaRoute,
 }

@@ -26,6 +26,14 @@ const components = [
     name: "Textarea",
     path: "/components/textarea",
   },
+  {
+    name: "Messages",
+    path: "/components/messages",
+  },
+  {
+    name: "Conversation",
+    path: "/components/conversation",
+  },
 ] as const;
 
 function RouteComponent() {
