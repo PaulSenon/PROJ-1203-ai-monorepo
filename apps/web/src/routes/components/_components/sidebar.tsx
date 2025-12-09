@@ -84,19 +84,20 @@ const threads = [
       "This is a test title that is super long so it must end up truncated",
   },
   ...Array.from({ length: 20 }).map((_, i) => ({
-    _id: `${i + 6}` as Doc<"threads">["_id"],
+    _id: `${i + 7}` as Doc<"threads">["_id"],
     _creationTime: Date.now(),
     createdAt: Date.now(),
     lifecycleState: "active" as const,
     liveStatus: "completed" as const,
     updatedAt: Date.now(),
     userId: "7" as Doc<"users">["_id"],
-    uuid: `${i + 6}`,
-    title: `Thread ${i + 6}`,
+    uuid: `${i + 7}`,
+    title: `Thread ${i + 7}`,
   })),
 ] satisfies Doc<"threads">[];
 
 function RouteComponent() {
+  console.log("threads", threads);
   return (
     <Sidebar threads={threads}>
       <Content />

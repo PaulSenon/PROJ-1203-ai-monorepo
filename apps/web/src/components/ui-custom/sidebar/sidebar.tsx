@@ -1,5 +1,5 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
-import React, { useRef } from "react";
+import React, { useCallback, useRef } from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
 import {
   Sidebar as BaseSidebar,
@@ -10,10 +10,12 @@ import {
   SidebarMenu,
   SidebarProvider,
 } from "@/components/ui/sidebar";
+import { useInView } from "@/hooks/utils/use-intersection-observer";
 import {
   ScrollEdgeProbe,
   useScrollEdges,
 } from "@/hooks/utils/use-scroll-edges";
+import { mergeRefs } from "@/lib/utils";
 import { ScrollbarZIndexHack } from "../utils/scrollbar-z-index-hack";
 import { SpacerFrom } from "../utils/spacer";
 import { SidebarFooter } from "./primitives/sidebar-footer";
@@ -28,9 +30,21 @@ export function Sidebar({
   threads: Doc<"threads">[];
   children: React.ReactNode;
 }) {
-  const viewportRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // handle scroll edges intersect for UI tweaks
   const { isAtTop, isAtBottom, topRef, bottomRef } =
-    useScrollEdges(viewportRef);
+    useScrollEdges(scrollContainerRef);
+
+  // handle lazy loading
+  const handleLoadMore = useCallback(() => {
+    console.log("load more");
+  }, []);
+  const { ref: loadMoreRef } = useInView<HTMLDivElement>({
+    rootRef: scrollContainerRef,
+    rootMargin: "0px 0px 100px 0px",
+    onEnter: handleLoadMore,
+  });
 
   return (
     <SidebarProvider
@@ -48,7 +62,7 @@ export function Sidebar({
         />
         <SidebarContent
           className="gap-0 overscroll-contain p-0"
-          ref={viewportRef}
+          ref={scrollContainerRef}
         >
           <ScrollEdgeProbe ref={topRef} />
           <MySidebarHeaderSpacer />
@@ -64,7 +78,7 @@ export function Sidebar({
             </SidebarGroupContent>
           </SidebarGroup>
           <MySidebarFooterSpacer />
-          <ScrollEdgeProbe ref={bottomRef} />
+          <ScrollEdgeProbe ref={mergeRefs(bottomRef, loadMoreRef)} />
         </SidebarContent>
         <MySidebarFooter
           className="absolute bottom-0 z-50 w-full"
