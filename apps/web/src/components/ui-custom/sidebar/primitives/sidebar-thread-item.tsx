@@ -10,8 +10,11 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
+import { Pulse2Icon } from "@/components/ui/icons/svg-spinners-pulse-2";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ActionMenu,
   ActionMenuButton,
@@ -20,9 +23,6 @@ import {
   ActionMenuTrigger,
 } from "@/components/ui-custom/action-menu";
 import { cn } from "@/lib/utils";
-import { Shimmer } from "../ai-elements/shimmer";
-import { Pulse2Icon } from "../ui/icons/svg-spinners-pulse-2";
-import { Skeleton } from "../ui/skeleton";
 
 function reduceLiveStateToIndicatorVariant(
   thread: Doc<"threads">
