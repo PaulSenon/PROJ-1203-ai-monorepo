@@ -103,6 +103,7 @@ export function ChatMessage({
     [message.metadata]
   );
 
+  // TODO ref
   const textContent = useMemo(
     () =>
       message.parts

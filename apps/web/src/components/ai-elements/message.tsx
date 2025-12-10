@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useSmoothText } from "@convex-dev/agent/react";
 import type { FileUIPart, UIMessage } from "ai";
 import {
   ChevronLeftIcon,
@@ -307,15 +308,17 @@ export const MessageBranchPage = ({
 export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 export const MessageResponse = memo(
-  ({ className, ...props }: MessageResponseProps) => (
-    <Streamdown
+  ({ className, children, ...props }: MessageResponseProps) => {
+    const [text] = useSmoothText(children as string);
+    return <Streamdown
       className={cn(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
       {...props}
-    />
-  ),
+    >{text}</Streamdown>
+  
+},            
   (prevProps, nextProps) => prevProps.children === nextProps.children
 );
 

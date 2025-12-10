@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import { Pulse2Icon } from "@/components/ui/icons/svg-spinners-pulse-2";
@@ -35,7 +35,7 @@ function reduceLiveStateToIndicatorVariant(
   }
   // TODO: handle unread
   if (thread.liveStatus === "completed") {
-    return "unread";
+    return;
   }
 
   // TODO: handle need-action
@@ -184,86 +184,66 @@ function SidebarChatLinkQuickActions({
   );
 }
 
-const debugLiveStatusesCycle: Doc<"threads">["liveStatus"][] = [
-  "pending",
-  "streaming",
-  "completed",
-  "error",
-  "cancelled",
-];
-
 export function SidebarChatLink({
   thread,
+  isActive = false,
   className,
-  endIcon,
-  contextMenuItems,
 }: {
   thread: Doc<"threads">;
+  isActive: boolean;
   className?: string;
-  endIcon?: React.ReactNode;
-  contextMenuItems?: ActionMenuItem[];
-  longPressMs?: number;
 }) {
-  const [debugThread, setDebugThread] = useState<Doc<"threads">>(thread);
   const isLoading =
-    debugThread.liveStatus === "pending" ||
-    debugThread.liveStatus === "streaming";
-  const tooltip = debugThread.title || "Loading title";
-  const menuItems: ActionMenuItem[] = contextMenuItems ?? [
-    {
-      id: "pin-thread",
-      icon: PinIcon,
-      label: "Pin thread",
-      onSelect: () => console.log("Pin thread"),
-    },
-    {
-      id: "rename-thread",
-      icon: EditIcon,
-      label: "Rename thread",
-      onSelect: () => console.log("Rename thread"),
-    },
-    {
-      id: "share-thread",
-      icon: ShareIcon,
-      label: "Share thread",
-      onSelect: () => console.log("Share thread"),
-    },
-    {
-      id: "delete-thread",
-      icon: XIcon,
-      label: "Delete thread",
-      onSelect: () => console.log("Delete thread"),
-      variant: "destructive",
-    },
-  ];
-  const quickActions: ActionMenuItem[] = [
-    {
-      id: "pin-thread",
-      icon: PinIcon,
-      label: "Pin thread",
-      onSelect: () => console.log("Pin thread"),
-    },
-    {
-      id: "delete-thread",
-      icon: XIcon,
-      label: "Delete thread",
-      onSelect: () => console.log("Delete thread"),
-      variant: "destructive",
-    },
-  ];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDebugThread((prev) => ({
-        ...prev,
-        liveStatus: debugLiveStatusesCycle[
-          (debugLiveStatusesCycle.indexOf(prev.liveStatus) + 1) %
-            debugLiveStatusesCycle.length
-        ] as Doc<"threads">["liveStatus"],
-      }));
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+    thread.liveStatus === "pending" || thread.liveStatus === "streaming";
+  const tooltip = thread.title || "Loading title";
+  const menuItems: ActionMenuItem[] = useMemo(
+    () => [
+      {
+        id: "pin-thread",
+        icon: PinIcon,
+        label: "Pin thread",
+        onSelect: () => console.log("Pin thread"),
+      },
+      {
+        id: "rename-thread",
+        icon: EditIcon,
+        label: "Rename thread",
+        onSelect: () => console.log("Rename thread"),
+      },
+      {
+        id: "share-thread",
+        icon: ShareIcon,
+        label: "Share thread",
+        onSelect: () => console.log("Share thread"),
+      },
+      {
+        id: "delete-thread",
+        icon: XIcon,
+        label: "Delete thread",
+        onSelect: () => console.log("Delete thread"),
+        variant: "destructive",
+      },
+    ],
+    [thread]
+  );
+  const quickActions: ActionMenuItem[] = useMemo(
+    () => [
+      {
+        id: "pin-thread",
+        icon: PinIcon,
+        label: "Pin thread",
+        onSelect: () => console.log("Pin thread"),
+      },
+      {
+        id: "delete-thread",
+        icon: XIcon,
+        label: "Delete thread",
+        onSelect: () => console.log("Delete thread"),
+        variant: "destructive",
+      },
+    ],
+    [thread]
+  );
 
   return (
     <SidebarMenuItem className={cn("select-none", className)}>
@@ -271,18 +251,17 @@ export function SidebarChatLink({
         <ActionMenuTrigger>
           <SidebarMenuButton asChild tooltip={tooltip}>
             <Link
-              className="group/link relative flex h-10 w-full items-center gap-0! overflow-hidden md:h-9"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
+              className={cn(
+                "group/link relative flex h-10 w-full items-center gap-0! overflow-hidden transition-background-color duration-500 ease-(--ease-default) md:h-9",
+                isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+              )}
               params={{ id: thread.uuid }}
               style={{
                 WebkitTouchCallout: "none",
               }}
               to="/chat/{-$id}"
             >
-              <LiveStateIndicatorIcon thread={debugThread} />
+              <LiveStateIndicatorIcon thread={thread} />
               <span className="mx-1 min-w-0 flex-1">
                 <TruncatedText
                   shimmer={isLoading}
@@ -290,9 +269,13 @@ export function SidebarChatLink({
                   text={thread.title}
                 />
               </span>
-              {endIcon && <span className="shrink-0">{endIcon}</span>}
+              {/* {endIcon && <span className="shrink-0">{endIcon}</span>} */}
 
-              <div className="pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100">
+              <div
+                className={cn(
+                  "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100"
+                )}
+              >
                 <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
                 <SidebarChatLinkQuickActions actions={quickActions} />
               </div>

@@ -1,6 +1,7 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import React, { useCallback, useRef } from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar as BaseSidebar,
   SidebarContent,
@@ -9,13 +10,17 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
   SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { useChatNav } from "@/hooks/use-chat-nav";
 import { useInView } from "@/hooks/utils/use-intersection-observer";
 import {
   ScrollEdgeProbe,
   useScrollEdges,
 } from "@/hooks/utils/use-scroll-edges";
-import { mergeRefs } from "@/lib/utils";
+import { cn, mergeRefs } from "@/lib/utils";
+import { CollapsibleButtonGroup } from "../button-group-collapsible";
 import { ScrollbarZIndexHack } from "../utils/scrollbar-z-index-hack";
 import { SpacerFrom } from "../utils/spacer";
 import { SidebarFooter } from "./primitives/sidebar-footer";
@@ -24,13 +29,18 @@ import { SidebarInset } from "./primitives/sidebar-inset";
 import { SidebarChatLink } from "./primitives/sidebar-thread-item";
 
 export function Sidebar({
+  className,
   threads,
   children,
+  onLoadMore,
 }: {
+  className?: string;
   threads: Doc<"threads">[];
   children: React.ReactNode;
+  onLoadMore?: () => void;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const { id: activeThreadId } = useChatNav();
 
   // handle scroll edges intersect for UI tweaks
   const { isAtTop, isAtBottom, topRef, bottomRef } =
@@ -38,11 +48,12 @@ export function Sidebar({
 
   // handle lazy loading
   const handleLoadMore = useCallback(() => {
-    console.log("load more");
-  }, []);
+    onLoadMore?.();
+  }, [onLoadMore]);
   const { ref: loadMoreRef } = useInView<HTMLDivElement>({
     rootRef: scrollContainerRef,
-    rootMargin: "0px 0px 100px 0px",
+    rootMargin: "0px 0px 100% 0px",
+    continuous: true,
     onEnter: handleLoadMore,
   });
 
@@ -55,7 +66,7 @@ export function Sidebar({
         } as React.CSSProperties
       }
     >
-      <BaseSidebar className="p-0" variant="inset">
+      <BaseSidebar className={cn("p-0", className)} variant="inset">
         <MySidebarHeader
           className="absolute top-0 z-50 w-full"
           isOverflowing={!isAtTop}
@@ -72,7 +83,11 @@ export function Sidebar({
             <SidebarGroupContent className="px-2">
               <SidebarMenu className="gap-1.5">
                 {threads.map((thread) => (
-                  <SidebarChatLink key={thread._id} thread={thread} />
+                  <SidebarChatLink
+                    isActive={thread.uuid === activeThreadId}
+                    key={thread.uuid}
+                    thread={thread}
+                  />
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -85,7 +100,10 @@ export function Sidebar({
           isOverflowing={!isAtBottom}
         />
       </BaseSidebar>
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset>
+        <CollapsibleButtonGroupAnimated className="fixed top-3 top-safe-offset-2 left-3" />
+        {children}
+      </SidebarInset>
     </SidebarProvider>
   );
 }
@@ -137,3 +155,32 @@ const MySidebarFooterSpacer = React.memo(
   )
 );
 MySidebarFooterSpacer.displayName = "MySidebarFooterSpacer";
+
+function CollapsibleButtonGroupAnimated({
+  ...props
+}: React.ComponentProps<typeof CollapsibleButtonGroup>) {
+  const { open, isMobile } = useSidebar();
+  const isDesktop = !isMobile;
+  const isButtonGroupCollapsed = isDesktop && open;
+
+  return (
+    <CollapsibleButtonGroup
+      {...props}
+      className={cn(
+        "pointer-events-auto z-50 flex origin-left items-center gap-0.5 overflow-hidden rounded-sm bg-foreground/5 p-1 backdrop-blur-xs",
+        props.className
+      )}
+      collapsed={isButtonGroupCollapsed}
+    >
+      <SidebarTrigger className="size-8" />
+      <CollapsibleButtonGroup.CollapsibleContent>
+        <Button className="size-8" variant="ghost">
+          1
+        </Button>
+        <Button className="size-8" variant="ghost">
+          2
+        </Button>
+      </CollapsibleButtonGroup.CollapsibleContent>
+    </CollapsibleButtonGroup>
+  );
+}

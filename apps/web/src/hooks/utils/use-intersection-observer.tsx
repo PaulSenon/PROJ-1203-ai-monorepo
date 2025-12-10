@@ -24,6 +24,7 @@ type UseInViewOptions = IntersectionObserverHookOptions & {
   triggerOnce?: boolean;
   initialInView?: boolean;
   minRatio?: number;
+  continuous?: boolean;
   onEnter?: (entry: IntersectionObserverEntry) => void;
   onLeave?: (entry: IntersectionObserverEntry) => void;
   onChange?: (inView: boolean, entry: IntersectionObserverEntry) => void;
@@ -193,6 +194,7 @@ export function useInView<T extends Element = Element>(
     triggerOnce,
     initialInView = false,
     minRatio = 0,
+    continuous,
     onEnter,
     onLeave,
     onChange,
@@ -221,23 +223,78 @@ export function useInView<T extends Element = Element>(
     freezeOnceVisible: freezeOnceVisible ?? triggerOnce,
   });
 
+  const nextInView = useMemo(() => {
+    if (!entry) return initialInView;
+    return entry.isIntersecting && entry.intersectionRatio >= minRatio;
+  }, [entry, initialInView, minRatio]);
+
   useEffect(() => {
-    if (!entry) return;
-    if (triggerOnce && wasEverInView) return;
+    if (!continuous) return;
+    if (!entry || (triggerOnce && wasEverInView) || !nextInView) return;
 
-    const nextInView =
-      entry.isIntersecting && entry.intersectionRatio >= minRatio;
-    const prevInView = prevInViewRef.current;
-
-    if (nextInView !== prevInView) {
-      if (nextInView) onEnter?.(entry);
-      else onLeave?.(entry);
-      onChange?.(nextInView, entry);
-      prevInViewRef.current = nextInView;
-      setInView(nextInView);
-      if (nextInView) setWasEverInView(true);
+    onEnter?.(entry);
+    onChange?.(true, entry);
+    if (!prevInViewRef.current) {
+      prevInViewRef.current = true;
+      setInView(true);
     }
-  }, [entry, minRatio, onChange, onEnter, onLeave, triggerOnce, wasEverInView]);
+    if (!wasEverInView) setWasEverInView(true);
+  }, [
+    continuous,
+    entry,
+    nextInView,
+    onChange,
+    onEnter,
+    triggerOnce,
+    wasEverInView,
+  ]);
+
+  useEffect(() => {
+    if (!continuous) return;
+    if (!entry || (triggerOnce && wasEverInView)) return;
+    if (nextInView || !prevInViewRef.current) return;
+
+    onLeave?.(entry);
+    onChange?.(false, entry);
+    prevInViewRef.current = false;
+    setInView(false);
+  }, [
+    continuous,
+    entry,
+    nextInView,
+    onChange,
+    onLeave,
+    triggerOnce,
+    wasEverInView,
+  ]);
+
+  useEffect(() => {
+    if (continuous) return;
+    if (!entry || (triggerOnce && wasEverInView)) return;
+
+    const prevInView = prevInViewRef.current;
+    if (nextInView === prevInView) return;
+
+    if (nextInView) {
+      onEnter?.(entry);
+      setWasEverInView(true);
+    } else {
+      onLeave?.(entry);
+    }
+
+    onChange?.(nextInView, entry);
+    prevInViewRef.current = nextInView;
+    setInView(nextInView);
+  }, [
+    continuous,
+    entry,
+    nextInView,
+    onChange,
+    onEnter,
+    onLeave,
+    triggerOnce,
+    wasEverInView,
+  ]);
 
   return {
     ref,

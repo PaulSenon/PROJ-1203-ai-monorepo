@@ -42,6 +42,9 @@ catalogs:
   schema:
     '@standard-schema/spec': ^1.0.0
 
+ignoredBuiltDependencies:
+  - '@clerk/shared'
+
 onlyBuiltDependencies:
   - esbuild
   - sharp

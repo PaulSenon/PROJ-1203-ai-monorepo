@@ -1,5 +1,5 @@
 import { cva } from "class-variance-authority";
-import { type ComponentProps, useRef, useState } from "react";
+import { type ComponentProps, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   PromptInput,
@@ -11,12 +11,17 @@ import {
   PromptInputAttachments,
   PromptInputBody,
   PromptInputFooter,
+  type PromptInputProps,
   PromptInputProvider,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
+import { useAppLoadStatusActions } from "@/hooks/use-app-load-status";
+import { useActiveThreadActions } from "@/hooks/use-chat-active";
+import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useModelSelectorState } from "@/hooks/use-user-preferences";
 import { cn } from "@/lib/utils";
 import { ModelSelector } from "./model-selector";
 
@@ -27,11 +32,37 @@ export function ChatInput({
 }: Omit<ComponentProps<typeof PromptInput>, "onSubmit"> & {
   onSubmit?: ComponentProps<typeof PromptInput>["onSubmit"];
 }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isMobile = useIsMobile();
+  // TODO: status not implemented yet
   const [status, setStatus] = useState<
     "submitted" | "streaming" | "ready" | "error"
   >("ready");
+
+  // const { isInitialUIStateReady } = useAppLoadStatus();
+  const appUiStatus = useAppLoadStatusActions();
+  const inputState = useChatInputState();
+  const inputActions = useChatInputActions();
+  const { sendMessage } = useActiveThreadActions();
+  const { selectedModelId } = useModelSelectorState();
+  const handleSubmit: PromptInputProps["onSubmit"] = (message, event) => {
+    if (!message.text || message.text.trim() === "") return;
+
+    console.log("ChatInput: handleSubmit", { message, event });
+    sendMessage({
+      text: message.text,
+      options: {
+        selectedModelId,
+      },
+    });
+  };
+
+  // TODO: perhaps we need better autofocus logic
+  useLayoutEffect(() => {
+    appUiStatus.setInputUIReady(!inputState.isPending);
+    if (inputState.isPending) return;
+    inputActions.focus();
+  }, [inputState.isPending, inputActions.focus, appUiStatus.setInputUIReady]);
 
   return (
     <PromptInputProvider>
@@ -47,10 +78,7 @@ export function ChatInput({
           "focus-within:border-border focus-within:bg-background/90 focus-within:shadow-lg"
         )}
         multiple
-        onSubmit={(message, event) => {
-          toast.success("Message sent");
-          onSubmit?.(message, event);
-        }}
+        onSubmit={handleSubmit}
         {...props}
       >
         <PromptInputAttachments>
@@ -59,9 +87,11 @@ export function ChatInput({
         <PromptInputBody>
           <PromptInputTextarea
             className="max-h-48 not-focus-within:max-h-16 min-h-8"
-            ref={textareaRef}
+            onChange={(e) => inputActions.setInput(e.target.value)}
+            ref={inputState.inputRef}
             rows={1}
             submitOnEnter={!isMobile}
+            value={inputState.input}
           />
         </PromptInputBody>
         <PromptInputFooter>
@@ -73,12 +103,17 @@ export function ChatInput({
               </PromptInputActionMenuContent>
               <ModelSelector
                 onClose={() => {
-                  textareaRef.current?.focus({ preventScroll: true });
+                  inputActions.focus();
                 }}
               />
             </PromptInputActionMenu>
           </PromptInputTools>
-          <PromptInputSubmit className="" status={status} variant={"ghost"} />
+          <PromptInputSubmit
+            className=""
+            disabled={inputState.disabled}
+            status={status}
+            variant={"ghost"}
+          />
         </PromptInputFooter>
       </PromptInput>
     </PromptInputProvider>

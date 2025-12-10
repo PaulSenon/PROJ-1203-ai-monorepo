@@ -1,3 +1,4 @@
+import { useSmoothText } from "@convex-dev/agent/react";
 import { BrainIcon, ChevronRightIcon } from "lucide-react";
 import { type ComponentProps, memo, useState } from "react";
 import { Streamdown } from "streamdown";
@@ -116,6 +117,7 @@ export const ThinkingBlock = memo(
   }: ThinkingBlockProps) => {
     // Fully controlled by user - no auto-open/close to prevent CLS
     const [isOpen, setIsOpen] = useState(defaultOpen);
+    const [text] = useSmoothText(children as string);
 
     return (
       <div className={cn("not-prose", className)} {...props}>
@@ -125,7 +127,7 @@ export const ThinkingBlock = memo(
             isOpen={isOpen}
             isStreaming={isStreaming}
           />
-          <ThinkingContent>{children}</ThinkingContent>
+          <ThinkingContent>{text}</ThinkingContent>
         </Collapsible>
       </div>
     );

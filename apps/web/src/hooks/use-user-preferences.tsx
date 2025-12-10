@@ -13,6 +13,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import type { Prettify } from "@/lib/utils";
 import { useActiveThreadQuery } from "./queries/use-chat-active-queries";
 import { useUserPreferencesQuery } from "./queries/use-user-preferences-queries";
 import { ChatNavRerenderTrigger, useChatNav } from "./use-chat-nav";
@@ -20,7 +21,7 @@ import { ChatNavRerenderTrigger, useChatNav } from "./use-chat-nav";
 type ModelSelectorState = {
   selectedModelId?: AllowedModelIds;
   isPending: boolean;
-  modelsConfig: LanguageModelConfig<AllowedModelIds>;
+  modelsConfig: Prettify<LanguageModelConfig<AllowedModelIds>>;
 };
 
 type ModelSelectorActions = {
