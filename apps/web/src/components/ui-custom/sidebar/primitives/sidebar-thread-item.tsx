@@ -51,36 +51,35 @@ function LiveStateIndicatorIcon({
   const variant = reduceLiveStateToIndicatorVariant(thread);
   const isVisible = variant !== undefined;
   return (
-    <AnimatePresence mode="wait">
-      {isVisible && (
-        <motion.div
-          animate={{ width: "auto", translateX: 0, opacity: 1 }}
-          className={className}
-          exit={{ width: 0, translateX: -10, opacity: 0 }}
-          initial={{ width: 0, translateX: -10, opacity: 0 }}
-          transition={{ duration: 0.2, ease: "easeInOut", type: "spring" }}
-        >
-          <div aria-label={variant} className="relative mr-1 size-2" role="img">
-            <span
-              className={cn(
-                "absolute inset-0 size-2 origin-center rounded-full transition-all duration-200 ease-in-out",
-                variant === "unread" && "bg-sidebar-primary",
-                variant === "error" && "bg-destructive",
-                variant === "need-action" && "animate-pulse bg-sidebar-primary",
-                variant === "pending" &&
-                  "animation-duration-1800 animate-pulse bg-muted-foreground"
-              )}
-            />
-            {variant === "pending" && (
-              <Pulse2Icon
-                className="-left-1/2 -top-1/2 absolute origin-center animate-in text-muted-foreground/80"
-                size={16}
-              />
-            )}
-          </div>
-        </motion.div>
+    <div
+      aria-hidden={!isVisible}
+      className={cn(
+        "flex items-center overflow-hidden transition-all duration-300 ease-in-out",
+        isVisible
+          ? "w-4 translate-x-0 opacity-100"
+          : "-translate-x-2 w-0 opacity-0",
+        className
       )}
-    </AnimatePresence>
+    >
+      <div aria-label={variant} className="relative mr-1 size-2" role="img">
+        <span
+          className={cn(
+            "absolute inset-0 size-2 origin-center rounded-full transition-all duration-200 ease-in-out",
+            variant === "unread" && "bg-sidebar-primary",
+            variant === "error" && "bg-destructive",
+            variant === "need-action" && "animate-pulse bg-sidebar-primary",
+            variant === "pending" &&
+              "animation-duration-1800 animate-pulse bg-muted-foreground"
+          )}
+        />
+        {variant === "pending" && (
+          <Pulse2Icon
+            className="-left-1/2 -top-1/2 absolute origin-center animate-in text-muted-foreground/80"
+            size={16}
+          />
+        )}
+      </div>
+    </div>
   );
 }
 

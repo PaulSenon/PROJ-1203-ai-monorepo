@@ -4,6 +4,7 @@ import { useCallback, useLayoutEffect, useMemo } from "react";
 import { Sidebar } from "@/components/ui-custom/sidebar/sidebar";
 import { usePreviousThreadHistoryPaginated } from "@/hooks/queries/use-chat-listing-queries";
 import { useAppLoadStatusActions } from "@/hooks/use-app-load-status";
+import { useChatNav } from "@/hooks/use-chat-nav";
 
 export function ChatSidebar({
   className,
@@ -14,7 +15,7 @@ export function ChatSidebar({
 }) {
   const appUiStatus = useAppLoadStatusActions();
   // const { isInitialUIStateReady } = useAppLoadStatus();
-  // const chatNav = useChatNav();
+  const chatNav = useChatNav();
   // const handleNewChat = () => chatNav.openNewChat();
   // TODO: debug
   // const inputActions = useChatInputActions();
@@ -38,6 +39,7 @@ export function ChatSidebar({
 
   return (
     <Sidebar
+      activeThreadId={chatNav.id}
       className={className}
       onLoadMore={handleLoadMore}
       threads={memoThreads}

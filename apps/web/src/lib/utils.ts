@@ -1,4 +1,5 @@
 import { type ClassValue, clsx } from "clsx";
+import { useMemo } from "react";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -21,4 +22,10 @@ export function mergeRefs<T>(...refs: Array<React.Ref<T> | null | undefined>) {
       }
     }
   };
+}
+
+export function useMergedRefs<T>(
+  ...refs: Array<React.Ref<T> | null | undefined>
+) {
+  return useMemo(() => mergeRefs(...refs), [refs]);
 }
