@@ -129,7 +129,7 @@ function SidebarProvider({
 
   return (
     <SidebarContext.Provider value={contextValue}>
-      <TooltipProvider delayDuration={0}>
+      <TooltipProvider delayDuration={1000} skipDelayDuration={300}>
         <div
           data-slot="sidebar-wrapper"
           style={
@@ -226,6 +226,7 @@ function Sidebar({
         data-slot="sidebar-gap"
         className={cn(
           "relative w-(--sidebar-width) bg-transparent transition-[width] duration-(--duration-fast) ease-(--ease-default)",
+          "will-change-[width]",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -237,6 +238,7 @@ function Sidebar({
         data-slot="sidebar-container"
         className={cn(
           "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-(--duration-fast) ease-(--ease-default) md:flex",
+          "will-change-[left,right,width]",
           side === "left"
             ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
             : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
@@ -543,9 +545,14 @@ function SidebarMenuButton({
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent
-        side="right"
-        align="center"
-        hidden={state !== "collapsed" || isMobile}
+        avoidCollisions={true}
+        sideOffset={5}
+        alignOffset={10}
+        side="bottom"
+        align="start"
+        hidden={state === "collapsed" || isMobile}
+        arrow={false}
+        className="border max-w-56 bg-background/50  backdrop-blur-lg text-sidebar-accent-foreground"
         {...tooltip}
       />
     </Tooltip>

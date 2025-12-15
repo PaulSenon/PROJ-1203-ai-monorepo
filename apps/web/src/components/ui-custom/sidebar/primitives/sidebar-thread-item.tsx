@@ -14,11 +14,8 @@ import { Pulse2Icon } from "@/components/ui/icons/svg-spinners-pulse-2";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ActionMenu,
   ActionMenuButton,
-  ActionMenuContent,
   type ActionMenuItem,
-  ActionMenuTrigger,
 } from "@/components/ui-custom/action-menu";
 import { cn } from "@/lib/utils";
 
@@ -111,7 +108,6 @@ export function SidebarThreadActionButton({
       }}
       size="icon"
       tabIndex={-1}
-      title={label}
       variant={"default"}
     >
       <Icon className="size-4" />
@@ -124,22 +120,15 @@ function TruncatedText({
   text,
   className,
   skeletonWidth = "w-3/4",
-  srTitle,
   shimmer,
 }: {
   text?: string;
   className?: string;
   skeletonWidth?: string;
-  srTitle?: string;
   shimmer?: boolean;
 }) {
   if (text === undefined) {
-    return (
-      <Skeleton
-        aria-label={srTitle}
-        className={cn("h-5", skeletonWidth, className)}
-      />
-    );
+    return <Skeleton className={cn("h-5", skeletonWidth, className)} />;
   }
 
   // TODO: shimmer text does not ellipsis, and when it does the animation is broken (jumps)
@@ -149,7 +138,6 @@ function TruncatedText({
         "block max-w-full overflow-hidden truncate text-ellipsis whitespace-nowrap",
         className
       )}
-      title={srTitle}
     >
       {shimmer ? <Shimmer>{text}</Shimmer> : text}
     </span>
@@ -254,7 +242,14 @@ export function _SidebarChatLink({
 
     const cb = (e: Event) => {
       if (!(e instanceof ContentVisibilityAutoStateChangeEvent)) return;
-      setIsVisible(!e.skipped);
+      if (!e.skipped) {
+        ref.current?.removeEventListener(
+          "contentvisibilityautostatechange",
+          cb
+        );
+        setIsVisible(true);
+      }
+      // setIsVisible(!e.skipped);
     };
     ref.current?.addEventListener("contentvisibilityautostatechange", cb);
     return () => {
@@ -268,59 +263,56 @@ export function _SidebarChatLink({
       className={cn("min-h-10 select-none md:min-h-9", className)}
       ref={ref}
       style={{
+        contain: "layout style",
         contentVisibility: "auto",
-        containIntrinsicSize: "auto 40px",
+        containIntrinsicBlockSize: "auto 40px",
       }}
     >
       <Activity mode={isVisible ? "visible" : "hidden"}>
-        <ActionMenu items={menuItems}>
-          <SidebarMenuButton asChild>
-            <ActionMenuTrigger>
-              <Link
-                className={cn(
-                  "-webkit-touch-callout-none group/link relative flex h-10 w-full items-center gap-0! overflow-hidden transition-background-color duration-500 ease-(--ease-default) data-[state=open]:bg-sidebar-accent md:h-9",
-                  isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
-                )}
-                params={{ id: thread.uuid }}
-                to="/chat/{-$id}"
-              >
-                <LiveStateIndicatorIcon thread={thread} />
-                <span className="mx-1 min-w-0 flex-1">
-                  <TruncatedText
-                    shimmer={isLoading}
-                    srTitle={tooltip}
-                    text={thread.title}
-                  />
-                </span>
-                {/* {endIcon && <span className="shrink-0">{endIcon}</span>} */}
+        {/* <ActionMenu items={menuItems}> */}
+        <SidebarMenuButton asChild tooltip={isMobile ? undefined : tooltip}>
+          {/* <ActionMenuTrigger> */}
+          <Link
+            className={cn(
+              "-webkit-touch-callout-none group/link relative flex h-10 w-full items-center gap-0! overflow-hidden transition-background-color duration-500 ease-(--ease-default) data-[state=open]:bg-sidebar-accent md:h-9",
+              isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+            )}
+            params={{ id: thread.uuid }}
+            to="/chat/{-$id}"
+          >
+            <LiveStateIndicatorIcon thread={thread} />
+            <span className="mx-1 min-w-0 flex-1">
+              <TruncatedText shimmer={isLoading} text={thread.title} />
+            </span>
+            {/* {endIcon && <span className="shrink-0">{endIcon}</span>} */}
 
-                {!isMobile && (
-                  <>
-                    <div
-                      className={cn(
-                        "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100"
-                      )}
-                    >
-                      <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
-                      <SidebarChatLinkQuickActions actions={quickActions} />
-                    </div>
-                    <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
-                      <ActionMenuButton
-                        className={cn(
-                          "h-7 w-7 shrink-0 rounded-md bg-transparent p-1.5 text-foreground backdrop-blur-sm hover:bg-sidebar-ring/50 hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                        )}
-                      >
-                        <MoreVerticalIcon className="size-4" />
-                        <span className="sr-only">Thread options</span>
-                      </ActionMenuButton>
-                    </div>
-                  </>
-                )}
-              </Link>
-            </ActionMenuTrigger>
-          </SidebarMenuButton>
-          <ActionMenuContent />
-        </ActionMenu>
+            {!isMobile && (
+              <>
+                <div
+                  className={cn(
+                    "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100"
+                  )}
+                >
+                  <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
+                  <SidebarChatLinkQuickActions actions={quickActions} />
+                </div>
+                <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
+                  <ActionMenuButton
+                    className={cn(
+                      "h-7 w-7 shrink-0 rounded-md bg-transparent p-1.5 text-foreground backdrop-blur-sm hover:bg-sidebar-ring/50 hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                    )}
+                  >
+                    <MoreVerticalIcon className="size-4" />
+                    <span className="sr-only">Thread options</span>
+                  </ActionMenuButton>
+                </div>
+              </>
+            )}
+          </Link>
+          {/* </ActionMenuTrigger> */}
+        </SidebarMenuButton>
+        {/* <ActionMenuContent /> */}
+        {/* </ActionMenu> */}
       </Activity>
     </SidebarMenuItem>
   );

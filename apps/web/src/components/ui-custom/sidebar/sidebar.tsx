@@ -68,7 +68,10 @@ export function Sidebar({
 
   return (
     <SidebarProvider style={SIDEBAR_STYLE}>
-      <BaseSidebar className={cn("p-0", className)} variant="inset">
+      <BaseSidebar
+        className={cn("p-0 contain-strict", className)}
+        variant="inset"
+      >
         <MySidebarHeader
           className="absolute top-0 z-50 w-full"
           isOverflowing={!isAtTop}
@@ -122,7 +125,7 @@ const SidebarThreads = React.memo(
           isActive={thread.uuid === activeThreadId}
           isMobile={isMobile}
           key={thread.uuid}
-          prerender={index < 15}
+          prerender={index < 20}
           thread={thread}
         />
       ))}
