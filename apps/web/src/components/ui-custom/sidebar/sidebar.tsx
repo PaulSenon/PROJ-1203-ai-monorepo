@@ -1,5 +1,5 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useDeferredValue, useRef } from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,13 +13,13 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useChatNav } from "@/hooks/use-chat-nav";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useInView } from "@/hooks/utils/use-intersection-observer";
 import {
   ScrollEdgeProbe,
   useScrollEdges,
 } from "@/hooks/utils/use-scroll-edges";
-import { cn, mergeRefs } from "@/lib/utils";
+import { cn, useMergedRefs } from "@/lib/utils";
 import { CollapsibleButtonGroup } from "../button-group-collapsible";
 import { ScrollbarZIndexHack } from "../utils/scrollbar-z-index-hack";
 import { SpacerFrom } from "../utils/spacer";
@@ -28,20 +28,25 @@ import { SidebarHeader } from "./primitives/sidebar-header";
 import { SidebarInset } from "./primitives/sidebar-inset";
 import { SidebarChatLink } from "./primitives/sidebar-thread-item";
 
+const SIDEBAR_STYLE = {
+  "--duration-base": "200ms",
+  // "--ease-default": "ease-out",
+} as React.CSSProperties;
 export function Sidebar({
   className,
+  activeThreadId,
   threads,
   children,
   onLoadMore,
 }: {
   className?: string;
+  activeThreadId?: string;
   threads: Doc<"threads">[];
   children: React.ReactNode;
   onLoadMore?: () => void;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const { id: activeThreadId } = useChatNav();
-
+  const isMobile = useIsMobile();
   // handle scroll edges intersect for UI tweaks
   const { isAtTop, isAtBottom, topRef, bottomRef } =
     useScrollEdges(scrollContainerRef);
@@ -57,15 +62,12 @@ export function Sidebar({
     onEnter: handleLoadMore,
   });
 
+  const mergedBottomRef = useMergedRefs<HTMLDivElement>(bottomRef, loadMoreRef);
+
+  const deferredThreads = useDeferredValue(threads, []);
+
   return (
-    <SidebarProvider
-      style={
-        {
-          "--duration-base": "200ms",
-          // "--ease-default": "ease-out",
-        } as React.CSSProperties
-      }
-    >
+    <SidebarProvider style={SIDEBAR_STYLE}>
       <BaseSidebar className={cn("p-0", className)} variant="inset">
         <MySidebarHeader
           className="absolute top-0 z-50 w-full"
@@ -81,19 +83,15 @@ export function Sidebar({
           <SidebarGroup className="px-2">
             <SidebarGroupLabel>Previous Chats</SidebarGroupLabel>
             <SidebarGroupContent className="px-2">
-              <SidebarMenu className="gap-1.5">
-                {threads.map((thread) => (
-                  <SidebarChatLink
-                    isActive={thread.uuid === activeThreadId}
-                    key={thread.uuid}
-                    thread={thread}
-                  />
-                ))}
-              </SidebarMenu>
+              <SidebarThreads
+                activeThreadId={activeThreadId}
+                isMobile={isMobile}
+                threads={deferredThreads}
+              />
             </SidebarGroupContent>
           </SidebarGroup>
           <MySidebarFooterSpacer />
-          <ScrollEdgeProbe ref={mergeRefs(bottomRef, loadMoreRef)} />
+          <ScrollEdgeProbe ref={mergedBottomRef} />
         </SidebarContent>
         <MySidebarFooter
           className="absolute bottom-0 z-50 w-full"
@@ -107,6 +105,30 @@ export function Sidebar({
     </SidebarProvider>
   );
 }
+
+const SidebarThreads = React.memo(
+  ({
+    threads,
+    activeThreadId,
+    isMobile,
+  }: {
+    threads: Doc<"threads">[];
+    activeThreadId?: string;
+    isMobile: boolean;
+  }) => (
+    <SidebarMenu className="gap-1.5">
+      {threads.map((thread) => (
+        <SidebarChatLink
+          isActive={thread.uuid === activeThreadId}
+          isMobile={isMobile}
+          key={thread.uuid}
+          thread={thread}
+        />
+      ))}
+    </SidebarMenu>
+  )
+);
+SidebarThreads.displayName = "SidebarThreads";
 
 function MySidebarHeader({
   isOverflowing = false,

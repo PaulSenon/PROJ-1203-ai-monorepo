@@ -4,7 +4,6 @@ import React, {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -98,24 +97,26 @@ function PersistedProxy({ className, ...props }: React.ComponentProps<"div">) {
 
 function PersistedTarget({ children }: { children: React.ReactNode }) {
   const { hostEl, isAttachedToProxy } = useCtx();
-  const [isIdle, setIsIdle] = useState(false);
+  // const [isIdle, setIsIdle] = useState(false);
 
-  useEffect(() => {
-    if (!("requestIdleCallback" in window)) return;
-    const callback = requestIdleCallback(() => {
-      setIsIdle(true);
-    });
-    return () => {
-      cancelIdleCallback(callback);
-    };
-  }, []);
+  // useEffect(() => {
+  //   if (!("requestIdleCallback" in window)) return;
+  //   const callback = requestIdleCallback(() => {
+  //     setIsIdle(true);
+  //   });
+  //   return () => {
+  //     cancelIdleCallback(callback);
+  //   };
+  // }, []);
 
-  const show = isIdle || isAttachedToProxy;
+  const backgroundMode = !isAttachedToProxy;
 
   if (!hostEl) return null;
 
+  // return createPortal(children, hostEl);
+
   return (
-    <React.Activity mode={show ? "visible" : "hidden"}>
+    <React.Activity mode={backgroundMode ? "hidden" : "visible"}>
       {createPortal(children, hostEl)}
     </React.Activity>
   );
