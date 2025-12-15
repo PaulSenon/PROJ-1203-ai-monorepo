@@ -117,11 +117,12 @@ const SidebarThreads = React.memo(
     isMobile: boolean;
   }) => (
     <SidebarMenu className="gap-1.5">
-      {threads.map((thread) => (
+      {threads.map((thread, index) => (
         <SidebarChatLink
           isActive={thread.uuid === activeThreadId}
           isMobile={isMobile}
           key={thread.uuid}
+          prerender={index < 15}
           thread={thread}
         />
       ))}

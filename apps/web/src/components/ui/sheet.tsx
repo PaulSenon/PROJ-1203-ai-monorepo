@@ -41,9 +41,10 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-black/50 ",
+        "absolute inset-0 z-50 bg-black/50",
+        // NOTICE: absolute because of ios26.6 fix for overscroll color bleed
         "data-[state=open]:animate-opacity-in data-[state=closed]:animate-opacity-out",
-        // NOTICE: Do not change duration or it mess up layout on ios26
+        "duration-(--duration-slowest) ease-(--ease-default)",
         className
       )}
       {...props}
@@ -52,7 +53,7 @@ function SheetOverlay({
 }
 
 function SheetContent({
-  className,
+  className, 
   children,
   side = "right",
   ...props
@@ -66,6 +67,7 @@ function SheetContent({
         data-slot="sheet-content"
         className={cn(
           "bg-background fixed z-50 flex flex-col gap-4 shadow-lg",
+          "absolute", // reason: IOS 26.6 extends area styling trick
           "data-[state=open]:animate-sheet-in data-[state=closed]:animate-sheet-out will-change-transform",
           "ease-(--ease-default) data-[state=closed]:duration-(--duration-slowest) data-[state=open]:duration-(--duration-slowest)",
           "data-[state=closed]:opacity-0 ",
@@ -81,7 +83,10 @@ function SheetContent({
         )}
         {...props}
       >
-        <div className="relative flex h-full flex-col">
+        <div className={cn(
+          "relative flex h-full flex-col",
+          "sticky inset-0 h-dvh", // reason: IOS 26.6 extends area styling trick
+        )}>
           {children}
           <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 z-50 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
             <XIcon className="size-4" />
