@@ -3,7 +3,6 @@ import React, { useCallback, useDeferredValue, useRef } from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
-  Sidebar as BaseSidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
@@ -23,6 +22,7 @@ import { cn, useMergedRefs } from "@/lib/utils";
 import { CollapsibleButtonGroup } from "../button-group-collapsible";
 import { ScrollbarZIndexHack } from "../utils/scrollbar-z-index-hack";
 import { SpacerFrom } from "../utils/spacer";
+import { Sidebar as BaseSidebar } from "./primitives/sidebar";
 import { SidebarFooter } from "./primitives/sidebar-footer";
 import { SidebarHeader } from "./primitives/sidebar-header";
 import { SidebarInset } from "./primitives/sidebar-inset";
@@ -101,10 +101,8 @@ export function Sidebar({
           isOverflowing={!isAtBottom}
         />
       </BaseSidebar>
-      <SidebarInset>
-        <CollapsibleButtonGroupAnimated className="fixed top-3 top-safe-offset-2 left-3" />
-        {children}
-      </SidebarInset>
+      <CollapsibleButtonGroupAnimated className="fixed top-3 top-safe-offset-2 left-3" />
+      <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
   );
 }

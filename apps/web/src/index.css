@@ -8,6 +8,7 @@
   --duration-base: 150ms;
   --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-subtle-overshoot: cubic-bezier(0, 0.88, 0.37, 1.2);
+  --ease-snappy: cubic-bezier(0.2, 0.4, 0.1, 0.95);
 
   --font-sans:
     "Inter", "Geist", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
@@ -36,6 +37,8 @@ body {
   @media (prefers-color-scheme: light) {
     color-scheme: light;
   }
+
+  scrollbar-gutter: stable;
 }
 
 :root {

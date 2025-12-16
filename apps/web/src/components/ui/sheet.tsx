@@ -44,7 +44,7 @@ function SheetOverlay({
         "absolute inset-0 z-50 bg-black/50",
         // NOTICE: absolute because of ios26.6 fix for overscroll color bleed
         "data-[state=open]:animate-opacity-in data-[state=closed]:animate-opacity-out",
-        "duration-(--duration-slowest) ease-(--ease-default)",
+        "duration-400 ease-snappy",
         className
       )}
       {...props}
@@ -69,7 +69,7 @@ function SheetContent({
           "bg-background fixed z-50 flex flex-col gap-4 shadow-lg",
           "absolute", // reason: IOS 26.6 extends area styling trick
           "data-[state=open]:animate-sheet-in data-[state=closed]:animate-sheet-out will-change-transform",
-          "ease-(--ease-default) data-[state=closed]:duration-(--duration-slowest) data-[state=open]:duration-(--duration-slowest)",
+          "ease-snappy data-[state=closed]:duration-(--duration-slowest) data-[state=open]:duration-(--duration-slowest)",
           "data-[state=closed]:opacity-0 ",
           side === "right" &&
             "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm",
