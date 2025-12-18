@@ -6,18 +6,6 @@ settings:
 
 catalogs:
   ai:
-    '@ai-sdk/anthropic':
-      specifier: ^2.0.40
-      version: 2.0.40
-    '@ai-sdk/google':
-      specifier: 2.0.25
-      version: 2.0.25
-    '@ai-sdk/openai':
-      specifier: ^2.0.60
-      version: 2.0.60
-    '@ai-sdk/provider':
-      specifier: ^2.0.0
-      version: 2.0.0
     '@ai-sdk/react':
       specifier: ^2.0.81
       version: 2.0.81
@@ -25,25 +13,16 @@ catalogs:
       specifier: 5.0.81
       version: 5.0.81
   clerk:
-    '@clerk/backend':
-      specifier: ^2.19.1
-      version: 2.19.1
     '@clerk/clerk-react':
       specifier: ^5.53.4
       version: 5.53.4
     '@clerk/themes':
       specifier: ^2.4.33
       version: 2.4.33
-    '@hono/clerk-auth':
-      specifier: ^3.0.3
-      version: 3.0.3
   convex:
     '@convex-dev/agent':
       specifier: ^0.2.12
       version: 0.2.12
-    '@convex-dev/migrations':
-      specifier: ^0.2.9
-      version: 0.2.9
     convex:
       specifier: ^1.28.0
       version: 1.28.0
@@ -54,18 +33,6 @@ catalogs:
     alchemy:
       specifier: ^0.75.1
       version: 0.75.1
-    dotenv:
-      specifier: ^17.2.2
-      version: 17.2.3
-    hono:
-      specifier: ^4.8.2
-      version: 4.10.3
-    nanoid:
-      specifier: 5.1.6
-      version: 5.1.6
-    tsdown:
-      specifier: ^0.15.5
-      version: 0.15.10
     typescript:
       specifier: 5.9.3
       version: 5.9.3
@@ -83,20 +50,11 @@ catalogs:
     '@orpc/contract':
       specifier: 1.10.2
       version: 1.10.2
-    '@orpc/openapi':
-      specifier: 1.10.2
-      version: 1.10.2
     '@orpc/openapi-client':
       specifier: ^1.10.2
       version: 1.10.2
-    '@orpc/server':
-      specifier: 1.10.2
-      version: 1.10.2
     '@orpc/tanstack-query':
       specifier: ^1.10.2
-      version: 1.10.2
-    '@orpc/zod':
-      specifier: 1.10.2
       version: 1.10.2
   schema:
     '@standard-schema/spec':

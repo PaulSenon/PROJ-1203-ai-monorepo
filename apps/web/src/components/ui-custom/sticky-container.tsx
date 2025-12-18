@@ -69,8 +69,8 @@ const useIsOnScreenKeyboardOpen = () => {
         return;
       }
       const target = e.target as HTMLElement;
-      console.log("isKeyboardInput", isKeyboardInput(target));
-      console.log("isKeyboardInput", target.tagName);
+      // console.log("isKeyboardInput", isKeyboardInput(target));
+      // console.log("isKeyboardInput", target.tagName);
       if (isKeyboardInput(target)) {
         setOpen(true);
       }

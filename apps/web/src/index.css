@@ -209,6 +209,11 @@ html body[data-scroll-locked][style] {
     var(--tw-ease, ease-out) both;
   --animate-opacity-out: opacity-out var(--tw-duration, 140ms)
     var(--tw-ease, ease-in) both;
+
+  --animate-scale-in: scale-in var(--tw-duration, 180ms)
+    var(--tw-ease, ease-out) both;
+  --animate-scale-out: scale-out var(--tw-duration, 140ms)
+    var(--tw-ease, ease-in) both;
 }
 
 @keyframes sheet-in {
@@ -246,7 +251,25 @@ html body[data-scroll-locked][style] {
     backdrop-filter: blur(3px);
   }
   to {
-    opacity: 1%;
+    opacity: 0%;
     backdrop-filter: blur(0px);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.95);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes scale-out {
+  from {
+    transform: scale(0.95);
+  }
+  to {
+    transform: scale(0.9);
   }
 }

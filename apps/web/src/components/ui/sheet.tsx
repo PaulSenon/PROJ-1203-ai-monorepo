@@ -45,6 +45,7 @@ function SheetOverlay({
         // NOTICE: absolute because of ios26.6 fix for overscroll color bleed
         "data-[state=open]:animate-opacity-in data-[state=closed]:animate-opacity-out",
         "duration-400 ease-snappy",
+        "select-none",
         className
       )}
       {...props}

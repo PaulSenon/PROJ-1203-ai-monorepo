@@ -1,6 +1,7 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { createFileRoute } from "@tanstack/react-router";
 import type React from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { CollapsibleButtonGroup } from "@/components/ui-custom/button-group-collapsible";
@@ -83,7 +84,7 @@ const threads = [
     title:
       "This is a test title that is super long so it must end up truncated",
   },
-  ...Array.from({ length: 20 }).map((_, i) => ({
+  ...Array.from({ length: 1000 }).map((_, i) => ({
     _id: `${i + 7}` as Doc<"threads">["_id"],
     _creationTime: Date.now(),
     createdAt: Date.now(),
@@ -97,9 +98,25 @@ const threads = [
 ] satisfies Doc<"threads">[];
 
 function RouteComponent() {
-  console.log("threads", threads);
+  const [_threads, setThreads] = useState<Doc<"threads">[]>(threads);
+  const i = useRef(0);
+  // useEffect(() => {
+  //   i.current++;
+  //   const interval = setInterval(() => {
+  //     setThreads((prev) => {
+  //       const newThreads = [...prev];
+  //       newThreads[0] = {
+  //         ...newThreads[0],
+  //         liveStatus: ["pending", "completed", "error"][i.current % 3],
+  //       } as Doc<"threads">;
+  //       return newThreads;
+  //     });
+  //   }, 1000);
+  //   return () => clearInterval(interval);
+  // }, [_threads]);
+
   return (
-    <Sidebar threads={threads}>
+    <Sidebar threads={_threads}>
       <Content />
     </Sidebar>
   );
@@ -139,15 +156,15 @@ function Content() {
   const isCollapsed = sidebarState === "collapsed";
   return (
     <>
-      <CollapsibleButtonGroupAnimated className="fixed top-3 top-safe-offset-2 left-3" />
-      <header
+      {/* <CollapsibleButtonGroupAnimated className="fixed top-3 top-safe-offset-2 left-3" /> */}
+      {/* <header
         className={cn(
-          "flex h-16 shrink-0 items-center gap-2 border-b px-4 transition-padding duration-(--duration-fast) ease-(--ease-default)",
-          isCollapsed ? "pl-33" : ""
+          "flex h-16 shrink-0 items-center gap-2 border-b px-4",
+          isCollapsed ? "-mt-2 pl-33" : ""
         )}
       >
         <h1 className="font-semibold text-lg">Sidebar Component Demo</h1>
-      </header>
+      </header> */}
       <div className="mx-auto flex max-w-3xl flex-1 flex-col gap-4 p-6">
         <div className="rounded-lg border bg-card p-6">
           <h2 className="mb-2 font-semibold text-xl">Sidebar Component</h2>

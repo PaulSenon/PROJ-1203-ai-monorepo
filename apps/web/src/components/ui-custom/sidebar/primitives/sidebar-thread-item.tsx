@@ -1,23 +1,18 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { Link } from "@tanstack/react-router";
-import {
-  EditIcon,
-  MoreVerticalIcon,
-  PinIcon,
-  ShareIcon,
-  XIcon,
-} from "lucide-react";
+import { MoreVerticalIcon, PinIcon, XIcon } from "lucide-react";
 import React, { Activity, useEffect, useMemo, useRef, useState } from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import { Pulse2Icon } from "@/components/ui/icons/svg-spinners-pulse-2";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  ActionMenuButton,
-  type ActionMenuItem,
-} from "@/components/ui-custom/action-menu";
 import { cn } from "@/lib/utils";
+import {
+  type ActionMenuItem,
+  GlobalContextMenuButton,
+  GlobalContextMenuItem,
+} from "../sidebar-context-menu";
 
 function reduceLiveStateToIndicatorVariant(
   thread: Doc<"threads">
@@ -144,10 +139,14 @@ function TruncatedText({
   );
 }
 
+type QuickActionItem = Omit<ActionMenuItem, "onSelect"> & {
+  onClick: (e: React.MouseEvent) => void;
+};
+
 function SidebarChatLinkQuickActions({
   actions,
 }: {
-  actions: ActionMenuItem[];
+  actions: QuickActionItem[];
 }) {
   if (actions.length === 0) {
     return null;
@@ -160,8 +159,8 @@ function SidebarChatLinkQuickActions({
           icon={action.icon as React.ElementType}
           key={action.id}
           label={action.label}
-          onClick={() => {
-            action.onSelect?.();
+          onClick={(e) => {
+            action.onClick?.(e);
           }}
           variant={action.variant === "destructive" ? "destructive" : "default"}
         />
@@ -188,49 +187,20 @@ export function _SidebarChatLink({
   const isLoading =
     thread.liveStatus === "pending" || thread.liveStatus === "streaming";
   const tooltip = thread.title || "Loading title";
-  const menuItems: ActionMenuItem[] = useMemo(
+
+  const quickActions: QuickActionItem[] = useMemo(
     () => [
       {
         id: "pin-thread",
         icon: PinIcon,
         label: "Pin thread",
-        onSelect: () => console.log("Pin thread"),
-      },
-      {
-        id: "rename-thread",
-        icon: EditIcon,
-        label: "Rename thread",
-        onSelect: () => console.log("Rename thread", thread.title),
-      },
-      {
-        id: "share-thread",
-        icon: ShareIcon,
-        label: "Share thread",
-        onSelect: () => console.log("Share thread", thread.title),
+        onClick: () => console.log("Pin thread", thread.title),
       },
       {
         id: "delete-thread",
         icon: XIcon,
         label: "Delete thread",
-        onSelect: () => console.log("Delete thread", thread.title),
-        variant: "destructive",
-      },
-    ],
-    [thread]
-  );
-  const quickActions: ActionMenuItem[] = useMemo(
-    () => [
-      {
-        id: "pin-thread",
-        icon: PinIcon,
-        label: "Pin thread",
-        onSelect: () => console.log("Pin thread", thread.title),
-      },
-      {
-        id: "delete-thread",
-        icon: XIcon,
-        label: "Delete thread",
-        onSelect: () => console.log("Delete thread", thread.title),
+        onClick: () => console.log("Delete thread", thread.title),
         variant: "destructive",
       },
     ],
@@ -258,63 +228,72 @@ export function _SidebarChatLink({
   }, [prerender]);
 
   return (
-    // <>
-    <SidebarMenuItem
-      className={cn("min-h-10 select-none md:min-h-9", className)}
-      ref={ref}
-      style={{
-        contain: "layout style",
-        contentVisibility: "auto",
-        containIntrinsicBlockSize: "auto 40px",
-      }}
-    >
-      <Activity mode={isVisible ? "visible" : "hidden"}>
-        {/* <ActionMenu items={menuItems}> */}
-        <SidebarMenuButton asChild tooltip={isMobile ? undefined : tooltip}>
-          {/* <ActionMenuTrigger> */}
-          <Link
-            className={cn(
-              "-webkit-touch-callout-none group/link relative flex h-10 w-full items-center gap-0! overflow-hidden transition-background-color duration-500 ease-(--ease-default) data-[state=open]:bg-sidebar-accent md:h-9",
-              isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
-            )}
-            params={{ id: thread.uuid }}
-            to="/chat/{-$id}"
+    <GlobalContextMenuItem asChild data={thread}>
+      <SidebarMenuItem
+        className={cn(
+          "min-h-10 select-none md:min-h-9",
+          "group/item transition-transform duration-50 ease-subtle-overshoot data-[cm-selected=true]:z-9999 data-[cm-selected=true]:scale-105 md:data-[cm-selected=true]:scale-none",
+          className
+        )}
+        ref={ref}
+        style={{
+          contain: "layout style",
+          contentVisibility: "auto",
+          containIntrinsicBlockSize: "auto 40px",
+        }}
+        title={tooltip}
+      >
+        <Activity mode={isVisible ? "visible" : "hidden"}>
+          <SidebarMenuButton
+            asChild
+            // tooltip={isMobile ? undefined : tooltip}
           >
-            <LiveStateIndicatorIcon thread={thread} />
-            <span className="mx-1 min-w-0 flex-1">
-              <TruncatedText shimmer={isLoading} text={thread.title} />
-            </span>
-            {/* {endIcon && <span className="shrink-0">{endIcon}</span>} */}
+            <Link
+              className={cn(
+                "-webkit-touch-callout-none group/link relative flex h-10 w-full items-center gap-0! overflow-hidden transition-background-color duration-500 ease-(--ease-default) data-[state=open]:bg-sidebar-accent md:h-9",
+                "focus-visible:box-shadow-none focus-visible:bg-sidebar-accent focus-visible:ring-0!",
+                "focus-within:box-shadow-none focus-within:bg-sidebar-accent",
+                "group-data-[cm-selected=true]/item:bg-sidebar-accent group-data-[cm-selected=true]/item:text-sidebar-accent-foreground",
+                "",
+                isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+              )}
+              params={{ id: thread.uuid }}
+              to="/chat/{-$id}"
+            >
+              <LiveStateIndicatorIcon thread={thread} />
+              <span className="mx-1 min-w-0 flex-1">
+                <TruncatedText shimmer={isLoading} text={thread.title} />
+              </span>
+              {/* {endIcon && <span className="shrink-0">{endIcon}</span>} */}
 
-            {!isMobile && (
-              <>
-                <div
-                  className={cn(
-                    "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100"
-                  )}
-                >
-                  <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
-                  <SidebarChatLinkQuickActions actions={quickActions} />
-                </div>
-                <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
-                  <ActionMenuButton
+              {!isMobile && (
+                <>
+                  <div
                     className={cn(
-                      "h-7 w-7 shrink-0 rounded-md bg-transparent p-1.5 text-foreground backdrop-blur-sm hover:bg-sidebar-ring/50 hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                      "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100"
                     )}
                   >
-                    <MoreVerticalIcon className="size-4" />
-                    <span className="sr-only">Thread options</span>
-                  </ActionMenuButton>
-                </div>
-              </>
-            )}
-          </Link>
-          {/* </ActionMenuTrigger> */}
-        </SidebarMenuButton>
-        {/* <ActionMenuContent /> */}
-        {/* </ActionMenu> */}
-      </Activity>
-    </SidebarMenuItem>
+                    <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
+                    <SidebarChatLinkQuickActions actions={quickActions} />
+                  </div>
+                  <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
+                    <GlobalContextMenuButton
+                      aria-label="Thread options"
+                      className={cn(
+                        "pointer-events-none h-7 w-7 shrink-0 rounded-md bg-sidebar-accent p-1.5 text-foreground opacity-0 backdrop-blur-sm hover:bg-sidebar-ring/50 hover:text-accent-foreground focus:outline-none focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                      )}
+                    >
+                      <MoreVerticalIcon className="size-4" />
+                      <span className="sr-only">Thread options</span>
+                    </GlobalContextMenuButton>
+                  </div>
+                </>
+              )}
+            </Link>
+          </SidebarMenuButton>
+        </Activity>
+      </SidebarMenuItem>
+    </GlobalContextMenuItem>
   );
 }
 

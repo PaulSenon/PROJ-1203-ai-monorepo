@@ -27,6 +27,7 @@ import { SidebarFooter } from "./primitives/sidebar-footer";
 import { SidebarHeader } from "./primitives/sidebar-header";
 import { SidebarInset } from "./primitives/sidebar-inset";
 import { SidebarChatLink } from "./primitives/sidebar-thread-item";
+import { GlobalContextMenu } from "./sidebar-context-menu";
 
 const SIDEBAR_STYLE = {
   "--duration-base": "200ms",
@@ -117,17 +118,19 @@ const SidebarThreads = React.memo(
     activeThreadId?: string;
     isMobile: boolean;
   }) => (
-    <SidebarMenu className="gap-1.5">
-      {threads.map((thread, index) => (
-        <SidebarChatLink
-          isActive={thread.uuid === activeThreadId}
-          isMobile={isMobile}
-          key={thread.uuid}
-          prerender={index < 20}
-          thread={thread}
-        />
-      ))}
-    </SidebarMenu>
+    <GlobalContextMenu>
+      <SidebarMenu className="select-none gap-1.5">
+        {threads.map((thread, index) => (
+          <SidebarChatLink
+            isActive={thread.uuid === activeThreadId}
+            isMobile={isMobile}
+            key={thread.uuid}
+            prerender={index < 20}
+            thread={thread}
+          />
+        ))}
+      </SidebarMenu>
+    </GlobalContextMenu>
   )
 );
 SidebarThreads.displayName = "SidebarThreads";
