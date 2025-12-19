@@ -18,6 +18,7 @@ export const web = await Vite("web", {
   },
   dev: {
     command: "pnpm run dev",
+    // command: "pnpm run build && pnpm run serve",
   },
 });
 
@@ -26,7 +27,7 @@ export const server = await Worker("server", {
   entrypoint: "src/index.ts",
   compatibility: "node",
   limits: {
-    cpu_ms: 60_000, // 1 minute
+    cpu_ms: 60_000, // 1 minute (max 5 minutes)
   },
   placement: {
     mode: "smart",

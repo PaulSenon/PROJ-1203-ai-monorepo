@@ -1,18 +1,32 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
+import { Slot } from "@radix-ui/react-slot";
 import { Link } from "@tanstack/react-router";
-import { MoreVerticalIcon, PinIcon, XIcon } from "lucide-react";
+import {
+  EditIcon,
+  MoreVerticalIcon,
+  PinIcon,
+  ShareIcon,
+  XIcon,
+} from "lucide-react";
 import React, { Activity, useEffect, useMemo, useRef, useState } from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuShortcut,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Pulse2Icon } from "@/components/ui/icons/svg-spinners-pulse-2";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import {
-  type ActionMenuItem,
-  GlobalContextMenuButton,
-  GlobalContextMenuItem,
-} from "../sidebar-context-menu";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 function reduceLiveStateToIndicatorVariant(
   thread: Doc<"threads">
@@ -79,35 +93,39 @@ export function SidebarThreadActionButton({
   onClick,
   className,
   variant = "default",
+  isMobile,
 }: {
   icon: React.ElementType;
   label: string;
   onClick?: (e: React.MouseEvent) => void;
   className?: string;
   variant?: "default" | "destructive";
+  isMobile: boolean;
 }) {
   return (
-    <Button
-      className={cn(
-        "h-7 w-7 rounded-md bg-transparent p-1.5 text-foreground hover:text-foreground",
-        variant === "default" &&
-          "hover:bg-sidebar-ring/50 hover:text-accent-foreground",
-        variant === "destructive" &&
-          "hover:bg-destructive/50 hover:text-accent-foreground",
-        className
-      )}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClick?.(e);
-      }}
-      size="icon"
-      tabIndex={-1}
-      variant={"default"}
-    >
-      <Icon className="size-4" />
-      <span className="sr-only">{label}</span>
-    </Button>
+    <MyTooltip asChild isMobile={isMobile} tooltip={label}>
+      <Button
+        className={cn(
+          "h-7 w-7 rounded-md bg-transparent p-1.5 text-foreground hover:text-foreground",
+          variant === "default" &&
+            "hover:bg-sidebar-ring/50 hover:text-accent-foreground",
+          variant === "destructive" &&
+            "hover:bg-destructive/50 hover:text-accent-foreground",
+          className
+        )}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onClick?.(e);
+        }}
+        size="icon"
+        tabIndex={-1}
+        variant={"default"}
+      >
+        <Icon className="size-4" />
+        <span className="sr-only">{label}</span>
+      </Button>
+    </MyTooltip>
   );
 }
 
@@ -139,28 +157,63 @@ function TruncatedText({
   );
 }
 
-type QuickActionItem = Omit<ActionMenuItem, "onSelect"> & {
-  onClick: (e: React.MouseEvent) => void;
+function MyTooltipContent({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<typeof TooltipContent>) {
+  return (
+    <TooltipContent
+      alignOffset={10}
+      arrow={false}
+      className={cn(
+        "wrap-break-word max-h-[var(--radix-tooltip-content-available-height)]whitespace-normal max-w-(--radix-tooltip-content-available-width) overflow-auto",
+        "pointer-events-none select-none bg-sidebar text-foreground text-xs md:bg-background",
+        className
+      )}
+      collisionPadding={10}
+      side="bottom"
+      // sticky="always"
+      {...props}
+    >
+      {children}
+    </TooltipContent>
+  );
+}
+
+export type ThreadAction = {
+  id: string;
+  label: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  shortcut?: string;
+  disabled?: boolean;
+  variant?: "default" | "destructive";
+  callback: () => void;
 };
 
 function SidebarChatLinkQuickActions({
   actions,
+  className,
+  isMobile,
 }: {
-  actions: QuickActionItem[];
+  actions: ThreadAction[];
+  isMobile: boolean;
+  className?: string;
 }) {
   if (actions.length === 0) {
     return null;
   }
   return (
-    <div className="flex items-center gap-1 p-1">
+    <div className={cn("flex items-center gap-1 p-1", className)}>
       {actions.map((action) => (
         <SidebarThreadActionButton
           className="shrink-0"
           icon={action.icon as React.ElementType}
+          isMobile={isMobile}
           key={action.id}
           label={action.label}
-          onClick={(e) => {
-            action.onClick?.(e);
+          onClick={() => {
+            action.callback();
           }}
           variant={action.variant === "destructive" ? "destructive" : "default"}
         />
@@ -169,43 +222,88 @@ function SidebarChatLinkQuickActions({
   );
 }
 
-export function _SidebarChatLink({
-  thread,
-  isActive = false,
-  className,
-  isMobile = false,
-  prerender = false,
-}: {
-  thread: Doc<"threads">;
-  isActive?: boolean;
-  className?: string;
-  isMobile?: boolean;
-  prerender?: boolean;
-}) {
-  const [isVisible, setIsVisible] = useState(prerender);
-  const ref = useRef<HTMLLIElement>(null);
-  const isLoading =
-    thread.liveStatus === "pending" || thread.liveStatus === "streaming";
-  const tooltip = thread.title || "Loading title";
+const SidebarChatLinkContextMenuContent = React.memo(
+  ({
+    actions,
+    className,
+    children,
+  }: {
+    actions: ThreadAction[];
+    className?: string;
+    children: React.ReactNode;
+  }) => {
+    return (
+      <ContextMenu>
+        <ContextMenuTrigger className="group/cm">{children}</ContextMenuTrigger>
+        <ContextMenuContent
+          // collision behavior
+          avoidCollisions
+          className={cn(
+            "flex flex-col gap-1",
+            "contain-content",
+            "max-h-(--radix-context-menu-content-available-height) max-w-[min(20rem,var(--radix-context-menu-content-available-width))] overflow-y-auto overflow-x-hidden",
+            "data-[state=open]:fade-in-0 data-[state=closed]:animate-none!",
+            "duration-(--duration-fastest) ease-snappy",
 
-  const quickActions: QuickActionItem[] = useMemo(
-    () => [
-      {
-        id: "pin-thread",
-        icon: PinIcon,
-        label: "Pin thread",
-        onClick: () => console.log("Pin thread", thread.title),
-      },
-      {
-        id: "delete-thread",
-        icon: XIcon,
-        label: "Delete thread",
-        onClick: () => console.log("Delete thread", thread.title),
-        variant: "destructive",
-      },
-    ],
-    [thread]
-  );
+            "bg-background/50 backdrop-blur-md",
+            className
+          )}
+          collisionPadding={4}
+          forceMount
+          hideWhenDetached
+          updatePositionStrategy="optimized"
+        >
+          {actions.map((item) => (
+            <ContextMenuItem
+              disabled={item.disabled}
+              key={item.id}
+              onSelect={() => {
+                item.callback();
+              }}
+              variant={item.variant}
+            >
+              {item.icon ? <item.icon className="size-4" /> : null}
+              <span className="flex-1 truncate">{item.label}</span>
+              {item.shortcut ? (
+                <ContextMenuShortcut>{item.shortcut}</ContextMenuShortcut>
+              ) : null}
+            </ContextMenuItem>
+          ))}
+        </ContextMenuContent>
+      </ContextMenu>
+    );
+  }
+);
+SidebarChatLinkContextMenuContent.displayName =
+  "SidebarChatLinkContextMenuContent";
+
+export const SidebarThreadItem = React.memo(
+  _SidebarThreadItem,
+  (prev, next) =>
+    prev.thread.uuid === next.thread.uuid &&
+    prev.isActive === next.isActive &&
+    prev.className === next.className &&
+    prev.thread.liveStatus === next.thread.liveStatus &&
+    prev.thread.title === next.thread.title &&
+    prev.isMobile === next.isMobile &&
+    prev.prerender === next.prerender
+);
+
+SidebarThreadItem.displayName = "SidebarThreadItem";
+
+export function LazySidebarMenuItem({
+  children,
+  prerender = false,
+  isMobile,
+  className,
+  ...props
+}: {
+  children: React.ReactNode;
+  prerender?: boolean;
+  isMobile: boolean;
+} & React.ComponentProps<typeof SidebarMenuItem>) {
+  const ref = useRef<HTMLLIElement>(null);
+  const [isVisible, setIsVisible] = useState(prerender);
 
   useEffect(() => {
     if (prerender) return;
@@ -228,85 +326,236 @@ export function _SidebarChatLink({
   }, [prerender]);
 
   return (
-    <GlobalContextMenuItem asChild data={thread}>
-      <SidebarMenuItem
-        className={cn(
-          "min-h-10 select-none md:min-h-9",
-          "group/item transition-transform duration-50 ease-subtle-overshoot data-[cm-selected=true]:z-9999 data-[cm-selected=true]:scale-105 md:data-[cm-selected=true]:scale-none",
-          className
-        )}
-        ref={ref}
-        style={{
-          contain: "layout style",
-          contentVisibility: "auto",
-          containIntrinsicBlockSize: "auto 40px",
-        }}
-        title={tooltip}
-      >
-        <Activity mode={isVisible ? "visible" : "hidden"}>
-          <SidebarMenuButton
-            asChild
-            // tooltip={isMobile ? undefined : tooltip}
-          >
-            <Link
-              className={cn(
-                "-webkit-touch-callout-none group/link relative flex h-10 w-full items-center gap-0! overflow-hidden transition-background-color duration-500 ease-(--ease-default) data-[state=open]:bg-sidebar-accent md:h-9",
-                "focus-visible:box-shadow-none focus-visible:bg-sidebar-accent focus-visible:ring-0!",
-                "focus-within:box-shadow-none focus-within:bg-sidebar-accent",
-                "group-data-[cm-selected=true]/item:bg-sidebar-accent group-data-[cm-selected=true]/item:text-sidebar-accent-foreground",
-                "",
-                isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
-              )}
-              params={{ id: thread.uuid }}
-              to="/chat/{-$id}"
-            >
-              <LiveStateIndicatorIcon thread={thread} />
-              <span className="mx-1 min-w-0 flex-1">
-                <TruncatedText shimmer={isLoading} text={thread.title} />
-              </span>
-              {/* {endIcon && <span className="shrink-0">{endIcon}</span>} */}
-
-              {!isMobile && (
-                <>
-                  <div
-                    className={cn(
-                      "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100"
-                    )}
-                  >
-                    <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
-                    <SidebarChatLinkQuickActions actions={quickActions} />
-                  </div>
-                  <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
-                    <GlobalContextMenuButton
-                      aria-label="Thread options"
-                      className={cn(
-                        "pointer-events-none h-7 w-7 shrink-0 rounded-md bg-sidebar-accent p-1.5 text-foreground opacity-0 backdrop-blur-sm hover:bg-sidebar-ring/50 hover:text-accent-foreground focus:outline-none focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                      )}
-                    >
-                      <MoreVerticalIcon className="size-4" />
-                      <span className="sr-only">Thread options</span>
-                    </GlobalContextMenuButton>
-                  </div>
-                </>
-              )}
-            </Link>
-          </SidebarMenuButton>
-        </Activity>
-      </SidebarMenuItem>
-    </GlobalContextMenuItem>
+    <SidebarMenuItem
+      className={cn("min-h-10 select-none md:min-h-9", className)}
+      ref={ref}
+      style={{
+        contain: "layout style",
+        contentVisibility: "auto",
+        containIntrinsicBlockSize: `auto ${isMobile ? "40px" : "36px"}`,
+      }}
+      {...props}
+    >
+      <Activity mode={isVisible ? "visible" : "hidden"}>{children}</Activity>
+    </SidebarMenuItem>
   );
 }
 
-export const SidebarChatLink = React.memo(
-  _SidebarChatLink,
-  (prev, next) =>
-    prev.thread.uuid === next.thread.uuid &&
-    prev.isActive === next.isActive &&
-    prev.className === next.className &&
-    prev.thread.liveStatus === next.thread.liveStatus &&
-    prev.thread.title === next.thread.title &&
-    prev.isMobile === next.isMobile &&
-    prev.prerender === next.prerender
-);
+function SidebarMenuItemLink({
+  children,
+  className,
+  isActive = false,
+  threadUuid,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  isActive?: boolean;
+  threadUuid: string;
+}) {
+  return (
+    <Link
+      className={cn(
+        "-webkit-touch-callout-none group/link relative flex h-20 w-full items-center gap-0! overflow-hidden transition-background-color duration-500 ease-(--ease-default) md:h-9",
+        "focus-visible:box-shadow-none focus-visible:bg-sidebar-accent focus-visible:ring-0!",
+        "focus-within:box-shadow-none focus-within:bg-sidebar-accent",
+        isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+        className
+      )}
+      params={{ id: threadUuid }}
+      to="/chat/{-$id}"
+    >
+      {children}
+    </Link>
+  );
+}
 
-SidebarChatLink.displayName = "SidebarChatLink";
+// TODO move in context-menu primitives
+function A11YContextMenuTriggerButton(
+  props: React.ButtonHTMLAttributes<HTMLButtonElement>
+) {
+  const open = React.useCallback((el: HTMLButtonElement) => {
+    const r = el.getBoundingClientRect();
+    const ev = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: r.left + r.width / 2,
+      clientY: r.top + r.height / 2,
+      button: 2,
+      buttons: 2,
+    });
+    el.dispatchEvent(ev);
+  }, []);
+
+  return (
+    <Button
+      aria-haspopup="menu"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        open(e.currentTarget);
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        e.stopPropagation();
+        open(e.currentTarget);
+      }}
+      variant="ghost"
+      {...props}
+    />
+  );
+}
+
+function MyTooltip({
+  children,
+  tooltip,
+  isMobile = false,
+  asChild = false,
+}: {
+  children: React.ReactNode;
+  tooltip?: string;
+  isMobile: boolean;
+  asChild?: boolean;
+}) {
+  if (isMobile) {
+    return children;
+  }
+
+  const Comp = asChild ? Slot : "div";
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Comp>{children}</Comp>
+      </TooltipTrigger>
+      <MyTooltipContent>{tooltip}</MyTooltipContent>
+    </Tooltip>
+  );
+}
+
+export function _SidebarThreadItem({
+  thread,
+  isActive = false,
+  className,
+  isMobile = false,
+  prerender = false,
+}: {
+  thread: Doc<"threads">;
+  isActive?: boolean;
+  className?: string;
+  isMobile?: boolean;
+  prerender?: boolean;
+}) {
+  const isLoading =
+    thread.liveStatus === "pending" || thread.liveStatus === "streaming";
+  const tooltip = thread.title || "Loading title";
+
+  const quickActions: ThreadAction[] = useMemo(
+    () => [
+      {
+        id: "pin-thread",
+        icon: PinIcon,
+        label: "Pin thread",
+        callback: () => console.log("Pin thread", thread.title),
+      },
+      {
+        id: "delete-thread",
+        icon: XIcon,
+        label: "Delete thread",
+        callback: () => console.log("Delete thread", thread.title),
+        variant: "destructive",
+      },
+    ],
+    [thread]
+  );
+
+  const menuItems: ThreadAction[] = useMemo(
+    () => [
+      {
+        id: "pin-thread",
+        icon: PinIcon,
+        label: "Pin thread",
+        callback: () => console.log("Pin thread"),
+      },
+      {
+        id: "rename-thread",
+        icon: EditIcon,
+        label: "Rename thread",
+        callback: () => console.log("Rename thread", thread.title),
+      },
+      {
+        id: "share-thread",
+        icon: ShareIcon,
+        label: "Share thread",
+        callback: () => console.log("Share thread", thread.title),
+      },
+      {
+        id: "delete-thread",
+        icon: XIcon,
+        label: "Delete thread",
+        callback: () => console.log("Delete thread", thread.title),
+        variant: "destructive",
+      },
+    ],
+    [thread]
+  );
+
+  return (
+    <LazySidebarMenuItem
+      className={className}
+      isMobile={isMobile}
+      prerender={prerender}
+    >
+      <SidebarChatLinkContextMenuContent actions={menuItems}>
+        <SidebarMenuButton asChild>
+          <SidebarMenuItemLink
+            className={cn(
+              "h-10 group-data-[state=open]/cm:bg-sidebar-accent md:h-9"
+            )}
+            isActive={isActive}
+            threadUuid={thread.uuid}
+          >
+            <LiveStateIndicatorIcon thread={thread} />
+            <span className="mx-1 h-full min-w-0 flex-1 content-center">
+              {!isMobile && (
+                <MyTooltip asChild isMobile={isMobile} tooltip={tooltip}>
+                  <div className="absolute top-0 bottom-0 left-0 z-30 m-0 h-full w-[calc(100%-4rem)]" />
+                </MyTooltip>
+              )}
+
+              <TruncatedText shimmer={isLoading} text={thread.title} />
+            </span>
+            {/* {endIcon && <span className="shrink-0">{endIcon}</span>} */}
+
+            {!isMobile && (
+              <>
+                {/* <StopHoverShield className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 m-0 h-full w-16 bg-red-400 p-0" /> */}
+                <div
+                  className={cn(
+                    "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100"
+                  )}
+                >
+                  <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
+                  <SidebarChatLinkQuickActions
+                    actions={quickActions}
+                    isMobile={isMobile}
+                  />
+                </div>
+                <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
+                  <A11YContextMenuTriggerButton
+                    aria-label="Thread options"
+                    className={cn(
+                      "pointer-events-none h-7 w-7 shrink-0 rounded-md bg-sidebar-accent p-1.5 text-foreground opacity-0 backdrop-blur-sm hover:bg-sidebar-ring/50 hover:text-accent-foreground focus:outline-none focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                    )}
+                  >
+                    <MoreVerticalIcon className="size-4" />
+                    <span className="sr-only">Thread options</span>
+                  </A11YContextMenuTriggerButton>
+                </div>
+              </>
+            )}
+          </SidebarMenuItemLink>
+        </SidebarMenuButton>
+      </SidebarChatLinkContextMenuContent>
+    </LazySidebarMenuItem>
+  );
+}

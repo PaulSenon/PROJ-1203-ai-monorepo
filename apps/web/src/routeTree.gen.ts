@@ -25,7 +25,6 @@ import { Route as ComponentsComponentsMessagesRouteImport } from './routes/compo
 import { Route as ComponentsComponentsConversationRouteImport } from './routes/components/_components/conversation'
 import { Route as ComponentsComponentsChatInputRouteImport } from './routes/components/_components/chat-input'
 import { Route as ComponentsComponentsButtonGroupRouteImport } from './routes/components/_components/button-group'
-import { Route as ComponentsComponentsActionMenuRouteImport } from './routes/components/_components/action-menu'
 import { Route as DebugDebugChar123IdChar125RouteImport } from './routes/_debug/debug.{-$id}'
 import { Route as ChatChatChar123IdChar125RouteImport } from './routes/_chat/chat.{-$id}'
 import { Route as AuthSignUpSplatRouteImport } from './routes/_auth/sign-up.$'
@@ -109,12 +108,6 @@ const ComponentsComponentsButtonGroupRoute =
     path: '/button-group',
     getParentRoute: () => ComponentsComponentsRoute,
   } as any)
-const ComponentsComponentsActionMenuRoute =
-  ComponentsComponentsActionMenuRouteImport.update({
-    id: '/action-menu',
-    path: '/action-menu',
-    getParentRoute: () => ComponentsComponentsRoute,
-  } as any)
 const DebugDebugChar123IdChar125Route =
   DebugDebugChar123IdChar125RouteImport.update({
     id: '/debug/{-$id}',
@@ -147,7 +140,6 @@ export interface FileRoutesByFullPath {
   '/sign-up/$': typeof AuthSignUpSplatRoute
   '/chat/{-$id}': typeof ChatChatChar123IdChar125Route
   '/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
-  '/components/action-menu': typeof ComponentsComponentsActionMenuRoute
   '/components/button-group': typeof ComponentsComponentsButtonGroupRoute
   '/components/chat-input': typeof ComponentsComponentsChatInputRoute
   '/components/conversation': typeof ComponentsComponentsConversationRoute
@@ -163,7 +155,6 @@ export interface FileRoutesByTo {
   '/sign-up/$': typeof AuthSignUpSplatRoute
   '/chat/{-$id}': typeof ChatChatChar123IdChar125Route
   '/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
-  '/components/action-menu': typeof ComponentsComponentsActionMenuRoute
   '/components/button-group': typeof ComponentsComponentsButtonGroupRoute
   '/components/chat-input': typeof ComponentsComponentsChatInputRoute
   '/components/conversation': typeof ComponentsComponentsConversationRoute
@@ -186,7 +177,6 @@ export interface FileRoutesById {
   '/_auth/sign-up/$': typeof AuthSignUpSplatRoute
   '/_chat/chat/{-$id}': typeof ChatChatChar123IdChar125Route
   '/_debug/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
-  '/components/_components/action-menu': typeof ComponentsComponentsActionMenuRoute
   '/components/_components/button-group': typeof ComponentsComponentsButtonGroupRoute
   '/components/_components/chat-input': typeof ComponentsComponentsChatInputRoute
   '/components/_components/conversation': typeof ComponentsComponentsConversationRoute
@@ -205,7 +195,6 @@ export interface FileRouteTypes {
     | '/sign-up/$'
     | '/chat/{-$id}'
     | '/debug/{-$id}'
-    | '/components/action-menu'
     | '/components/button-group'
     | '/components/chat-input'
     | '/components/conversation'
@@ -221,7 +210,6 @@ export interface FileRouteTypes {
     | '/sign-up/$'
     | '/chat/{-$id}'
     | '/debug/{-$id}'
-    | '/components/action-menu'
     | '/components/button-group'
     | '/components/chat-input'
     | '/components/conversation'
@@ -243,7 +231,6 @@ export interface FileRouteTypes {
     | '/_auth/sign-up/$'
     | '/_chat/chat/{-$id}'
     | '/_debug/debug/{-$id}'
-    | '/components/_components/action-menu'
     | '/components/_components/button-group'
     | '/components/_components/chat-input'
     | '/components/_components/conversation'
@@ -368,13 +355,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComponentsComponentsButtonGroupRouteImport
       parentRoute: typeof ComponentsComponentsRoute
     }
-    '/components/_components/action-menu': {
-      id: '/components/_components/action-menu'
-      path: '/action-menu'
-      fullPath: '/components/action-menu'
-      preLoaderRoute: typeof ComponentsComponentsActionMenuRouteImport
-      parentRoute: typeof ComponentsComponentsRoute
-    }
     '/_debug/debug/{-$id}': {
       id: '/_debug/debug/{-$id}'
       path: '/debug/{-$id}'
@@ -451,7 +431,6 @@ const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
 )
 
 interface ComponentsComponentsRouteChildren {
-  ComponentsComponentsActionMenuRoute: typeof ComponentsComponentsActionMenuRoute
   ComponentsComponentsButtonGroupRoute: typeof ComponentsComponentsButtonGroupRoute
   ComponentsComponentsChatInputRoute: typeof ComponentsComponentsChatInputRoute
   ComponentsComponentsConversationRoute: typeof ComponentsComponentsConversationRoute
@@ -461,7 +440,6 @@ interface ComponentsComponentsRouteChildren {
 }
 
 const ComponentsComponentsRouteChildren: ComponentsComponentsRouteChildren = {
-  ComponentsComponentsActionMenuRoute: ComponentsComponentsActionMenuRoute,
   ComponentsComponentsButtonGroupRoute: ComponentsComponentsButtonGroupRoute,
   ComponentsComponentsChatInputRoute: ComponentsComponentsChatInputRoute,
   ComponentsComponentsConversationRoute: ComponentsComponentsConversationRoute,

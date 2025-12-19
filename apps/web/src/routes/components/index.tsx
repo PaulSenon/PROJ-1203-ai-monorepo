@@ -19,10 +19,6 @@ const components = [
     path: "/components/chat-input",
   },
   {
-    name: "Action Menu",
-    path: "/components/action-menu",
-  },
-  {
     name: "Textarea",
     path: "/components/textarea",
   },
