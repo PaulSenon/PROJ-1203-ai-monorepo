@@ -242,44 +242,69 @@ function CollapsibleTriggerInvisible({ collapsed }: { collapsed: boolean }) {
   return null;
 }
 
-const variants: Variants = {
+const variants: (params: {
+  index: number;
+  nbItems: number;
+  duration: {
+    in: number;
+    out: number;
+  };
+  delay: number;
+}) => Variants = ({
+  index,
+  nbItems,
+  duration,
+  delay,
+}: {
+  index: number;
+  nbItems: number;
+  duration: {
+    in: number;
+    out: number;
+  };
+  delay: number;
+}) => ({
   horizontal: {
     width: "auto",
     opacity: 1,
     transition: {
-      type: "spring",
+      ease: [0.16, 1, 0.3, 1], // matches ease-snappy
       bounce: 0,
-      duration: 0.15,
+      duration: duration.in,
+      delay: index * delay,
     },
   },
   horizontalHidden: {
     width: 0,
     opacity: 0,
     transition: {
-      type: "spring",
+      ease: [0.16, 1, 0.3, 1], // matches ease-snappy
       bounce: 0,
-      duration: 0.2,
+      duration: duration.out,
+      delay: (nbItems - 1 - index) * delay,
     },
   },
   vertical: {
     height: "auto",
     opacity: 1,
     transition: {
-      type: "spring",
+      ease: [0.16, 1, 0.3, 1], // matches ease-snappy
       bounce: 0,
-      duration: 0.15,
+      duration: duration.in,
+      delay: index * delay,
     },
   },
   verticalHidden: {
     height: 0,
     opacity: 0,
     transition: {
-      type: "spring",
+      ease: [0.16, 1, 0.3, 1], // matches ease-snappy
       bounce: 0,
-      duration: 0.2,
+      duration: duration.out,
+      delay: (nbItems - 1 - index) * delay,
     },
   },
-};
+});
 
 function CollapsibleContent({ children }: { children: React.ReactNode }) {
   const { collapsed, orientation } = useCollapsibleButtonGroupState();
@@ -297,12 +322,16 @@ function CollapsibleContent({ children }: { children: React.ReactNode }) {
             exit={isVertical ? "verticalHidden" : "horizontalHidden"}
             initial={isVertical ? "verticalHidden" : "horizontalHidden"}
             key={`collapsible-${index}`}
-            layout
-            transition={{
-              delay: index * 0.05,
-            }}
             // Adjust delay based on index for stagger effect if needed, though variants handle per-prop transition
-            variants={variants}
+            variants={variants({
+              index,
+              nbItems: Children.count(children),
+              duration: {
+                in: 0.15,
+                out: 0.1,
+              },
+              delay: 0.05,
+            })}
           >
             {child}
           </motion.div>

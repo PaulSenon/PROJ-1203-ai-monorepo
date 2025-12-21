@@ -1,7 +1,7 @@
 import { createUiMessageFromChunks } from "@ai-monorepo/ai/libs/createUiMessageFromChunks";
 import type {
-  MetadataSchema,
   MyUIMessage,
+  MyUIMessageMetadata,
 } from "@ai-monorepo/ai/types/uiMessage";
 import { useChat } from "@ai-sdk/react";
 import type {
@@ -236,8 +236,9 @@ export function useMessages(threadUuid: string | "skip") {
   useEffect(() => {
     if (isSkip) return;
     if (isStale) return;
+    if (isPending) return;
     cache.set(messages);
-  }, [isSkip, isStale, messages, cache.set]);
+  }, [isSkip, isStale, isPending, messages, cache.set]);
 
   const staleMessages = isStale ? (cache.snapshot ?? []) : messages;
 
@@ -300,7 +301,7 @@ export function usePatchedMessages(
         ({
           ...msg,
           metadata: {
-            ...(msg.metadata as MetadataSchema),
+            ...(msg.metadata as MyUIMessageMetadata),
             dataSource: "convex-persisted",
           },
         }) as MyUIMessage
@@ -316,7 +317,7 @@ export function usePatchedMessages(
         const newMsg = {
           ...msg,
           metadata: {
-            ...(msg.metadata as MetadataSchema),
+            ...(msg.metadata as MyUIMessageMetadata),
             dataSource: "optimistic",
           },
         } as MyUIMessage;
@@ -396,7 +397,7 @@ export function useUnifiedMessages(
       const newMsg = {
         ...msg,
         metadata: {
-          ...(msg.metadata as MetadataSchema),
+          ...(msg.metadata as MyUIMessageMetadata),
           dataSource: "convex-stream",
         },
       };
@@ -435,7 +436,7 @@ export function useUnifiedMessages(
       const newMsg = {
         ...msg,
         metadata: {
-          ...(msg.metadata as MetadataSchema),
+          ...(msg.metadata as MyUIMessageMetadata),
           dataSource: "http-stream",
         },
       };

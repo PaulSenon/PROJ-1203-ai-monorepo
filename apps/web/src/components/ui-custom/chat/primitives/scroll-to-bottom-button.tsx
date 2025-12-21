@@ -4,29 +4,23 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type ScrollToBottomButtonProps = ComponentProps<typeof Button> & {
-  isAtBottom: boolean;
-  onScrollToBottom: () => void;
+  onClick?: ComponentProps<typeof Button>["onClick"];
 };
 
 export function ScrollToBottomButton({
-  isAtBottom,
-  onScrollToBottom,
+  onClick,
   className,
   children,
   ...props
 }: ScrollToBottomButtonProps) {
-  if (isAtBottom) return null;
-
   const handleClick: ComponentProps<typeof Button>["onClick"] = (event) => {
-    props.onClick?.(event);
-    if (event.defaultPrevented) return;
-    onScrollToBottom();
+    onClick?.(event);
   };
 
   return (
     <Button
       className={cn(
-        "h-9 w-9 rounded-full shadow-md backdrop-blur-md",
+        "size-8 rounded-full shadow-md backdrop-blur-md",
         "border border-border/60 bg-background/70",
         "flex items-center justify-center",
         className

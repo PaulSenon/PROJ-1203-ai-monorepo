@@ -183,6 +183,7 @@ MySidebarFooterSpacer.displayName = "MySidebarFooterSpacer";
 function CollapsibleButtonGroupAnimated({
   ...props
 }: React.ComponentProps<typeof CollapsibleButtonGroup>) {
+  // TODO: fix bug, isMobile is false then true, so it opens the button group (animation)
   const { open, isMobile } = useSidebar();
   const isDesktop = !isMobile;
   const isButtonGroupCollapsed = isDesktop && open;
@@ -195,6 +196,7 @@ function CollapsibleButtonGroupAnimated({
         props.className
       )}
       collapsed={isButtonGroupCollapsed}
+      defaultCollapsed={false}
     >
       <SidebarTrigger className="size-8" />
       <CollapsibleButtonGroup.CollapsibleContent>

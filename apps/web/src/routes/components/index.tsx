@@ -26,10 +26,6 @@ const components = [
     name: "Messages",
     path: "/components/messages",
   },
-  {
-    name: "Conversation",
-    path: "/components/conversation",
-  },
 ] as const;
 
 function RouteComponent() {

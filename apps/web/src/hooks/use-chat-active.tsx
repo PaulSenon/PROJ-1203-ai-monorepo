@@ -1,7 +1,7 @@
 import type { AllowedModelIds } from "@ai-monorepo/ai/model.registry";
 import type {
-  MetadataSchema,
   MyUIMessage,
+  MyUIMessageMetadata,
 } from "@ai-monorepo/ai/types/uiMessage";
 import { nanoid } from "nanoid";
 import {
@@ -275,7 +275,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
             (m): MyUIMessage => ({
               ...m,
               metadata: {
-                ...(m.metadata as MetadataSchema),
+                ...(m.metadata as MyUIMessageMetadata),
                 lifecycleState: "deleted",
               },
             })

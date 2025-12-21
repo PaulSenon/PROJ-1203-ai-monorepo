@@ -34,7 +34,7 @@ export function ChatSidebar({
 
   const memoThreads = useMemo(
     () => history.results.filter((t) => t.lifecycleState === "active"),
-    [JSON.stringify(history.results)]
+    [history.results]
   );
 
   return (

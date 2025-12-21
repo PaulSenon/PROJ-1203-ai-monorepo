@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
+import { ScrollToBottomProvider } from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
 import { ChatDraftProvider } from "@/hooks/use-chat-draft";
 import { ChatInputProvider } from "@/hooks/use-chat-input";
 import { ChatNavProvider } from "@/hooks/use-chat-nav";
@@ -18,7 +19,9 @@ function ChatProviders({ children }: { children: React.ReactNode }) {
     <UseChatProvider>
       <ChatDraftProvider>
         <ModelSelectorProvider>
-          <ChatInputProvider>{children}</ChatInputProvider>
+          <ChatInputProvider>
+            <ScrollToBottomProvider>{children}</ScrollToBottomProvider>
+          </ChatInputProvider>
         </ModelSelectorProvider>
       </ChatDraftProvider>
     </UseChatProvider>

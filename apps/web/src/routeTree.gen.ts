@@ -22,7 +22,6 @@ import { Route as ProtectedAiRouteImport } from './routes/_protected/ai'
 import { Route as ComponentsComponentsTextareaRouteImport } from './routes/components/_components/textarea'
 import { Route as ComponentsComponentsSidebarRouteImport } from './routes/components/_components/sidebar'
 import { Route as ComponentsComponentsMessagesRouteImport } from './routes/components/_components/messages'
-import { Route as ComponentsComponentsConversationRouteImport } from './routes/components/_components/conversation'
 import { Route as ComponentsComponentsChatInputRouteImport } from './routes/components/_components/chat-input'
 import { Route as ComponentsComponentsButtonGroupRouteImport } from './routes/components/_components/button-group'
 import { Route as DebugDebugChar123IdChar125RouteImport } from './routes/_debug/debug.{-$id}'
@@ -90,12 +89,6 @@ const ComponentsComponentsMessagesRoute =
     path: '/messages',
     getParentRoute: () => ComponentsComponentsRoute,
   } as any)
-const ComponentsComponentsConversationRoute =
-  ComponentsComponentsConversationRouteImport.update({
-    id: '/conversation',
-    path: '/conversation',
-    getParentRoute: () => ComponentsComponentsRoute,
-  } as any)
 const ComponentsComponentsChatInputRoute =
   ComponentsComponentsChatInputRouteImport.update({
     id: '/chat-input',
@@ -142,7 +135,6 @@ export interface FileRoutesByFullPath {
   '/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
   '/components/button-group': typeof ComponentsComponentsButtonGroupRoute
   '/components/chat-input': typeof ComponentsComponentsChatInputRoute
-  '/components/conversation': typeof ComponentsComponentsConversationRoute
   '/components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/sidebar': typeof ComponentsComponentsSidebarRoute
   '/components/textarea': typeof ComponentsComponentsTextareaRoute
@@ -157,7 +149,6 @@ export interface FileRoutesByTo {
   '/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
   '/components/button-group': typeof ComponentsComponentsButtonGroupRoute
   '/components/chat-input': typeof ComponentsComponentsChatInputRoute
-  '/components/conversation': typeof ComponentsComponentsConversationRoute
   '/components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/sidebar': typeof ComponentsComponentsSidebarRoute
   '/components/textarea': typeof ComponentsComponentsTextareaRoute
@@ -179,7 +170,6 @@ export interface FileRoutesById {
   '/_debug/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
   '/components/_components/button-group': typeof ComponentsComponentsButtonGroupRoute
   '/components/_components/chat-input': typeof ComponentsComponentsChatInputRoute
-  '/components/_components/conversation': typeof ComponentsComponentsConversationRoute
   '/components/_components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/_components/sidebar': typeof ComponentsComponentsSidebarRoute
   '/components/_components/textarea': typeof ComponentsComponentsTextareaRoute
@@ -197,7 +187,6 @@ export interface FileRouteTypes {
     | '/debug/{-$id}'
     | '/components/button-group'
     | '/components/chat-input'
-    | '/components/conversation'
     | '/components/messages'
     | '/components/sidebar'
     | '/components/textarea'
@@ -212,7 +201,6 @@ export interface FileRouteTypes {
     | '/debug/{-$id}'
     | '/components/button-group'
     | '/components/chat-input'
-    | '/components/conversation'
     | '/components/messages'
     | '/components/sidebar'
     | '/components/textarea'
@@ -233,7 +221,6 @@ export interface FileRouteTypes {
     | '/_debug/debug/{-$id}'
     | '/components/_components/button-group'
     | '/components/_components/chat-input'
-    | '/components/_components/conversation'
     | '/components/_components/messages'
     | '/components/_components/sidebar'
     | '/components/_components/textarea'
@@ -334,13 +321,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComponentsComponentsMessagesRouteImport
       parentRoute: typeof ComponentsComponentsRoute
     }
-    '/components/_components/conversation': {
-      id: '/components/_components/conversation'
-      path: '/conversation'
-      fullPath: '/components/conversation'
-      preLoaderRoute: typeof ComponentsComponentsConversationRouteImport
-      parentRoute: typeof ComponentsComponentsRoute
-    }
     '/components/_components/chat-input': {
       id: '/components/_components/chat-input'
       path: '/chat-input'
@@ -433,7 +413,6 @@ const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
 interface ComponentsComponentsRouteChildren {
   ComponentsComponentsButtonGroupRoute: typeof ComponentsComponentsButtonGroupRoute
   ComponentsComponentsChatInputRoute: typeof ComponentsComponentsChatInputRoute
-  ComponentsComponentsConversationRoute: typeof ComponentsComponentsConversationRoute
   ComponentsComponentsMessagesRoute: typeof ComponentsComponentsMessagesRoute
   ComponentsComponentsSidebarRoute: typeof ComponentsComponentsSidebarRoute
   ComponentsComponentsTextareaRoute: typeof ComponentsComponentsTextareaRoute
@@ -442,7 +421,6 @@ interface ComponentsComponentsRouteChildren {
 const ComponentsComponentsRouteChildren: ComponentsComponentsRouteChildren = {
   ComponentsComponentsButtonGroupRoute: ComponentsComponentsButtonGroupRoute,
   ComponentsComponentsChatInputRoute: ComponentsComponentsChatInputRoute,
-  ComponentsComponentsConversationRoute: ComponentsComponentsConversationRoute,
   ComponentsComponentsMessagesRoute: ComponentsComponentsMessagesRoute,
   ComponentsComponentsSidebarRoute: ComponentsComponentsSidebarRoute,
   ComponentsComponentsTextareaRoute: ComponentsComponentsTextareaRoute,
