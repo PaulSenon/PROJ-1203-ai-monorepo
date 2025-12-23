@@ -1,27 +1,22 @@
 import { useLayoutEffect } from "react";
-import {
-  PromptInput,
-  PromptInputAttachment,
-  PromptInputAttachments,
-  PromptInputBody,
-  PromptInputFooter,
-  PromptInputHeader,
-  type PromptInputProps,
-  PromptInputSubmit,
-  PromptInputTextarea,
-  PromptInputTools,
+import type {
+  PromptInputProps,
+  PromptInputSubmitProps,
 } from "@/components/ai-elements/prompt-input";
+import { ChatInput as Input } from "@/components/ui-custom/chat/chat-input";
 import {
   useAppLoadStatus,
   useAppLoadStatusActions,
 } from "@/hooks/use-app-load-status";
 import { useActiveThreadActions } from "@/hooks/use-chat-active";
 import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useModelSelectorState } from "@/hooks/use-user-preferences";
 import { cn } from "@/lib/utils";
 import { ChatModelSelector } from "./chat-model-selector";
 
 export function ChatInput() {
+  const isMobile = useIsMobile();
   const { isInitialUIStateReady } = useAppLoadStatus();
   const appUiStatus = useAppLoadStatusActions();
   const inputState = useChatInputState();
@@ -47,46 +42,46 @@ export function ChatInput() {
     inputActions.focus();
   }, [inputState.isPending, inputActions.focus, appUiStatus.setInputUIReady]);
 
+  // TODO: status not implemented yet
+  const submitButtonStatus: PromptInputSubmitProps["status"] = "ready";
+
   return (
-    // TODO: improve initial loader UI and remove this opacity thing
-    <PromptInput
+    <Input.Root
       className={cn("relative mt-4", !isInitialUIStateReady && "opacity-0")}
+      inputClassName={cn(
+        "h-full",
+        "rounded-xl bg-background dark:border-initial dark:bg-initial",
+        "bg-background/80 backdrop-blur-md",
+        "border-border/50",
+        "shadow-sm",
+        "focus-within:border-border focus-within:bg-background/90 focus-within:shadow-lg"
+      )}
       onSubmit={handleSubmit}
     >
-      <PromptInputHeader>
-        <PromptInputAttachments>
-          {(attachment) => <PromptInputAttachment data={attachment} />}
-        </PromptInputAttachments>
-      </PromptInputHeader>
-      <PromptInputBody>
-        <PromptInputTextarea
-          disabled={inputState.isPending}
+      {/* <Input.Header>
+        <Input.Attachments>
+          {(attachment) => <Input.Attachment data={attachment} />}
+        </Input.Attachments>
+      </Input.Header> */}
+      <Input.Body>
+        <Input.Textarea
+          disabled={inputState.isPending} // can type while disabled (as long as not initializing)
           onChange={(e) => inputActions.setInput(e.target.value)}
           ref={inputState.inputRef}
+          submitOnEnter={!isMobile}
           value={inputState.input}
         />
-      </PromptInputBody>
-      <PromptInputFooter>
-        <PromptInputTools>
-          {/* <PromptInputActionMenu>
-            <PromptInputActionMenuTrigger />
-            <PromptInputActionMenuContent>
-              <PromptInputActionAddAttachments />
-            </PromptInputActionMenuContent>
-          </PromptInputActionMenu> */}
-          {/* <PromptInputSpeechButton /> */}
-          {/* <PromptInputButton>
-            <GlobeIcon size={16} />
-            <span>Search</span>
-          </PromptInputButton> */}
-          <ChatModelSelector />
-        </PromptInputTools>
-        <PromptInputSubmit
-          className="duration-0"
+      </Input.Body>
+      <Input.Footer>
+        <Input.Tools>
+          <Input.ToolsMore />
+          <ChatModelSelector onClose={() => inputActions.focus()} />
+        </Input.Tools>
+        <Input.SubmitButton
           disabled={inputState.disabled}
-          status={"ready"}
+          status={submitButtonStatus}
         />
-      </PromptInputFooter>
-    </PromptInput>
+      </Input.Footer>
+    </Input.Root>
   );
 }

@@ -15,10 +15,6 @@ const components = [
     path: "/components/button-group",
   },
   {
-    name: "Chat Input",
-    path: "/components/chat-input",
-  },
-  {
     name: "Textarea",
     path: "/components/textarea",
   },

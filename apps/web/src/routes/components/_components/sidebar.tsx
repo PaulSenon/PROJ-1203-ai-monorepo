@@ -1,3 +1,8 @@
+import {
+  type AllowedModelIds,
+  defaultModelId,
+  modelsConfig,
+} from "@ai-monorepo/ai/model.registry";
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { createFileRoute } from "@tanstack/react-router";
 import type React from "react";
@@ -5,9 +10,17 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { CollapsibleButtonGroup } from "@/components/ui-custom/button-group-collapsible";
-import { ChatInput } from "@/components/ui-custom/chat-input";
+import { ChatInput as Input } from "@/components/ui-custom/chat/chat-input";
+import {
+  ScrollToBottomProvider,
+  useScrollToBottomInit,
+  useScrollToBottomState,
+} from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
+import { ModelSelector } from "@/components/ui-custom/chat/model-selector";
 import { Sidebar } from "@/components/ui-custom/sidebar/sidebar";
 import { StickyContainer } from "@/components/ui-custom/sticky-container";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/components/_components/sidebar")({
@@ -116,9 +129,11 @@ function RouteComponent() {
   // }, [_threads]);
 
   return (
-    <Sidebar threads={_threads}>
-      <Content />
-    </Sidebar>
+    <ScrollToBottomProvider>
+      <Sidebar threads={_threads}>
+        <Content />
+      </Sidebar>
+    </ScrollToBottomProvider>
   );
 }
 
@@ -151,7 +166,74 @@ function CollapsibleButtonGroupAnimated({
   );
 }
 
+function ChatModelSelector({ onClose }: { onClose?: () => void }) {
+  const [selectedModelId, setSelectedModelId] =
+    useState<AllowedModelIds>(defaultModelId);
+  return (
+    <ModelSelector
+      disabled={false}
+      modelsConfig={modelsConfig}
+      onClose={onClose}
+      onSelect={setSelectedModelId}
+      selectedModelId={selectedModelId}
+    />
+  );
+}
+
+function ChatInput() {
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [value, setValue] = useState("");
+  const isMobile = useIsMobile();
+
+  return (
+    <Input.Root
+      className={cn("relative mt-4")}
+      inputClassName={cn(
+        "h-full",
+        "rounded-xl bg-background dark:border-initial dark:bg-initial",
+        "bg-background/80 backdrop-blur-md",
+        "border-border/50",
+        "shadow-sm",
+        "focus-within:border-border focus-within:bg-background/90 focus-within:shadow-lg"
+      )}
+      onSubmit={console.log}
+    >
+      {/* <Input.Header>
+        <Input.Attachments>
+          {(attachment) => <Input.Attachment data={attachment} />}
+        </Input.Attachments>
+      </Input.Header> */}
+      <Input.Body>
+        <Input.Textarea
+          disabled={false}
+          onChange={(e) => setValue(e.target.value)}
+          ref={inputRef}
+          submitOnEnter={!isMobile}
+          value={value}
+        />
+      </Input.Body>
+      <Input.Footer>
+        <Input.Tools>
+          <Input.ToolsMore />
+          <ChatModelSelector onClose={() => inputRef.current?.focus()} />
+        </Input.Tools>
+        <Input.SubmitButton disabled={false} status="ready" variant="ghost" />
+      </Input.Footer>
+    </Input.Root>
+  );
+}
+
+function InitialScroll() {
+  useScrollToBottomInit({
+    enabled: true,
+    target: "bottom",
+  });
+
+  return null;
+}
+
 function Content() {
+  const { bottomRef } = useScrollToBottomState();
   const { state: sidebarState } = useSidebar();
   const isCollapsed = sidebarState === "collapsed";
   return (
@@ -188,6 +270,8 @@ function Content() {
             curae.
           </p>
         ))}
+        <ScrollEdgeProbe ref={bottomRef} />
+        <InitialScroll />
       </div>
       <StickyContainer>
         <div className="mx-auto flex w-full max-w-2xl flex-col items-start justify-center gap-4 p-4 pb-2 md:pb-4">

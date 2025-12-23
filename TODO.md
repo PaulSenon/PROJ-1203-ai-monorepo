@@ -45,10 +45,12 @@ Problems:
 - [ ] message footer, aligned start (even for infos)
 - [ ] message thinking arrow should be right after thinking text, not aligned end.
 - [ ] message footer, add retry button
-- input: draft broken
-- [ ] conversation: setup initial scroll bottom (current setup is not working)
+- [x] input: rewire working chat input
+- [ ] input: draft broken
+- [x] conversation: setup initial scroll bottom (current setup is not working)
 - [ ] conversation: setup submit min-heigh and scroll feature
 - [ ] conversation: add paginated lazy loading
 - [ ] conversation: wire back the error and retry message component
 - [ ] fullstack: setup userSubmittedAt and order by that in thread listing
 - [ ] fullstack setup stats metadata
+- [ ] fullstack: new chat: fix page rerender when submitting (not caused by scroll to bottom feature but don't know exactly what is rerendering and what is causing it.)

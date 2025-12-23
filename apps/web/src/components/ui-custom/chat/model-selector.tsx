@@ -1,6 +1,10 @@
-import { defaultModelId, modelsConfig } from "@ai-monorepo/ai/model.registry";
+import type {
+  AllowedModelIds,
+  LanguageModelConfig,
+  // modelsConfig,
+} from "@ai-monorepo/ai/model.registry";
 import { CheckIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ModelSelector as ModelSelectorBase,
   ModelSelectorContent,
@@ -14,44 +18,39 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
-import {
-  useModelSelectorActions,
-  useModelSelectorState,
-} from "@/hooks/use-user-preferences";
-import { PromptInputButton } from "../ai-elements/prompt-input";
+import { PromptInputButton } from "../../ai-elements/prompt-input";
 
-const models = Object.values(modelsConfig);
-
-const chefs = Array.from(new Set(models.map((model) => model.chef)));
-
-export const ModelSelector = ({ onClose }: { onClose?: () => void }) => {
+export const ModelSelector = ({
+  onSelect,
+  modelsConfig,
+  selectedModelId,
+  disabled,
+  onClose,
+}: {
+  selectedModelId: AllowedModelIds;
+  modelsConfig: LanguageModelConfig<AllowedModelIds>;
+  onSelect?: (modelId: AllowedModelIds) => void;
+  onClose?: () => void;
+  disabled?: boolean;
+}) => {
+  // internal state
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
-  const { selectedModelId = defaultModelId, isPending } =
-    useModelSelectorState();
-  const { setSelectedModelId } = useModelSelectorActions();
 
+  // derived input values
   const selectedModelData = modelsConfig[selectedModelId];
-
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    if (!open) {
-      onCloseRef.current?.();
-    }
-  }, [open]);
+  const models = useMemo(() => Object.values(modelsConfig), [modelsConfig]);
+  const chefs = useMemo(
+    () => Array.from(new Set(models.map((model) => model.chef))),
+    [models]
+  );
 
   return (
     <ModelSelectorBase onOpenChange={setOpen} open={open}>
       <ModelSelectorTrigger asChild>
-        <PromptInputButton disabled={isPending}>
-          {/* {isPending ? (
-            <Spinner />
-          ) : (
-            <> */}
+        <PromptInputButton disabled={disabled}>
           <ModelSelectorLogo provider={selectedModelData.chef} />
           <ModelSelectorName>{selectedModelData.label}</ModelSelectorName>
-          {/* </>
-          )} */}
         </PromptInputButton>
       </ModelSelectorTrigger>
       <ModelSelectorContent
@@ -78,8 +77,9 @@ export const ModelSelector = ({ onClose }: { onClose?: () => void }) => {
                   <ModelSelectorItem
                     key={m.id}
                     onSelect={() => {
-                      setSelectedModelId(m.id);
+                      onSelect?.(m.id);
                       setOpen(false);
+                      onClose?.();
                     }}
                     value={m.id}
                   >

@@ -205,6 +205,8 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       upsertThread,
       chatNav.id,
       sdkSetMessages,
+      applyOptimisticPatch,
+      revertOptimisticPatch,
     ]
   );
 

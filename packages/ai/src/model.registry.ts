@@ -116,14 +116,15 @@ function createLanguageModelConfig<const T extends string>(
   return config;
 }
 
+export type LanguageModelConfigEntry<T extends string> = {
+  id: T;
+  label: string;
+  chef: ProviderSlug;
+  providers: ProviderSlug[];
+};
 // TODO: configurable entry type (from schema ?)
 export type LanguageModelConfig<T extends string> = {
-  [K in T]: {
-    id: K;
-    label: string;
-    chef: ProviderSlug;
-    providers: ProviderSlug[];
-  };
+  [K in T]: LanguageModelConfigEntry<K>;
 };
 
 export function createLanguageModelSubList<
