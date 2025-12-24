@@ -30,6 +30,10 @@ export function ChatSidebar({
     history.loadMore(20);
   }, [history.loadMore]);
 
+  const handleNewChat = useCallback(() => {
+    chatNav.openNewChat();
+  }, [chatNav.openNewChat]);
+
   const memoThreads = useMemo(
     () => history.results.filter((t) => t.lifecycleState === "active"),
     [history.results]
@@ -40,7 +44,7 @@ export function ChatSidebar({
       activeThreadId={chatNav.id}
       className={className}
       onLoadMore={handleLoadMore}
-      // onNewChat={handleNewChat}
+      onNewChat={handleNewChat}
       threads={memoThreads}
     >
       {children}

@@ -1,4 +1,5 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
+import { PlusIcon, SearchIcon } from "lucide-react";
 import React, { useCallback, useDeferredValue, useRef } from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,8 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+
+import { useChatNav } from "@/hooks/use-chat-nav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInView } from "@/hooks/utils/use-intersection-observer";
 import {
@@ -20,6 +23,7 @@ import {
 } from "@/hooks/utils/use-scroll-edges";
 import { cn, useMergedRefs } from "@/lib/utils";
 import { CollapsibleButtonGroup } from "../button-group-collapsible";
+import { Tooltip } from "../tooltip";
 import { ScrollbarZIndexHack } from "../utils/scrollbar-z-index-hack";
 import { SpacerFrom } from "../utils/spacer";
 import { Sidebar as BaseSidebar } from "./primitives/sidebar";
@@ -38,11 +42,13 @@ export function Sidebar({
   threads,
   children,
   onLoadMore,
+  onNewChat,
 }: {
   className?: string;
   activeThreadId?: string;
   threads: Doc<"threads">[];
   children: React.ReactNode;
+  onNewChat?: () => void;
   onLoadMore?: () => void;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -75,6 +81,7 @@ export function Sidebar({
         <MySidebarHeader
           className="absolute top-0 z-50 w-full"
           isOverflowing={!isAtTop}
+          onNewChat={onNewChat}
         />
         <SidebarContent
           className="gap-0 overscroll-contain p-0"
@@ -135,15 +142,34 @@ SidebarThreads.displayName = "SidebarThreads";
 function MySidebarHeader({
   isOverflowing = false,
   className,
+  onNewChat,
 }: {
   isOverflowing?: boolean;
   className?: string;
+  onNewChat?: () => void;
 }) {
   return (
-    <SidebarHeader className={className} isOverflowing={isOverflowing}>
-      <h2 className="h-full content-center text-center font-semibold text-lg">
-        Navigation
+    <SidebarHeader className={cn("", className)} isOverflowing={isOverflowing}>
+      <h2 className="mt-0.5 h-full content-center text-center font-semibold text-lg">
+        Isaaac.chat
       </h2>
+
+      <div
+        className={cn(
+          "absolute top-3 top-safe-offset-2 right-3",
+          "pointer-events-auto z-50 flex origin-left items-center gap-0.5 overflow-hidden rounded-sm p-1"
+        )}
+      >
+        <Button
+          className={cn("size-8")}
+          onClick={onNewChat}
+          size="icon"
+          variant="ghost"
+        >
+          <PlusIcon className="size-4" />
+          <span className="sr-only">New Chat</span>
+        </Button>
+      </div>
     </SidebarHeader>
   );
 }
@@ -187,6 +213,7 @@ function CollapsibleButtonGroupAnimated({
   const { open, isMobile } = useSidebar();
   const isDesktop = !isMobile;
   const isButtonGroupCollapsed = isDesktop && open;
+  const { openNewChat } = useChatNav();
 
   return (
     <CollapsibleButtonGroup
@@ -198,14 +225,22 @@ function CollapsibleButtonGroupAnimated({
       collapsed={isButtonGroupCollapsed}
       defaultCollapsed={false}
     >
-      <SidebarTrigger className="size-8" />
+      <Tooltip asChild isMobile={isMobile} tooltip="Toggle Sidebar">
+        <SidebarTrigger className="size-8" />
+      </Tooltip>
       <CollapsibleButtonGroup.CollapsibleContent>
-        <Button className="size-8" variant="ghost">
-          1
-        </Button>
-        <Button className="size-8" variant="ghost">
-          2
-        </Button>
+        <Tooltip asChild isMobile={isMobile} tooltip="Search">
+          <Button className="size-8" disabled variant="ghost">
+            <SearchIcon className="size-4" />
+            <span className="sr-only">Search (feature not available)</span>
+          </Button>
+        </Tooltip>
+        <Tooltip asChild isMobile={isMobile} tooltip="New Chat">
+          <Button className="size-8" onClick={openNewChat} variant="ghost">
+            <PlusIcon className="size-4" />
+            <span className="sr-only">New Chat</span>
+          </Button>
+        </Tooltip>
       </CollapsibleButtonGroup.CollapsibleContent>
     </CollapsibleButtonGroup>
   );

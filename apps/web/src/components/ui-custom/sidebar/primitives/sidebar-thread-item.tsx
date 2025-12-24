@@ -1,5 +1,4 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
-import { Slot } from "@radix-ui/react-slot";
 import { Link } from "@tanstack/react-router";
 import {
   EditIcon,
@@ -21,12 +20,9 @@ import {
 import { Pulse2Icon } from "@/components/ui/icons/svg-spinners-pulse-2";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { Tooltip } from "../../tooltip";
 
 function reduceLiveStateToIndicatorVariant(
   thread: Doc<"threads">
@@ -103,7 +99,7 @@ export function SidebarThreadActionButton({
   isMobile: boolean;
 }) {
   return (
-    <MyTooltip asChild isMobile={isMobile} tooltip={label}>
+    <Tooltip asChild isMobile={isMobile} tooltip={label}>
       <Button
         className={cn(
           "h-7 w-7 rounded-md bg-transparent p-1.5 text-foreground hover:text-foreground",
@@ -125,7 +121,7 @@ export function SidebarThreadActionButton({
         <Icon className="size-4" />
         <span className="sr-only">{label}</span>
       </Button>
-    </MyTooltip>
+    </Tooltip>
   );
 }
 
@@ -406,32 +402,6 @@ function A11YContextMenuTriggerButton(
   );
 }
 
-function MyTooltip({
-  children,
-  tooltip,
-  isMobile = false,
-  asChild = false,
-}: {
-  children: React.ReactNode;
-  tooltip?: string;
-  isMobile: boolean;
-  asChild?: boolean;
-}) {
-  if (isMobile) {
-    return children;
-  }
-
-  const Comp = asChild ? Slot : "div";
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Comp>{children}</Comp>
-      </TooltipTrigger>
-      <MyTooltipContent>{tooltip}</MyTooltipContent>
-    </Tooltip>
-  );
-}
-
 export function _SidebarThreadItem({
   thread,
   isActive = false,
@@ -517,9 +487,9 @@ export function _SidebarThreadItem({
             <LiveStateIndicatorIcon thread={thread} />
             <span className="mx-1 h-full min-w-0 flex-1 content-center">
               {!isMobile && (
-                <MyTooltip asChild isMobile={isMobile} tooltip={tooltip}>
+                <Tooltip asChild isMobile={isMobile} tooltip={tooltip}>
                   <div className="absolute top-0 bottom-0 left-0 z-30 m-0 h-full w-[calc(100%-4rem)]" />
-                </MyTooltip>
+                </Tooltip>
               )}
 
               <TruncatedText shimmer={isLoading} text={thread.title} />
