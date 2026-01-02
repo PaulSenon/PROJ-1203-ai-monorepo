@@ -275,19 +275,6 @@ export const chatProcedure = chatProcedures.chat
           ? "cancelled"
           : (responseMessage.metadata?.liveStatus ?? "completed");
 
-        // TODO: update is better but had conflicts.
-        await fetchMutation(api.chat.upsertThread, {
-          threadUuid: thread.uuid,
-          patch: {
-            liveStatus: lastMessageStatus,
-          },
-        });
-        // TODO: fix update to use patches then use update again
-        // await fetchMutation(api.chat.updateThread, {
-        //   threadId: thread._id,
-        //   liveStatus: lastMessageStatus,
-        // });
-
         await fetchMutation(api.chat.upsertMessage, {
           threadId: thread._id,
           uiMessage: responseMessage,
@@ -300,6 +287,25 @@ export const chatProcedure = chatProcedures.chat
         //     streamId,
         //   });
         // }
+
+        const threadStatus =
+          lastMessageStatus !== "streaming" && lastMessageStatus !== "pending"
+            ? lastMessageStatus
+            : "completed";
+
+        // TODO: update is better but had conflicts.
+        // IMPORTANT! Must update thread status last
+        await fetchMutation(api.chat.upsertThread, {
+          threadUuid: thread.uuid,
+          patch: {
+            liveStatus: threadStatus,
+          },
+        });
+        // TODO: fix update to use patches then use update again
+        // await fetchMutation(api.chat.updateThread, {
+        //   threadId: thread._id,
+        //   liveStatus: lastMessageStatus,
+        // });
 
         console.log("DONE !");
       },
