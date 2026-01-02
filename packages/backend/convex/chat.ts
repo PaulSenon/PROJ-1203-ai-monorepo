@@ -2,7 +2,7 @@ import {
   type MyUIMessage,
   validateMyUIMessages,
 } from "@ai-monorepo/ai/types/uiMessage";
-import { paginationOptsValidator } from "convex/server";
+import { type PaginationResult, paginationOptsValidator } from "convex/server";
 import { ConvexError, type Validator, v } from "convex/values";
 import { partial } from "convex-helpers/validators";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -453,7 +453,7 @@ export const listThreadUiMessagesPaginated = queryWithRLS({
     threadUuid: v.string(),
     paginationOpts: paginationOptsValidator,
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<PaginationResult<MyUIMessage>> => {
     const user = await INTERNAL_getCurrentUserOrThrow(ctx);
 
     // 1. resolve thread id from uuid
@@ -462,7 +462,14 @@ export const listThreadUiMessagesPaginated = queryWithRLS({
       threadUuid: args.threadUuid,
     });
 
-    if (!thread) throw new ConvexError("Thread not found");
+    if (!thread) {
+      return {
+        page: [],
+        isDone: true,
+        splitCursor: null,
+        continueCursor: "",
+      };
+    }
     if (thread.lifecycleState === "deleted")
       throw new ConvexError("Thread is deleted");
 
