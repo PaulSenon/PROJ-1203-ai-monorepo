@@ -148,7 +148,7 @@ const convexMutationV2 = {
 
 const convexMutationV3 = {
   threads: {
-    upsert: mutationBuilderV3(api.chat.upsertThread, {
+    upsert: mutationBuilderV3(api.chat.upsertThreadClient, {
       optimisticUpdate: (localStore, mutationArgs) => {
         // thread query
         const threadQuery = convexQueries.getThread({

@@ -61,9 +61,9 @@ export function useCvxMutationAuthV3<
   mutation: TMutation,
   options: MutationOptions<FunctionArgs<TMutation>>
 ): ReactMutation<TMutation> {
-  const m = useMutation(mutation);
+  const rawMutation = useMutation(mutation);
   if (options.optimisticUpdate) {
-    m.withOptimisticUpdate(options.optimisticUpdate);
+    return rawMutation.withOptimisticUpdate(options.optimisticUpdate);
   }
-  return m;
+  return rawMutation;
 }

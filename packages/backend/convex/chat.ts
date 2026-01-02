@@ -122,9 +122,10 @@ async function InternalUpsertThread(
     userId: Id<"users">;
     threadUuid: string;
     patch: Partial<Doc<"threads">>;
+    canPatchThread?: (thread: Doc<"threads">) => boolean;
   }
 ) {
-  const { threadUuid, userId, patch } = args;
+  const { threadUuid, userId, patch, canPatchThread } = args;
 
   const existingThread = await ctx.db
     .query("threads")
@@ -138,13 +139,19 @@ async function InternalUpsertThread(
     const threadId = await ctx.db.insert("threads", {
       ...patch,
       lifecycleState: patch?.lifecycleState ?? "active",
-      liveStatus: patch?.liveStatus ?? "pending",
+      liveStatus: patch?.liveStatus ?? "completed",
       uuid: threadUuid,
       createdAt: now,
       updatedAt: now,
       userId,
     });
     return threadId;
+  }
+
+  if (canPatchThread && !canPatchThread(existingThread)) {
+    throw new ConvexError(
+      "CRITICAL: Thread is not allowed to be patched because of custom canPatchThread function."
+    );
   }
 
   await ctx.db.patch(existingThread._id, {
@@ -806,6 +813,43 @@ export const getDraft = queryWithRLS({
 
 // DONE
 // for frontend: upsert thread for optimistic update paginated thread listings
+export const upsertThreadClient = mutationWithRLS({
+  args: {
+    threadUuid: vv.doc("threads").fields.uuid,
+    patch: partial(
+      vv.object({
+        title: vv.optional(vv.doc("threads").fields.title),
+        lifecycleState: vv.optional(vv.doc("threads").fields.lifecycleState),
+        liveStatus: vv.optional(vv.doc("threads").fields.liveStatus),
+        lastUsedModelId: vv.optional(vv.doc("threads").fields.lastUsedModelId),
+      })
+    ),
+  },
+  async handler(ctx, args) {
+    const user = await INTERNAL_getCurrentUserOrThrow(ctx);
+    const { threadUuid, patch } = args;
+    const threadId = await InternalUpsertThread(ctx, {
+      threadUuid,
+      userId: user._id,
+      patch,
+      canPatchThread: (t) => {
+        if (t.liveStatus === "streaming") {
+          throw new ConvexError("Thread is already streaming. Retry later.");
+        }
+        if (patch.liveStatus === "streaming") {
+          throw new ConvexError(
+            "Cannot set liveStatus to streaming from client."
+          );
+        }
+
+        return true;
+      },
+    });
+    return threadId;
+  },
+});
+
+// for backend
 export const upsertThread = mutationWithRLS({
   args: {
     threadUuid: vv.doc("threads").fields.uuid,
@@ -914,6 +958,18 @@ export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
       threadUuid,
       userId: user._id,
       patch: threadPatch,
+      canPatchThread: (t) => {
+        if (t.liveStatus !== "streaming") return true;
+        console.error("Thread is not settled. Retry later.", {
+          threadUuid,
+          userId: user._id,
+          existingThread: t,
+          patch: threadPatch,
+        });
+        throw new ConvexError(
+          "Thread is not allowed to be patched because it is already streaming. Retry later."
+        );
+      },
     });
     // TODO: could skip runtime validation to save compute
     const validatedMessagesPromise = validateMyUIMessages(uiMessages);
@@ -923,7 +979,11 @@ export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
       validatedMessagesPromise,
     ]);
 
-    const threadPromise = ctx.db.get(threadId);
+    const thread = await ctx.db.get(threadId);
+    if (!thread) throw new ConvexError("FATAL: thread not found");
+    if (thread.lifecycleState !== "active")
+      throw new ConvexError("FATAL: thread is not active");
+
     const insertPromises: Promise<unknown>[] = [];
 
     // also update user preferences if last used model id is set
@@ -957,9 +1017,6 @@ export const upsertThreadWithNewMessagesAndReturnHistory = mutationWithRLS({
       userId: user._id,
       threadId,
     });
-
-    const thread = await threadPromise;
-    if (!thread) throw new ConvexError("FATAL: thread not found");
 
     return {
       thread,

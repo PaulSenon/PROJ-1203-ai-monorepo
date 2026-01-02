@@ -185,16 +185,32 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         await sdkSendMessage(uiMessage);
       } catch (error) {
         console.error("error while sending message", error);
-        await upsertPromise;
-        await upsertThread({
-          threadUuid: chatNav.id,
-          patch: {
-            liveStatus: "error",
-          },
-        });
+
+        // upsertThread might throw if not allowed (because already streaming)
+        try {
+          await upsertPromise;
+          await upsertThread({
+            threadUuid: chatNav.id,
+            patch: {
+              liveStatus: "error",
+            },
+          });
+        } catch (_error) {
+          console.error("error while upserting thread", _error);
+        }
       } finally {
         if (patchId) revertOptimisticPatch(patchId);
-        await upsertPromise;
+
+        // upsertThread might throw if not allowed (because already streaming)
+        try {
+          await upsertPromise;
+        } catch (_error) {
+          // clear messages shown by optimistic patch only because failure
+          sdkSetMessages([]);
+          console.error("error while upserting thread", _error);
+        }
+
+        console.log("TOTO123: UPSERTED THREAD");
       }
     },
     [
