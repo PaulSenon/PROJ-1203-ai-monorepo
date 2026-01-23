@@ -142,14 +142,14 @@ const schema = defineSchema({
     ),
   }).index("byUserIdMessageId", ["userId", "messageId"]),
 
-  messageStreams: defineTable({
+  threadStreams: defineTable({
     userId: v.id("users"),
     threadId: v.id("threads"),
-    messageId: v.id("messages"),
-  }).index("byUserIdThreadIdMessageId", ["userId", "threadId", "messageId"]),
+    deletedAt: v.optional(v.number()),
+  }).index("byUserIdThreadIdDeletedAt", ["userId", "threadId", "deletedAt"]),
 
   streamDeltas: defineTable({
-    streamId: v.id("messageStreams"),
+    streamId: v.id("threadStreams"),
     start: v.number(), // index of the first chunk in the delta
     end: v.number(), // exclusive index of the last chunk in the delta
     encodedChunks: v.object({

@@ -12,8 +12,9 @@
     "typescript": "catalog:"
   },
   "dependencies": {
-    "@convex-dev/migrations": "catalog:convex",
     "@ai-monorepo/ai": "workspace:*",
+    "@convex-dev/migrations": "catalog:convex",
+    "@convex-dev/workpool": "catalog:convex",
     "convex": "catalog:convex",
     "convex-helpers": "catalog:convex"
   }

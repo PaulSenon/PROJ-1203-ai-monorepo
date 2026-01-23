@@ -141,20 +141,20 @@ async function rlsRules(ctx: QueryCtx) {
       },
     },
 
-    messageStreams: {
-      read: async (_, messageStreamDoc) => {
+    threadStreams: {
+      read: async (_, threadStreamDoc) => {
         if (!user) return false;
-        if (messageStreamDoc.userId !== user._id) return false;
+        if (threadStreamDoc.userId !== user._id) return false;
         return true;
       },
-      insert: async (_, messageStreamDoc) => {
+      insert: async (_, threadStreamDoc) => {
         if (!user) return false;
-        if (messageStreamDoc.userId !== user._id) return false;
+        if (threadStreamDoc.userId !== user._id) return false;
         return true;
       },
-      modify: async (_, messageStreamDoc) => {
+      modify: async (_, threadStreamDoc) => {
         if (!user) return false;
-        if (messageStreamDoc.userId !== user._id) return false;
+        if (threadStreamDoc.userId !== user._id) return false;
         return true;
       },
     },

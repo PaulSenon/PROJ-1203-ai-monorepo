@@ -10,10 +10,6 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { INTERNAL_getCurrentUserOrThrow } from "./lib";
 import { mutationWithRLS, queryWithRLS } from "./rls";
 import { lifecycleStates, liveStatuses, vv } from "./schema";
-import {
-  INTERNAL_FindMessageStream,
-  INTERNAL_ListStreamDeltas,
-} from "./streams";
 import { INTERNAL_upsertUserChatPreferences } from "./users";
 
 async function InternalDeleteMessageWithParts(
@@ -499,107 +495,6 @@ export const listThreadUiMessagesPaginated = queryWithRLS({
       ...messages,
       page: uiMessages,
     };
-  },
-});
-
-// TODO find a way to have stream delta without 2 roundtrip + find a way to cache them
-export const listThreadStreamingMessagesPaginated = queryWithRLS({
-  args: {
-    threadUuid: v.string(),
-    paginationOpts: paginationOptsValidator,
-  },
-  handler: async (ctx, args) => {
-    const user = await INTERNAL_getCurrentUserOrThrow(ctx);
-
-    // 1. resolve thread id from uuid
-    const thread = await InternalFindThreadByUuid(ctx, {
-      userId: user._id,
-      threadUuid: args.threadUuid,
-    });
-
-    if (!thread) throw new ConvexError("Thread not found");
-    if (thread.lifecycleState === "deleted")
-      throw new ConvexError("Thread is deleted");
-
-    // 2. get messages page from thread id
-    const messages = await ctx.db
-      .query("messages")
-      .withIndex("byUserIdThreadIdStateOrdered", (q) =>
-        q
-          .eq("userId", user._id)
-          .eq("threadId", thread._id)
-          .eq("lifecycleState", "active")
-      )
-      .order("desc")
-      .paginate(args.paginationOpts);
-
-    // 3. retrieve stream deltas for each message
-    const streams = await Promise.all(
-      messages.page.map((message) =>
-        INTERNAL_FindMessageStream(ctx, {
-          userId: user._id,
-          threadId: thread._id,
-          messageId: message._id,
-        })
-      )
-    );
-
-    // 4. retrieve stream deltas for existing streams
-    const streamDeltas = await Promise.all(
-      streams.map((stream) =>
-        stream === null
-          ? null
-          : INTERNAL_ListStreamDeltas(ctx, {
-              streamId: stream._id,
-            })
-      )
-    );
-
-    return {
-      ...messages,
-      page: streamDeltas.filter((d) => d !== null),
-    };
-  },
-});
-
-// DONE
-// for frontend, for when we encounter a message in a streaming status, to retrieve stream deltas
-// in a reactive way. Those UIMessageChunks can be merged back into a UIMessage object using readUIMessageStream
-export const findMessageStream = queryWithRLS({
-  args: {
-    threadUuid: v.string(),
-    messageUuid: v.string(),
-  },
-  async handler(ctx, args) {
-    const user = await INTERNAL_getCurrentUserOrThrow(ctx);
-
-    const thread = await InternalFindThreadByUuid(ctx, {
-      userId: user._id,
-      threadUuid: args.threadUuid,
-    });
-
-    if (!thread) throw new ConvexError("Thread not found");
-
-    const message = await InternalFindMessageByUuid(ctx, {
-      userId: user._id,
-      threadId: thread._id,
-      messageUuid: args.messageUuid,
-    });
-    if (!message) throw new ConvexError("Message not found");
-
-    const stream = await INTERNAL_FindMessageStream(ctx, {
-      userId: user._id,
-      threadId: thread._id,
-      messageId: message._id,
-    });
-
-    if (!stream) return null;
-
-    const deltas = await INTERNAL_ListStreamDeltas(ctx, {
-      streamId: stream._id,
-    });
-
-    return deltas;
   },
 });
 
