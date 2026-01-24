@@ -35,16 +35,17 @@ After Tomorrow:
 Problems:
 
 - [x] mobile sidebar open 500ms lag
-- [ ] sidebar add new chat button
-- [ ] buttonGroup, add new chat button
+- [x] sidebar add new chat button
+- [x] buttonGroup, add new chat button
 - [x] sidebar set selected thread state (from url)
 - [ ] sidebar plug delete thread feature
 - [x] sidebar when open mobile, shouldn't set first item active.
-- [~] sidebar fix reactive update (when thread state changes, it does not reflect on UI) (weird, it get fixed when reactive update from convex dashboard, then it work, but broken while never "fixed" by toggling liveStatus from convex dashboard.... Really weird behavior. Need to investigate more.)
-- [ ] sidebar close on link click ( const { setOpenMobile } = useSidebar(); setOpenMobile(false);)
+- [ ] sidebar fix reactive update (when thread state changes, it does not reflect on UI) (weird, it get fixed when reactive update from convex dashboard, then it work, but broken while never "fixed" by toggling liveStatus from convex dashboard.... Really weird behavior. Need to investigate more.)
+- [~] sidebar close on link click ( const { setOpenMobile } = useSidebar(); setOpenMobile(false);)
 - [ ] message footer, aligned start (even for infos)
 - [ ] message thinking arrow should be right after thinking text, not aligned end.
 - [ ] message footer, add retry button
+- [~] message: the last message should be shown as low opacity if stale + non settled. (done in hacky way)
 - [x] input: rewire working chat input
 - [ ] input: draft broken
 - [x] conversation: setup initial scroll bottom (current setup is not working)
@@ -53,4 +54,20 @@ Problems:
 - [ ] conversation: wire back the error and retry message component
 - [ ] fullstack: setup userSubmittedAt and order by that in thread listing
 - [ ] fullstack setup stats metadata
-- [ ] fullstack: new chat: fix page rerender when submitting (not caused by scroll to bottom feature but don't know exactly what is rerendering and what is causing it.)
+- [~] fullstack: new chat: fix page rerender when submitting (not caused by scroll to bottom feature but don't know exactly what is rerendering and what is causing it.) => I think it's fixed since big refactoring of messages layers merge logic. To test.
+
+- [ ] add noise background
+
+```css
+.bg-noise {
+  background-image: url(/images/noise.png);
+  background-repeat: repeat;
+  background-size: 96px 96px;
+}
+```
+
+```html
+<div
+  class="bg-noise ease-snappy absolute inset-0 -top-3.5 bg-fixed bg-bottom-right transition-transform"
+></div>
+```

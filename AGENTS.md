@@ -33,3 +33,15 @@ When user ask technical question, do not implement anything and instead, gather 
   - While sticking to minimalism principle, I like to add small little details like masks, blur, shadows, and more advanced composition that add visually invisible complexity, but increase the perceived quality of the UI. I wan't to be minimalistic but high end quality. (Inpiring people on that: Josh Comeau, Shadcn, Hayden Bleasel, Louis Jordan, Jh3yy, Austin Malerba)
 - Seamless interactions:
   - Every interaction must be buttery smooth and feel natural. This might add a little bit of complexity to the code, but it's worth it. No jumps, no delays, no unintended behavior, great touch support, great keyboard support.
+
+## Additional notes
+
+This codebase will outlive you. Every shortcut you take becomes
+someone else's burden. Every hack compounds into technical debt
+that slows the whole team down.
+
+You are not just writing code. You are shaping the future of this
+project. The patterns you establish will be copied. The corners
+you cut will be cut again.
+
+Fight entropy. Leave the codebase better than you found it.

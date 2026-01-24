@@ -215,7 +215,6 @@ export const chatProcedure = chatProcedures.chat
 
     const createdStreamPromise = fetchMutation(api.streams.createStream, {
       threadId: thread._id,
-      messageUuid: newMessageUuid,
     }).catch((error) => {
       console.error("Error creating stream. Falling back to no stream.", error);
       return { streamId: undefined };

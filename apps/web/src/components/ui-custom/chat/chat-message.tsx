@@ -166,12 +166,26 @@ export function ChatMessage({
   const stats = (message.metadata ?? {}) as MyUIMessage["metadata"] &
     ExtraStats;
 
+  const source = (message.metadata as Record<string, unknown>)
+    ?.dataSource as string;
+
+  const isStreaming =
+    message.metadata?.liveStatus === "pending" ||
+    message.metadata?.liveStatus === "streaming";
+
   return (
     <div
       className={cn(
         "group flex w-full flex-col gap-2",
         isUser && "items-end",
         isAssistant && "items-start",
+        message.metadata?.lifecycleState === "deleted" ? "bg-red-500" : "",
+        isStreaming && isAssistant && source === "cache" ? "opacity-50" : "", // TODO: better, we need a proper isStale state and not rely on my hacky debug source flag
+        source === "cache" ? "border border-yellow-500 p-2" : "",
+        source === "convex-persisted" ? "border border-orange-500 p-2" : "",
+        source === "optimistic" ? "border border-purple-500 p-2" : "",
+        source === "http-stream" ? "border border-green-500 p-2" : "",
+        source === "convex-stream" ? "border border-blue-500 p-2" : "",
         className
       )}
       {...props}

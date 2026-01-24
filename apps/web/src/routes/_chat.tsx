@@ -5,7 +5,7 @@ import { ScrollToBottomProvider } from "@/components/ui-custom/chat/hooks/use-sc
 import { ChatDraftProvider } from "@/hooks/use-chat-draft";
 import { ChatInputProvider } from "@/hooks/use-chat-input";
 import { ChatNavProvider } from "@/hooks/use-chat-nav";
-import { UseChatProvider } from "@/hooks/use-messages";
+import { UseChatProvider } from "@/hooks/use-messages-legacy";
 import { preloadUserPreferences } from "@/hooks/use-preload";
 import { ModelSelectorProvider } from "@/hooks/use-user-preferences";
 

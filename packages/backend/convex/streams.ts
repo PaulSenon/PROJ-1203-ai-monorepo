@@ -121,7 +121,6 @@ export async function INTERNAL_GetStreamDelta(
   const firstDelta = streamDeltas.at(0);
   const lastDelta = streamDeltas.at(-1);
   if (!(lastDelta && firstDelta)) {
-    console.warn("No deltas found for stream", streamId);
     // TODO: don't know yet if we should return null or empty delta. I do this for now, but if makes sense to return something else for better client dx, feel free to change this.
     return null;
   }

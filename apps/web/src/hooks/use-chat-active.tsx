@@ -18,7 +18,9 @@ import { useCvxMutationAuthV3 } from "./queries/convex/utils/use-convex-mutation
 import { useThread } from "./queries/use-chat-active-queries";
 import { useChatInputActions } from "./use-chat-input";
 import { useChatNav } from "./use-chat-nav";
-import { useChatContext, useMessages } from "./use-messages";
+import { useMessages } from "./use-messages";
+import { useChatContext } from "./use-messages-legacy";
+import { getLiveStatusKind, useStreamOwnership } from "./use-stream-ownership";
 
 type ActiveThreadState = {
   uuid: string;
@@ -126,13 +128,27 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     isStale: isThreadStale,
   } = useThread(isSkip ? "skip" : chatNav.id);
 
+  const { isLocalOwned, markOwned, clearOwnership } = useStreamOwnership({
+    threadUuid: isSkip ? "skip" : chatNav.id,
+    liveStatus: thread?.liveStatus,
+    isThreadPending,
+  });
+
+  const liveStatusKind = getLiveStatusKind(thread?.liveStatus);
+  const resumeStreamEnabled =
+    !(isSkip || isThreadPending || isLocalOwned) &&
+    liveStatusKind === "ongoing";
+
   const {
     messages,
     isPending: isMessagesPending,
     isStale: isMessagesStale,
     applyOptimisticPatch,
     revertOptimisticPatch,
-  } = useMessages(isSkip ? "skip" : chatNav.id);
+  } = useMessages({
+    threadUuid: isSkip ? "skip" : chatNav.id,
+    resumeStreamEnabled,
+  });
 
   const isPending = isSkip ? false : isThreadPending || isMessagesPending;
   const isStale = isSkip ? false : isThreadStale || isMessagesStale;
@@ -163,6 +179,9 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     onFinish: () => {
       console.log("DEBUG123: onFinish !!!!!!");
     },
+    onError: () => {
+      clearOwnership();
+    },
   });
 
   const __sendMessageInternal = useCallback(
@@ -170,6 +189,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       if (chatNav.isNew) chatNav.persistNewChatIdToUrl();
       // TODO: save cleared input to restore in case of error
       inputActions.clear();
+      console.log("TOTO123: UPSERTING THREAD...");
       const upsertPromise = upsertThread({
         threadUuid: chatNav.id,
         patch: {
@@ -180,10 +200,14 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       let patchId: string | undefined;
       console.log("DEBUG123: __sendMessageInternal", chatNav.id);
       try {
+        console.log("TOTO123: APPLIED OPTIMISTIC PATCH", uiMessage);
         patchId = applyOptimisticPatch(uiMessage);
+        console.log("TOTO123: SDK SET SDK MESSAGES []");
         sdkSetMessages([]);
+        markOwned();
         await sdkSendMessage(uiMessage);
       } catch (error) {
+        clearOwnership();
         console.error("error while sending message", error);
 
         // upsertThread might throw if not allowed (because already streaming)
@@ -199,16 +223,13 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
           console.error("error while upserting thread", _error);
         }
       } finally {
+        console.log("TOTO123: REVERTING OPTIMISTIC PATCH", patchId);
         if (patchId) revertOptimisticPatch(patchId);
-
+        sdkSetMessages([]);
         // upsertThread might throw if not allowed (because already streaming)
-        try {
-          await upsertPromise;
-        } catch (_error) {
-          // clear messages shown by optimistic patch only because failure
-          sdkSetMessages([]);
-          console.error("error while upserting thread", _error);
-        }
+        await upsertPromise.catch((error) => {
+          console.error("error while upserting thread", error);
+        });
 
         console.log("TOTO123: UPSERTED THREAD");
       }
@@ -223,6 +244,8 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       sdkSetMessages,
       applyOptimisticPatch,
       revertOptimisticPatch,
+      markOwned,
+      clearOwnership,
     ]
   );
 
@@ -241,14 +264,15 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
           lifecycleState: "active",
         },
       };
-      if (
-        thread?.liveStatus === "streaming" ||
-        thread?.liveStatus === "pending"
-      ) {
-        setMessagesQueue((prev) => [...prev, uiMessage]);
-      } else {
-        return __sendMessageInternal(uiMessage);
-      }
+      // TODO: enable queuing later
+      // if (
+      //   thread?.liveStatus === "streaming" ||
+      //   thread?.liveStatus === "pending"
+      // ) {
+      //   setMessagesQueue((prev) => [...prev, uiMessage]);
+      // } else {
+      return __sendMessageInternal(uiMessage);
+      // }
     },
     [__sendMessageInternal, thread?.liveStatus]
   );
@@ -312,6 +336,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         }
         patchId = applyOptimisticPatch(messagesToRemovePatched);
         sdkSetMessages([message]);
+        markOwned();
         await sdkRegenerate({
           messageId: message.id,
           metadata: {
@@ -319,6 +344,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
           },
         });
       } catch (error) {
+        clearOwnership();
         console.error("error while regenerating message", error);
         await upsertPromise;
         await upsertThread({
@@ -329,7 +355,10 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         });
       } finally {
         if (patchId) revertOptimisticPatch(patchId);
-        await upsertPromise;
+        sdkSetMessages([]); // TODO if we keep this we might remove the one in catch below
+        await upsertPromise.catch((error) => {
+          console.error("error while upserting thread", error);
+        });
       }
     },
     [
@@ -340,6 +369,8 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       sdkSetMessages,
       applyOptimisticPatch,
       revertOptimisticPatch,
+      markOwned,
+      clearOwnership,
     ]
   );
 
