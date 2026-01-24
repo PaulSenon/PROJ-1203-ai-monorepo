@@ -5,24 +5,24 @@ import type {
   RequestForQueries,
   UsePaginatedQueryReturnType,
 } from "convex/react";
+import { useQuery as useConvexQueryNoCache } from "convex/react";
 import type { FunctionReference, FunctionReturnType } from "convex/server";
 import {
-  usePaginatedQuery,
-  useQueries,
-  useQuery,
+  usePaginatedQuery as useConvexPaginatedQueryCached,
+  useQueries as useConvexQueriesCached,
+  useQuery as useConvexQueryCached,
 } from "convex-helpers/react/cache/hooks";
 import { useAuth } from "@/hooks/use-auth";
 
-/**
- * Add auth check to convex query hooks
- */
-export function useCvxQueryAuth<Query extends FunctionReference<"query">>(
+export function useCvxQueryAuthNoCache<
+  Query extends FunctionReference<"query">,
+>(
   query: Query,
   ...queryArgs: OptionalRestArgsOrSkip<Query>
 ): FunctionReturnType<Query> | undefined {
   const { isReadyToUseConvex } = useAuth();
 
-  const result = useQuery(
+  const result = useConvexQueryNoCache(
     query,
     ...(isReadyToUseConvex ? queryArgs : ["skip"])
   );
@@ -30,7 +30,26 @@ export function useCvxQueryAuth<Query extends FunctionReference<"query">>(
   return result;
 }
 
-export function useCvxPaginatedQueryAuth<Query extends PaginatedQueryReference>(
+/**
+ * Add auth check to convex query hooks
+ */
+export function useCvxQueryAuthCached<Query extends FunctionReference<"query">>(
+  query: Query,
+  ...queryArgs: OptionalRestArgsOrSkip<Query>
+): FunctionReturnType<Query> | undefined {
+  const { isReadyToUseConvex } = useAuth();
+
+  const result = useConvexQueryCached(
+    query,
+    ...(isReadyToUseConvex ? queryArgs : ["skip"])
+  );
+
+  return result;
+}
+
+export function useCvxPaginatedQueryAuthCached<
+  Query extends PaginatedQueryReference,
+>(
   query: Query,
   args: PaginatedQueryArgs<Query> | "skip",
   options: {
@@ -39,7 +58,7 @@ export function useCvxPaginatedQueryAuth<Query extends PaginatedQueryReference>(
   }
 ): UsePaginatedQueryReturnType<Query> {
   const { isReadyToUseConvex } = useAuth();
-  const result = usePaginatedQuery(
+  const result = useConvexPaginatedQueryCached(
     query,
     isReadyToUseConvex ? args : "skip",
     options
@@ -49,11 +68,11 @@ export function useCvxPaginatedQueryAuth<Query extends PaginatedQueryReference>(
 }
 
 // TODO: also do cache for queries
-export function useCvxQueriesAuth(
+export function useCvxQueriesAuthCached(
   queries: RequestForQueries
   // biome-ignore lint/suspicious/noExplicitAny: needed any
 ): Record<string, any | undefined | Error> {
   const { isReadyToUseConvex } = useAuth();
-  const results = useQueries(isReadyToUseConvex ? queries : {});
+  const results = useConvexQueriesCached(isReadyToUseConvex ? queries : {});
   return results;
 }

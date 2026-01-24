@@ -295,10 +295,10 @@ export const pushStreamDelta = mutationWithRLS({
  * @returns {null} if no stream found
  * @returns {...} if stream found
  */
-export const listThreadStreamingDelta = queryWithRLS({
+export const getThreadStreamingDelta = queryWithRLS({
   args: {
     threadUuid: v.string(),
-    start: v.optional(v.number()),
+    start: v.number(),
   },
   handler: async (
     ctx,
@@ -312,7 +312,7 @@ export const listThreadStreamingDelta = queryWithRLS({
     } | null;
   } | null> => {
     const user = await INTERNAL_getCurrentUserOrThrow(ctx);
-    const { threadUuid, start = 0 } = args;
+    const { threadUuid, start } = args;
 
     // 1. resolve thread id from uuid
     const thread = await InternalFindThreadByUuid(ctx, {

@@ -12,15 +12,15 @@ import type {
 import type { FunctionReference, FunctionReturnType } from "convex/server";
 import { useMemo, useRef } from "react";
 import {
-  useCvxPaginatedQueryAuth,
-  useCvxQueryAuth,
+  useCvxPaginatedQueryAuthCached,
+  useCvxQueryAuthCached,
 } from "./use-convex-query-0-auth";
 
 export function useCvxQueryStable<Query extends FunctionReference<"query">>(
   query: Query,
   ...queryArgs: OptionalRestArgsOrSkip<Query>
 ): FunctionReturnType<Query> | undefined {
-  const result = useCvxQueryAuth(query, ...queryArgs);
+  const result = useCvxQueryAuthCached(query, ...queryArgs);
   const stored = useRef(result);
 
   if (result !== undefined) {
@@ -39,7 +39,7 @@ export function useCvxPaginatedQueryStable<
     // latestPageSize?: "grow" | "fixed";
   }
 ): UsePaginatedQueryReturnType<Query> & { isPending: boolean } {
-  const res = useCvxPaginatedQueryAuth(query, args, options);
+  const res = useCvxPaginatedQueryAuthCached(query, args, options);
 
   const stored = useRef(res.results);
 

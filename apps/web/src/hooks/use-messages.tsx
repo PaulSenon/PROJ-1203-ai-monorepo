@@ -1,8 +1,10 @@
 import { createUiMessageFromChunks } from "@ai-monorepo/ai/libs/createUiMessageFromChunks";
 import type {
   MyUIMessage,
+  MyUIMessageChunk,
   MyUIMessageMetadata,
 } from "@ai-monorepo/ai/types/uiMessage";
+import type { Id } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { useChat } from "@ai-sdk/react";
 import type {
   ChatOnDataCallback,
@@ -10,6 +12,7 @@ import type {
   ChatOnFinishCallback,
   ChatOnToolCallCallback,
 } from "ai";
+import dedent from "dedent";
 import {
   createContext,
   type ReactNode,
@@ -20,71 +23,147 @@ import {
   useRef,
   useState,
 } from "react";
-import { UserCache } from "@/lib/cache/UserCache";
 import { OrpcChatTransport } from "@/lib/chat/OrpcChatTransport";
 import { cvx } from "@/lib/convex/queries";
 import type { Prettify } from "@/lib/utils";
-import { useCvxPaginatedQueryAuth } from "./queries/convex/utils/use-convex-query-0-auth";
+import { useCvxQueryAuthNoCache } from "./queries/convex/utils/use-convex-query-0-auth";
 import { useCvxPaginatedQueryStable } from "./queries/convex/utils/use-convex-query-1-stable";
-import { fetchPaginatedQuery } from "./queries/convex/utils/use-convex-query-2-cached";
 import { useChatNav } from "./use-chat-nav";
 import { useUserCacheEntryOnce } from "./use-user-cache";
 import { useFpsThrottledValue } from "./utils/use-fps-throttled-state";
 
-function useStreamingMessages(threadUuid: string | "skip") {
+function useStreamingUiMessageChunks(threadUuid: string | "skip") {
   const isSkip = threadUuid === "skip";
-  const streamingMessagesChunks = useCvxPaginatedQueryAuth(
+
+  const [uiMessageChunks, setUiMessageChunks] = useState<MyUIMessageChunk[]>(
+    []
+  );
+  const [cursor, setCursor] = useState(0);
+  const streamIdRef = useRef<Id<"threadStreams"> | null>(null);
+
+  // IMPORTANT: no cache here super important
+  // otherwise will keep listening to the old cursor position reactively
+  // will accumulate N reactive queries for each cursor position all receiving
+  // all subsequent deltas impacting severely the egress, perf, and cache miss on convex.
+  // this design intend to trash and replace the n-1 reactive query crafting n query based on n-1 result.
+  // this is the pattern inspired from convex agent component streaming pattern,
+  // designed to avoid sending all previous chunk on each new delta. So we also shift the cursor
+  // while receiving delta and accumulate the previous received ones.
+  // this is the most elegant way yet to handle streaming-like with convex reactivity.
+  // but this adds quite a lot of complexity so be really careful when modifying this.
+  const result = /* DO NOT MODIFY THIS HOOK -> */ useCvxQueryAuthNoCache(
     ...cvx.query
-      .threadStreamingMessagesPaginated({ threadUuid })
+      .getThreadStreamingDelta({ threadUuid, start: cursor })
       .options.skipWhen(isSkip)
   );
 
-  const streamedMessagesPromises = useMemo(
-    () =>
-      Promise.all(
-        streamingMessagesChunks.results.map((chunks) =>
-          createUiMessageFromChunks<MyUIMessage>(chunks)
-        )
-      ),
-    [streamingMessagesChunks.results]
-  );
+  const isPending =
+    result === undefined && uiMessageChunks.length === 0 && cursor === 0;
 
-  const [streamedMessages, setStreamedMessages] = useState<
-    MyUIMessage[] | undefined
-  >(undefined);
   useEffect(() => {
-    if (isSkip) return;
-    if (streamingMessagesChunks.status === "LoadingFirstPage") return;
+    // skip if pending
+    if (result === undefined) return;
+    // reset state if no result
+    if (result === null) {
+      streamIdRef.current = null;
+      setUiMessageChunks([]);
+      setCursor(0);
+      return;
+    }
 
-    streamedMessagesPromises.then((m) => {
-      const filteredMessages = m.filter(
-        (m2): m2 is MyUIMessage => m2 !== undefined
+    // reset state if stream id changes
+    if (result.streamId !== streamIdRef.current) {
+      streamIdRef.current = result.streamId;
+      setUiMessageChunks([]);
+      setCursor(0);
+      return;
+    }
+
+    if (!result.delta) return; // skip if no delta yet
+    if (result.delta.chunks.length === 0) return; // skip if no chunks in delta
+    if (result.delta.start !== cursor) {
+      console.warn(
+        dedent`
+          Problem detected in convex resumed stream. 
+          We passed cursor [${cursor}] expecting the next delta to start with this value
+          but we received delta starting at [${result.delta.start}] instead.
+
+          if the received delta start is greater than passed cursor it means we probably skipped some chunks.
+            => this will be visible on the UI having missing parts in the rendered UIMessage.
+          if the received delta start is less than passed cursor it means we probably showed duplicate chunks.
+            => this might not be visible on the UI as the UIMessage reconstruction from chunks might deduplicate them.
+          
+          This is still a critical problem that must be addressed. 
+          You might want to investigate up to the delta streamer logic in api backend.
+        `,
+        { cursor, result }
       );
-      setStreamedMessages(filteredMessages);
-    });
-  }, [streamedMessagesPromises, isSkip, streamingMessagesChunks.status]);
+    }
+    if (result.delta.end <= cursor) return; // skip cursor update that is not strictly increasing
 
-  const throttledStreamedMessages = useFpsThrottledValue(
-    streamedMessages === undefined ? "skip" : streamedMessages,
+    setUiMessageChunks((prev) =>
+      result.delta ? prev.concat(result.delta.chunks) : prev
+    );
+    setCursor(result.delta.end);
+  }, [result, cursor]);
+
+  return useMemo(
+    () => ({
+      messageChunks: uiMessageChunks,
+      streamId: streamIdRef.current,
+      isPending: isSkip ? false : isPending,
+    }),
+    [uiMessageChunks, isPending, isSkip]
+  );
+}
+
+function useStreamingUiMessage(threadUuid: string | "skip") {
+  const isSkip = threadUuid === "skip";
+  const stream = useStreamingUiMessageChunks(threadUuid);
+
+  // 1. throttle the message chunks updates to 5fps
+  const throttledMessageChunks = useFpsThrottledValue(
+    stream.isPending ? "skip" : stream.messageChunks,
     {
       maxFps: 5,
     }
   );
 
+  // The final UIMessage state
+  const [streamedMessage, setStreamedMessage] = useState<
+    MyUIMessage | undefined
+  >(undefined);
+
+  // We react to throttledMessageChunks updates and create the UIMessage from chunks.
+  // We must handle potential race conditions by not allowing old resolving promises to set
+  // the state after the new one has been created.
+  const seq = useRef(0); // to avoid race conditions
+  useEffect(() => {
+    if (throttledMessageChunks === undefined) {
+      setStreamedMessage(undefined);
+      return;
+    }
+
+    const id = ++seq.current; // to avoid race conditions
+    (async () => {
+      const msg = await createUiMessageFromChunks<MyUIMessage>(
+        throttledMessageChunks
+      );
+      if (id === seq.current) setStreamedMessage(msg); // to avoid race conditions
+    })();
+  }, [throttledMessageChunks]);
+
   return useMemo(
     () => ({
-      results: throttledStreamedMessages ?? [],
-      isLoading: streamingMessagesChunks.isLoading,
-      isPending: throttledStreamedMessages === undefined,
-      loadMore: streamingMessagesChunks.loadMore,
-      status: streamingMessagesChunks.status,
+      messages:
+        stream.isPending || streamedMessage === undefined
+          ? []
+          : [streamedMessage], // TODO: skip being array
+      isPending: isSkip
+        ? false
+        : stream.isPending || streamedMessage === undefined,
     }),
-    [
-      streamingMessagesChunks.isLoading,
-      streamingMessagesChunks.status,
-      streamingMessagesChunks.loadMore,
-      throttledStreamedMessages,
-    ]
+    [stream.isPending, streamedMessage, isSkip]
   );
 }
 
@@ -101,64 +180,65 @@ function createCacheKey(threadUuid: string) {
   return `messages:${threadUuid}` as const;
 }
 
+// TODO: wasn't used and need refactoring since we refactored stream resume
 // TODO: we are not reusing things properly. If we change anything in the messages construct process without reflecting changes here, we will have discrepancies...
 // TODO: refactor with TS first mindset and then implement to react to we can reuse core.
 // Goals:
 // - single "useUnifiedMessages" logic
 // - single source of queries
 // - single source of streamingMessages query parsing (createUiMessageFromChunks)
-export async function preloadMessages(threadUuid: string) {
-  const cacheKey = createCacheKey(threadUuid);
+// export async function preloadMessages(threadUuid: string) {
+//   const cacheKey = createCacheKey(threadUuid);
 
-  // 1. check cache entry
-  const userCache = UserCache.getInstance();
-  const cacheEntry = userCache.entry<MyUIMessage[]>(cacheKey);
-  const value = await cacheEntry.get();
-  if (value !== undefined) {
-    console.log("DEBUG123: CACHE HIT", { cacheKey, value });
-    return value;
-  }
+//   // 1. check cache entry
+//   const userCache = UserCache.getInstance();
+//   const cacheEntry = userCache.entry<MyUIMessage[]>(cacheKey);
+//   const value = await cacheEntry.get();
+//   if (value !== undefined) {
+//     console.log("DEBUG123: CACHE HIT", { cacheKey, value });
+//     return value;
+//   }
 
-  // 2. if not found, fetch it
-  // 2.1 fetch persisted messages
-  const persistedMessagesPromise = fetchPaginatedQuery(
-    ...cvx.query.threadMessagesPaginated({ threadUuid }).options.neverSkip()
-  );
-  const streamingMessagesPromise = fetchPaginatedQuery(
-    ...cvx.query
-      .threadStreamingMessagesPaginated({ threadUuid })
-      .options.neverSkip()
-  )
-    .then((deltas) =>
-      Promise.all(
-        deltas.map((chunks) => createUiMessageFromChunks<MyUIMessage>(chunks))
-      )
-    )
-    .then((messages) =>
-      messages.filter((m): m is MyUIMessage => m !== undefined)
-    );
+//   // 2. if not found, fetch it
+//   // 2.1 fetch persisted messages
+//   const persistedMessagesPromise = fetchPaginatedQuery(
+//     ...cvx.query.threadMessagesPaginated({ threadUuid }).options.neverSkip()
+//   );
+//   const streamingMessagesPromise = fetchPaginatedQuery(
+//     ...cvx.query
+//       .threadStreamingMessagesPaginated({ threadUuid })
+//       .options.neverSkip()
+//   )
+//     .then((deltas) =>
+//       Promise.all(
+//         deltas.map((chunks) => createUiMessageFromChunks<MyUIMessage>(chunks))
+//       )
+//     )
+//     .then((messages) =>
+//       messages.filter((m): m is MyUIMessage => m !== undefined)
+//     );
 
-  const [persistedMessages, streamingMessages] = await Promise.all([
-    persistedMessagesPromise,
-    streamingMessagesPromise,
-  ]);
+//   const [persistedMessages, streamingMessages] = await Promise.all([
+//     persistedMessagesPromise,
+//     streamingMessagesPromise,
+//   ]);
 
-  const { list, indexMap } = processPersistedMessages(persistedMessages);
-  for (const msg of streamingMessages) {
-    const existingIndex = indexMap.get(msg.id);
-    if (existingIndex !== undefined) {
-      list[existingIndex] = msg;
-    } else {
-      list.push(msg);
-    }
-  }
+//   const { list, indexMap } = processPersistedMessages(persistedMessages);
+//   for (const msg of streamingMessages) {
+//     const existingIndex = indexMap.get(msg.id);
+//     if (existingIndex !== undefined) {
+//       list[existingIndex] = msg;
+//     } else {
+//       list.push(msg);
+//     }
+//   }
 
-  const res = list.sort(compareMessages);
+//   const res = list.sort(compareMessages);
 
-  cacheEntry.set(res);
+//   cacheEntry.set(res);
 
-  return res;
-}
+//   return res;
+// }
 
 export function useMessages(threadUuid: string | "skip") {
   const isSkip = threadUuid === "skip";
@@ -167,19 +247,10 @@ export function useMessages(threadUuid: string | "skip") {
   const paginatedMessages = usePersistedMessages(threadUuid);
 
   // 2. Get streaming messages (no cache)
-  const streamedMessages = useStreamingMessages(threadUuid);
+  const streamedMessages = useStreamingUiMessage(threadUuid);
 
   // 3. Get HTTP streaming messages (no cache)
   const httpStreamingMessages = useChatContext();
-
-  const loadMore = useCallback(
-    (numItems: number) => {
-      paginatedMessages.loadMore(numItems);
-      // TODO: I don't think we need to also load this but here is is just in case
-      streamedMessages.loadMore(numItems);
-    },
-    [paginatedMessages.loadMore, streamedMessages.loadMore]
-  );
 
   type PatchId = string;
   const optimisticPatches = useRef<Map<PatchId, MyUIMessage[]>>(new Map());
@@ -209,7 +280,7 @@ export function useMessages(threadUuid: string | "skip") {
   // 6. Merge all messages
   const messages = useUnifiedMessages(
     patchedPersistedMessages,
-    streamedMessages.results,
+    streamedMessages.messages,
     httpStreamingMessages.messages
   );
 
@@ -224,11 +295,11 @@ export function useMessages(threadUuid: string | "skip") {
   // (stable) stale must be true when data are from cache
   const isStale = isSkip ? false : isQueryPending && !cache.isPending;
   // loading turns back to true whenever data loads
-  const isLoading = paginatedMessages.isLoading || streamedMessages.isLoading;
+  const isLoading = paginatedMessages.isLoading;
 
   const isStreaming =
     httpStreamingMessages.status === "streaming" ||
-    streamedMessages.results.length > 0;
+    streamedMessages.messages.length > 0;
 
   const paginatedStatus = paginatedMessages.status; // only the persisted messages status
 
@@ -243,7 +314,7 @@ export function useMessages(threadUuid: string | "skip") {
   const staleMessages = isStale ? (cache.snapshot ?? []) : messages;
 
   useEffect(() => {
-    console.log("DEBUG123: SDLFKSKDJFLKSDJF", {
+    console.log("TOTO123: SDLFKSKDJFLKSDJF", {
       isQueryPending,
       isPending,
       isLoading,
@@ -268,7 +339,7 @@ export function useMessages(threadUuid: string | "skip") {
       isPending,
       isLoading,
       isStale,
-      loadMore,
+      loadMore: paginatedMessages.loadMore,
       paginatedStatus,
       streamingStatus: httpStreamingMessages.status,
       isStreaming,
@@ -279,7 +350,7 @@ export function useMessages(threadUuid: string | "skip") {
       staleMessages,
       isStale,
       isLoading,
-      loadMore,
+      paginatedMessages.loadMore,
       paginatedStatus,
       isStreaming,
       httpStreamingMessages.status,

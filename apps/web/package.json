@@ -66,6 +66,7 @@
     "convex": "catalog:convex",
     "convex-helpers": "catalog:convex",
     "date-fns": "^4.1.0",
+    "dedent": "^1.7.1",
     "embla-carousel-react": "^8.6.0",
     "idb": "^8.0.3",
     "input-otp": "^1.4.2",
