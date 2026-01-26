@@ -4,3 +4,8 @@
 - 2026-01-26: reserve streaming preview height + bottom anchor demo stream
 - 2026-01-26: demo stream by paragraph chunks
 - 2026-01-26: revert demo chunk stream to char stream
+- 2026-01-26: add error/cancelled status block + retry binding in ui-custom ChatMessage
+- 2026-01-26: redesign status UI + status actions (retry/continue/retry-with-model)
+- 2026-01-26: move status mapping/actions into chat-message-status adapter
+- 2026-01-26: add compound StatusMessage primitive + ChatStatusMessage composition
+- 2026-01-26: split error vs cancelled blocks; adapter only routes

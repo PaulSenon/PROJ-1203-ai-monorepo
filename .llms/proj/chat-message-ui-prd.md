@@ -36,6 +36,7 @@ Provide a stable, no-CLS message layout with clear states. Show a shimmer loader
 26. As an accessibility user, I can toggle reasoning with keyboard and accessible labels.
 27. As QA, I can reproduce each state using a demo message set.
 28. As a developer, I do not introduce horizontal overflow regressions in message content.
+29. As a user, I can see actions on my own messages, distinct from assistant actions.
 
 ## Implementation Decisions
 
@@ -45,18 +46,29 @@ Provide a stable, no-CLS message layout with clear states. Show a shimmer loader
 - Reasoning preview row: fixed-height second row when collapsed and reasoning is streaming with no response text. Preview shows a sliding window of reasoning text. Use a cheap text window (tail slice) and a fade mask to imply motion. Preview height is a configurable prop (default 2 lines).
 - Reasoning expanded: when open, show full reasoning in a subtle boxed container (border, soft background, padding). No transition animation; open state is user-controlled only and persists across streaming end.
 - Response rendering: keep existing response component unchanged and in normal flow. When response begins, reasoning preview row is removed, letting response appear in the same visual space without CLS.
-- Error/cancelled status: render inside message content after all parts (reasoning and response). Always render if status is error or cancelled, even when there is no content. Expose a retry callback binding at layer 4 (pluggable to mock logger for now).
+- Error/cancelled status: render inside message content after all parts (reasoning and response). Always render if status is error or cancelled, even when there is no content. Expose a status actions array at layer 4 (retry, retry with model, continue) and keep the error message builder + translations.
 - Duration formatting: add a pure formatter for milliseconds with these rules: <1000ms shows "Nms"; <60s shows "Xs" with 1 decimal; <60m shows "Xm Ys"; <24h shows "Xh Ym"; otherwise "Xd Yh". Use a mock duration value for now; real metadata wiring is out of scope.
 - Footer layout: left aligned, wrap enabled, actions first then stats. Provide an overflow actions trigger that can be enabled at any breakpoint (including desktop). Provide a right-aligned circular "i" info button on mobile that opens a popover with all stats; desktop shows all stats inline by default. No JS breakpoint detection; use responsive CSS classes.
 - Footer configuration API: expose composable slots for primary and overflow actions/stats in layer 3. Layer 4 supplies ordered items and decides what goes in overflow. Order stays consistent across breakpoints; overflow trigger visibility is controlled by props and responsive classes.
+- Footer role composition: layer 4 composes separate action sets for user vs assistant footers (may reuse ActionItem definitions), with different final layout per role.
 - Footer API shape (layer 3):
   - actions: { primary: ActionItem[]; overflow?: ActionItem[]; overflowLabel?: string; showOverflowTrigger?: boolean; overflowTriggerClassName?: string }
   - stats: { primary: StatItem[]; overflow?: StatItem[]; overflowLabel?: string; showOverflowTrigger?: boolean; overflowTriggerClassName?: string }
   - overflow trigger uses a button; default label "More" for actions; info trigger uses circular "i" icon for stats. Visibility is CSS-driven (e.g., "sm:hidden") not JS.
   - ActionItem = { key, icon, label, onClick, disabled?, tooltip?, isDestructive? }
   - StatItem = { key, icon?, label }
-- Layering: keep registry components untouched (layer 1). Keep custom primitives in layer 2. Build styled composable chat pieces in layer 3 (reasoning block, footer groups, error banner). Build final chat message meta component in layer 4 using layer 3 pieces.
-- Error UI reuse: preserve the current dynamic error message builder and translation pattern. Split error UI into a presentational error block (layer 3) and a meta error adapter (layer 4) that maps metadata and actions.
+- Layering (canonical):
+  - L1 external registries (immutable): `components/ui/*`, `components/ai-elements/*`. Only compose/wrap, never edit.
+  - L2 primitives (low opinion): `components/ui-custom/**/primitives/*`. No app hooks, no app types, no i18n mapping, no product copy, minimal styling.
+  - L3 composed UI (opinionated): `components/ui-custom/**` (non-primitives). Receive data/actions via props. No app hooks or app state.
+  - L4 app binding: `components/chat/**` or route-level. Uses hooks, maps metadata to props, selects i18n strings, builds action arrays.
+  - Placement rule: if it imports app hooks or app types or derives UI from metadata, it must be L4. If it hardcodes product copy or layout conventions, it is L3. If it is a small layout/behavior piece with minimal styles, it is L2.
+- Chat message file placement (within scope):
+  - L3: `components/ui-custom/chat/message-action.tsx`, `components/ui-custom/chat/message-actions.tsx`, `components/ui-custom/chat/message-content.tsx`, `components/ui-custom/chat/message-footer.tsx`, `components/ui-custom/chat/message-info.tsx`, `components/ui-custom/chat/message-infos.tsx`, `components/ui-custom/chat/message-status.tsx`, `components/ui-custom/chat/thinking-block.tsx`, `components/ui-custom/chat/code-block.tsx`.
+  - L4: `components/chat/chat-message.tsx`, `components/chat/chat-message-status.tsx`.
+- Error UI reuse: preserve the current dynamic error message builder and translation pattern. Split error UI into a presentational status block (layer 3) that uses an L2 status layout, and a meta status adapter (layer 4) that maps metadata and actions.
+- Status block composition: use a shadcn-like compound API (Root/Header/Content/Actions) built on the Alert primitive.
+- Status blocks are separate: `ChatMessageErrorBlock` (i18n error mapping + retry actions) and `ChatMessageCancelledBlock` (cancelled copy + continue action). L4 chooses which to render.
 - Prevent horizontal overflow: avoid new wrappers that introduce overflow-x issues; preserve existing code block behavior.
 - Iterative delivery: implement in small steps in this order: (1) reasoning block + loader/header rules + duration formatter, (2) error block layering + retry binding, (3) footer overflow controls + config API, (4) layer 4 message composition cleanup, (5) demo page updates to cover all states. Each step must keep the message component usable.
 - Demo page: evolve the existing component demo page to showcase all new states for the final message component; treat it as the primary manual QA surface.

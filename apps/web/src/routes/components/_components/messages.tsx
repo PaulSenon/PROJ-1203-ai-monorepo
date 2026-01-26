@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Message, MessageResponse } from "@/components/ai-elements/message";
+import { ChatMessage } from "@/components/chat/chat-message";
 import {
   Card,
   CardContent,
@@ -19,15 +20,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ChatMessage } from "@/components/ui-custom/chat/chat-message";
-import { ChatCodeBlock } from "@/components/ui-custom/chat/primitives/code-block";
-import { ChatMessageAction } from "@/components/ui-custom/chat/primitives/message-action";
-import { ChatMessageActions } from "@/components/ui-custom/chat/primitives/message-actions";
-import { ChatMessageContent } from "@/components/ui-custom/chat/primitives/message-content";
-import { ChatMessageFooter } from "@/components/ui-custom/chat/primitives/message-footer";
-import { ChatMessageInfo } from "@/components/ui-custom/chat/primitives/message-info";
-import { ChatMessageInfos } from "@/components/ui-custom/chat/primitives/message-infos";
-import { ThinkingBlock } from "@/components/ui-custom/chat/primitives/thinking-block";
+import { ChatCodeBlock } from "@/components/ui-custom/chat/code-block";
+import { ChatMessageAction } from "@/components/ui-custom/chat/message-action";
+import { ChatMessageActions } from "@/components/ui-custom/chat/message-actions";
+import { ChatMessageContent } from "@/components/ui-custom/chat/message-content";
+import { ChatMessageFooter } from "@/components/ui-custom/chat/message-footer";
+import { ChatMessageInfo } from "@/components/ui-custom/chat/message-info";
+import { ChatMessageInfos } from "@/components/ui-custom/chat/message-infos";
+import { ThinkingBlock } from "@/components/ui-custom/chat/thinking-block";
 
 export const Route = createFileRoute("/components/_components/messages")({
   component: RouteComponent,
@@ -248,6 +248,8 @@ ___`;
 // Demo Helpers
 // ============================================================================
 
+const demoAction = (label: string) => () => console.log(`[demo] ${label}`);
+
 function Section({
   id,
   title,
@@ -360,17 +362,31 @@ const assistantStreaming: MyUIMessage = {
   metadata: baseMeta("streaming"),
 };
 
+const assistantErrorEmtpy: MyUIMessage = {
+  id: "assistant-3",
+  role: "assistant",
+  parts: [],
+  metadata: { ...baseMeta("error"), error: { kind: "UNKNOWN_ERROR" } },
+};
+
 const assistantError: MyUIMessage = {
   id: "assistant-3",
   role: "assistant",
-  parts: [{ type: "text", text: "An error occurred while processing." }],
+  parts: [{ type: "text", text: SAMPLE_ASSISTANT_TEXT.slice(0, 200) }],
   metadata: { ...baseMeta("error"), error: { kind: "UNKNOWN_ERROR" } },
+};
+
+const assistantCancelledEmpty: MyUIMessage = {
+  id: "assistant-4",
+  role: "assistant",
+  parts: [],
+  metadata: baseMeta("cancelled"),
 };
 
 const assistantCancelled: MyUIMessage = {
   id: "assistant-4",
   role: "assistant",
-  parts: [{ type: "text", text: "Response was cancelled." }],
+  parts: [{ type: "text", text: SAMPLE_ASSISTANT_TEXT.slice(0, 200) }],
   metadata: baseMeta("cancelled"),
 };
 
@@ -388,7 +404,7 @@ const userMessage: MyUIMessage = {
 function MetaMessagesSection() {
   return (
     <Section
-      description="Meta ChatMessage component: maps UIMessage to primitives with actions/infos."
+      description="L4 ChatMessage component: maps UIMessage to L3 message blocks."
       id="meta-messages"
       title="Meta Messages"
     >
@@ -399,8 +415,8 @@ function MetaMessagesSection() {
       <DemoContainer label="Assistant completed (with stats)">
         <ChatMessage
           message={assistantCompleted}
-          onBranch={() => alert("Branch clicked")}
-          onRetry={() => alert("Retry clicked")}
+          onBranch={demoAction("Branch clicked")}
+          onRetry={demoAction("Retry clicked")}
         />
       </DemoContainer>
 
@@ -409,11 +425,35 @@ function MetaMessagesSection() {
       </DemoContainer>
 
       <DemoContainer label="Assistant error">
-        <ChatMessage message={assistantError} />
+        <ChatMessage
+          message={assistantError}
+          onRetry={demoAction("Retry clicked")}
+          onRetryWithModel={demoAction("Retry with model clicked")}
+        />
       </DemoContainer>
 
       <DemoContainer label="Assistant cancelled">
-        <ChatMessage message={assistantCancelled} />
+        <ChatMessage
+          message={assistantCancelled}
+          onContinue={demoAction("Continue clicked")}
+          onRetryWithModel={demoAction("Retry with model clicked")}
+        />
+      </DemoContainer>
+
+      <DemoContainer label="Assistant error (empty message)">
+        <ChatMessage
+          message={assistantErrorEmtpy}
+          onRetry={demoAction("Retry clicked")}
+          onRetryWithModel={demoAction("Retry with model clicked")}
+        />
+      </DemoContainer>
+
+      <DemoContainer label="Assistant cancelled (empty message)">
+        <ChatMessage
+          message={assistantCancelledEmpty}
+          onContinue={demoAction("Continue clicked")}
+          onRetryWithModel={demoAction("Retry with model clicked")}
+        />
       </DemoContainer>
     </Section>
   );
@@ -422,7 +462,7 @@ function MetaMessagesSection() {
 function PrimitiveCompositionSection() {
   return (
     <Section
-      description="Layer 1 primitives composed manually with ai-elements Message."
+      description="L3 message blocks composed with ai-elements Message (L1)."
       id="primitives"
       title="Primitive Composition"
     >
@@ -435,12 +475,12 @@ function PrimitiveCompositionSection() {
             <ChatMessageActions>
               <ChatMessageAction
                 icon={<CopyIcon className="size-4" />}
-                onClick={() => alert("Copy")}
+                onClick={demoAction("Copy clicked")}
                 tooltip="Copy"
               />
               <ChatMessageAction
                 icon={<RefreshCcwIcon className="size-4" />}
-                onClick={() => alert("Retry")}
+                onClick={demoAction("Retry clicked")}
                 tooltip="Retry"
               />
             </ChatMessageActions>

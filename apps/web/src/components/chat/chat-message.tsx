@@ -11,14 +11,15 @@ import {
 import { type ComponentProps, useMemo, useState } from "react";
 import { Message, MessageResponse } from "@/components/ai-elements/message";
 import { Shimmer } from "@/components/ai-elements/shimmer";
+import { ChatMessageAction } from "@/components/ui-custom/chat/message-action";
+import { ChatMessageActions } from "@/components/ui-custom/chat/message-actions";
+import { ChatMessageContent } from "@/components/ui-custom/chat/message-content";
+import { ChatMessageFooter } from "@/components/ui-custom/chat/message-footer";
+import { ChatMessageInfo } from "@/components/ui-custom/chat/message-info";
+import { ChatMessageInfos } from "@/components/ui-custom/chat/message-infos";
+import { ThinkingBlock } from "@/components/ui-custom/chat/thinking-block";
 import { cn } from "@/lib/utils";
-import { ChatMessageAction } from "./primitives/message-action";
-import { ChatMessageActions } from "./primitives/message-actions";
-import { ChatMessageContent } from "./primitives/message-content";
-import { ChatMessageFooter } from "./primitives/message-footer";
-import { ChatMessageInfo } from "./primitives/message-info";
-import { ChatMessageInfos } from "./primitives/message-infos";
-import { ThinkingBlock } from "./primitives/thinking-block";
+import { ChatMessageStatusAdapter } from "./chat-message-status";
 
 type ExtraStats = {
   modelId?: string;
@@ -30,6 +31,8 @@ type ExtraStats = {
 export type ChatMessageProps = ComponentProps<"div"> & {
   message: MyUIMessage;
   onRetry?: (message: MyUIMessage) => void;
+  onRetryWithModel?: (message: MyUIMessage) => void;
+  onContinue?: (message: MyUIMessage) => void;
   onCopy?: (message: MyUIMessage) => void;
   onBranch?: (message: MyUIMessage) => void;
 };
@@ -40,6 +43,8 @@ export function ChatMessage({
   className,
   message,
   onRetry,
+  onRetryWithModel,
+  onContinue,
   onCopy,
   onBranch,
   ...props
@@ -198,6 +203,12 @@ export function ChatMessage({
 
             return null;
           })}
+          <ChatMessageStatusAdapter
+            message={message}
+            onContinue={onContinue}
+            onRetry={onRetry}
+            onRetryWithModel={onRetryWithModel}
+          />
         </ChatMessageContent>
       </Message>
 
