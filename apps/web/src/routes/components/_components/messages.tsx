@@ -10,6 +10,7 @@ import {
   RefreshCcwIcon,
   ZapIcon,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Message, MessageResponse } from "@/components/ai-elements/message";
 import {
   Card,
@@ -76,6 +77,12 @@ The most important hooks to cover are:
 - useContext for context consumption
 
 I should also mention the rules of hooks since they're important for correct usage.`;
+
+const SAMPLE_REASONING_STREAM = `${SAMPLE_REASONING}
+
+To make this easier to follow, I will walk through a small example, then summarize the mental model.
+
+The key is that hooks let function components keep stateful logic without classes.`;
 
 const SAMPLE_CODE_TYPESCRIPT = `import { useState, useEffect, useCallback } from 'react';
 
@@ -284,6 +291,35 @@ function DemoContainer({
   );
 }
 
+const STREAM_TICK_MS = 80;
+const STREAM_CHUNK_SIZE = 10;
+
+function StreamingThinkingBlockDemo() {
+  const [index, setIndex] = useState(0);
+  const fullText = SAMPLE_REASONING_STREAM;
+  const isStreaming = true;
+
+  useEffect(() => {
+    if (index >= fullText.length) return undefined;
+
+    const timerId = setTimeout(() => {
+      setIndex((prev) => Math.min(prev + STREAM_CHUNK_SIZE, fullText.length));
+    }, STREAM_TICK_MS);
+
+    return () => clearTimeout(timerId);
+  }, [fullText.length, index]);
+
+  return (
+    <ThinkingBlock
+      hasResponseText={false}
+      isStreaming={isStreaming}
+      previewLines={1}
+    >
+      {fullText.slice(0, index)}
+    </ThinkingBlock>
+  );
+}
+
 // ============================================================================
 // Sample messages for ChatMessage meta component
 // ============================================================================
@@ -435,15 +471,15 @@ function ThinkingBlockSection() {
       title="Thinking Blocks"
     >
       <DemoContainer label="Collapsed (default)">
-        <ThinkingBlock duration={12}>{SAMPLE_REASONING}</ThinkingBlock>
+        <ThinkingBlock durationMs={12_000}>{SAMPLE_REASONING}</ThinkingBlock>
       </DemoContainer>
 
-      <DemoContainer label="Streaming state">
-        <ThinkingBlock isStreaming>{SAMPLE_REASONING}</ThinkingBlock>
+      <DemoContainer label="Streaming (mock)">
+        <StreamingThinkingBlockDemo />
       </DemoContainer>
 
       <DemoContainer label="Initially open">
-        <ThinkingBlock defaultOpen duration={8}>
+        <ThinkingBlock defaultOpen durationMs={8000}>
           {SAMPLE_REASONING}
         </ThinkingBlock>
       </DemoContainer>

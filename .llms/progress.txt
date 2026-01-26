@@ -1,0 +1,6 @@
+- 2026-01-26: reasoning block + loader/header rules + duration formatter (mock)
+- 2026-01-26: add streaming reasoning mock in messages demo
+- 2026-01-26: stabilize reasoning preview by bottom-clipping full stream
+- 2026-01-26: reserve streaming preview height + bottom anchor demo stream
+- 2026-01-26: demo stream by paragraph chunks
+- 2026-01-26: revert demo chunk stream to char stream

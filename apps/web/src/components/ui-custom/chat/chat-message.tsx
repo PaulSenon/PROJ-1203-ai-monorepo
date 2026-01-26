@@ -1,10 +1,5 @@
+import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import {
-  MyMetadataHelper,
-  type MyUIMessage,
-} from "@ai-monorepo/ai/types/uiMessage";
-import {
-  AlertCircleIcon,
-  BanIcon,
   CheckIcon,
   ClockIcon,
   CopyIcon,
@@ -14,8 +9,8 @@ import {
   ZapIcon,
 } from "lucide-react";
 import { type ComponentProps, useMemo, useState } from "react";
-import { Loader } from "@/components/ai-elements/loader";
 import { Message, MessageResponse } from "@/components/ai-elements/message";
+import { Shimmer } from "@/components/ai-elements/shimmer";
 import { cn } from "@/lib/utils";
 import { ChatMessageAction } from "./primitives/message-action";
 import { ChatMessageActions } from "./primitives/message-actions";
@@ -39,51 +34,7 @@ export type ChatMessageProps = ComponentProps<"div"> & {
   onBranch?: (message: MyUIMessage) => void;
 };
 
-type MessageStatus =
-  | "pending"
-  | "streaming"
-  | "completed"
-  | "error"
-  | "cancelled";
-
-function getStatus(message: MyUIMessage): MessageStatus {
-  const live = message.metadata?.liveStatus;
-  if (live === "pending") return "pending";
-  if (live === "streaming") return "streaming";
-  if (live === "error") return "error";
-  if (live === "cancelled") return "cancelled";
-  return "completed";
-}
-
-function StatusIndicator({ status }: { status: MessageStatus }) {
-  switch (status) {
-    case "pending":
-      return (
-        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-          <Loader size={14} />
-          <span>Thinking...</span>
-        </div>
-      );
-    case "streaming":
-      return null;
-    case "error":
-      return (
-        <div className="flex items-center gap-2 text-destructive text-sm">
-          <AlertCircleIcon className="size-4" />
-          <span>An error occurred</span>
-        </div>
-      );
-    case "cancelled":
-      return (
-        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-          <BanIcon className="size-4" />
-          <span>Response cancelled</span>
-        </div>
-      );
-    default:
-      return null;
-  }
-}
+const MOCK_THINKING_DURATION_MS = 8200;
 
 export function ChatMessage({
   className,
@@ -93,25 +44,33 @@ export function ChatMessage({
   onBranch,
   ...props
 }: ChatMessageProps) {
-  const status = getStatus(message);
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
   const [copied, setCopied] = useState(false);
 
-  const metadataHelper = useMemo(
-    () => new MyMetadataHelper(message.metadata),
-    [message.metadata]
-  );
-
   // TODO ref
-  const textContent = useMemo(
-    () =>
-      message.parts
-        .filter((part) => part.type === "text")
-        .map((part: { text?: string }) => part.text ?? "")
-        .join("\n"),
-    [message.parts]
-  );
+  const { hasReasoningContent, hasTextContent, textContent } = useMemo(() => {
+    let hasReasoning = false;
+    let hasText = false;
+    const textChunks: string[] = [];
+
+    for (const part of message.parts) {
+      if (part.type === "reasoning" && part.text?.trim()) {
+        hasReasoning = true;
+      }
+
+      if (part.type === "text" && part.text?.trim()) {
+        hasText = true;
+        textChunks.push(part.text ?? "");
+      }
+    }
+
+    return {
+      hasReasoningContent: hasReasoning,
+      hasTextContent: hasText,
+      textContent: textChunks.join("\n"),
+    };
+  }, [message.parts]);
 
   const handleCopy = async () => {
     if (onCopy) {
@@ -173,6 +132,9 @@ export function ChatMessage({
     message.metadata?.liveStatus === "pending" ||
     message.metadata?.liveStatus === "streaming";
 
+  const showThinkingLoader =
+    isAssistant && !hasReasoningContent && !hasTextContent;
+
   return (
     <div
       className={cn(
@@ -198,17 +160,23 @@ export function ChatMessage({
         from={message.role}
       >
         <ChatMessageContent variant={isUser ? "user" : "assistant"}>
-          {status !== "completed" && status !== "streaming" && (
-            <StatusIndicator status={status} />
+          {showThinkingLoader && (
+            <div className="flex min-h-6 items-center gap-2 text-muted-foreground text-sm">
+              <Shimmer as="span" duration={1}>
+                Thinking...
+              </Shimmer>
+            </div>
           )}
 
           {message.parts.map((part, i) => {
             if (part.type === "reasoning") {
+              if (!part.text?.trim()) return null;
               return (
                 <ThinkingBlock
                   defaultOpen={false}
-                  duration={metadataHelper.thinkingDuration}
-                  isStreaming={status === "streaming"}
+                  durationMs={MOCK_THINKING_DURATION_MS}
+                  hasResponseText={hasTextContent}
+                  isStreaming={isStreaming}
                   key={`reasoning-${i}`}
                 >
                   {part.text ?? ""}
@@ -217,6 +185,7 @@ export function ChatMessage({
             }
 
             if (part.type === "text") {
+              if (!part.text?.trim()) return null;
               return (
                 <MessageResponse
                   className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
