@@ -1,16 +1,16 @@
 import { useEffect } from "react";
+import { Conversation } from "@/components/ui-custom/chat/conversation";
 import { useAppLoadStatusActions } from "@/hooks/use-app-load-status";
 import {
   useActiveThreadMessages,
   useActiveThreadState,
 } from "@/hooks/use-chat-active";
 import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
-import { ChatMessage } from "../ui-custom/chat/chat-message";
 import {
   useScrollToBottomInit,
   useScrollToBottomState,
 } from "../ui-custom/chat/hooks/use-scroll-to-bottom";
-import { Conversation } from "../ui-custom/chat/primitives/conversation";
+import { ChatMessage } from "./chat-message";
 
 // TODO: move
 function InitialScroll() {

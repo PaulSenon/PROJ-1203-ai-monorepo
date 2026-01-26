@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from "motion/react";
+import { ScrollToBottomButton } from "@/components/ui-custom/chat/scroll-to-bottom-button";
 import {
   useScrollToBottomActions,
   useScrollToBottomState,
 } from "../ui-custom/chat/hooks/use-scroll-to-bottom";
-import { ScrollToBottomButton } from "../ui-custom/chat/primitives/scroll-to-bottom-button";
 import { StickyContainer } from "../ui-custom/sticky-container";
 import { ChatFeed } from "./chat-feed";
 import { ChatInput } from "./chat-input/chat-input";

@@ -24,6 +24,14 @@ When user ask technical question, do not implement anything and instead, gather 
 - for styling always use tailwind respecting the rules and themes.
 - Never barrel export anything (not allowed by linter rules) nor reexport anything from external libraries (not allowed by linter rules). So unless necessary we should have index.ts like files in folders
 
+## Component architecture layers
+
+- L1 external registries (immutable): `components/ui/*`, `components/ai-elements/*`. Only compose/wrap, never edit.
+- L2 primitives (low opinion): `components/ui-custom/**/primitives/*`. No app hooks, no app types, no i18n mapping, no product copy, minimal styling.
+- L3 composed UI (opinionated): `components/ui-custom/**` (non-primitives). Receive data/actions via props. No app hooks or app state.
+- L4 app binding: `components/chat/**` or route-level. Uses hooks, maps metadata to props, selects i18n strings, builds action arrays.
+- Placement rule: if it imports app hooks or app types or derives UI from metadata, it must be L4. If it hardcodes product copy or layout conventions, it is L3. If it is a small layout/behavior piece with minimal styles, it is L2.
+
 ## UI/UX Design guidelines
 
 - Minimalism:
