@@ -80,3 +80,17 @@ ai-monorepo/
 - `pnpm dev:server`: Start only the server
 - `pnpm check-types`: Check TypeScript types across all apps
 - `cd apps/web && pnpm generate-pwa-assets`: Generate PWA assets
+
+## Agent Skills
+
+To install skills (agent skills) please uses [https://skills.sh/] and `npx skills` command.
+
+Do install for:
+
+- Claude Code
+- Codex
+- OpenCode
+- Github
+- Cursor
+
+cli documentation: [https://skills.sh/docs/cli]
