@@ -49,6 +49,7 @@ Problems:
 - [x] input: rewire working chat input
 - [ ] input: draft broken
 - [x] conversation: setup initial scroll bottom (current setup is not working)
+  - [ ] BUG FOUND: when complex messages (code block) the scroll to bottom is not working. Perhaps the rendering happens after the initial scroll is triggered. Need to investigate more and build something that is never dependent of rendering speed of main content. => looks like the rendering of code block is async or something. See if we can at least show a placeholder and remove all cls (check last ai-elements version just in case)
 - [ ] conversation: setup submit min-heigh and scroll feature
 - [ ] conversation: add paginated lazy loading
 - [ ] conversation: wire back the error and retry message component
