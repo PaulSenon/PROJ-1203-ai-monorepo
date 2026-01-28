@@ -40,6 +40,7 @@ clean-soft: ## keep volumes
 clean-hard: ## Clean everything (containers, volumes, dependencies)
 	$(MAKE) pnpm-clean
 	$(MAKE) docker-clean-hard
+	$(MAKE) llms-ref-clear
 
 clean-install: ## Clean everything (containers, volumes, dependencies)
 	$(MAKE) pnpm-clean
@@ -107,6 +108,50 @@ convex-deploy: ## Deploy Convex functions to production
 corepack-update:
 	$(call run_in_container_smart,app,bash -c "corepack prepare pnpm@latest --activate && corepack use pnpm@latest")
 	$(MAKE) install
+
+# LLM REF (git submodules) HELPERS
+# Usage examples:
+#   make llms-ref-add url=https://github.com/vercel/ai-elements.git name=ai-elements
+#   make llms-ref-fetch-all
+#   make llms-ref-fetch-one name=ai-elements
+#   make llms-ref-pin-tag name=ai-elements tag=v0.1.2
+#   make llms-ref-remove name=ai-elements
+#   make llms-ref-clear
+
+LLMS_REF_DIR := .llms/git-references
+LLMS_REF_PATH = $(LLMS_REF_DIR)/$(name)
+
+llms-ref-fetch-all: ## Fetch/init all LLM reference submodules
+	git submodule update --init --recursive
+
+llms-ref-fetch-one: ## Fetch/init one LLM reference submodule (name=...)
+	@test -n "$(name)" || (echo "Missing: name=..."; exit 1)
+	git submodule update --init "$(LLMS_REF_PATH)"
+
+llms-ref-add: ## Add a new LLM reference submodule (url=... name=...)
+	@test -n "$(url)"  || (echo "Missing: url=..."; exit 1)
+	@test -n "$(name)" || (echo "Missing: name=..."; exit 1)
+	mkdir -p "$(LLMS_REF_DIR)"
+	git submodule add "$(url)" "$(LLMS_REF_PATH)"
+
+llms-ref-pin-tag: ## Pin one LLM reference submodule to a specific tag (name=... tag=...)
+	@test -n "$(name)" || (echo "Missing: name=..."; exit 1)
+	@test -n "$(tag)"  || (echo "Missing: tag=..."; exit 1)
+	git submodule update --init "$(LLMS_REF_PATH)"
+	cd "$(LLMS_REF_PATH)" && git fetch --tags && git checkout "$(tag)" && cd - >/dev/null
+	@echo "Pinned $(LLMS_REF_PATH) to tag $(tag). Now commit the parent repo pointer with: git add $(LLMS_REF_PATH)"
+
+llms-ref-remove: ## Remove one LLM reference submodule cleanly (name=...)
+	@test -n "$(name)" || (echo "Missing: name=..."; exit 1)
+	git submodule deinit -f "$(LLMS_REF_PATH)" || true
+	git rm -f "$(LLMS_REF_PATH)" || true
+	rm -rf ".git/modules/$(LLMS_REF_PATH)" || true
+	@echo "Removed $(LLMS_REF_PATH). Now commit parent repo changes if needed."
+
+llms-ref-clear: ## Clear local downloaded refs to free disk space (keeps submodule definitions)
+	rm -rf ".llms/git-references"/*
+	rm -rf ".git/modules/$(LLMS_REF_DIR)"
+	@echo "Cleared local checkouts (and module cache). Restore with: make llms-ref-fetch-all"
 
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' 

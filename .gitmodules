@@ -1,0 +1,9 @@
+[submodule ".llms/git-references/ai-elements"]
+	path = .llms/git-references/ai-elements
+	url = https://github.com/vercel/ai-elements.git
+[submodule ".llms/git-references/shadcn-ui"]
+	path = .llms/git-references/shadcn-ui
+	url = https://github.com/shadcn-ui/ui.git
+[submodule ".llms/git-references/convex-agent-component"]
+	path = .llms/git-references/convex-agent-component
+	url = https://github.com/get-convex/agent.git
