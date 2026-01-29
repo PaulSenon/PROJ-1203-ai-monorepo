@@ -26,11 +26,22 @@ When user ask technical question, do not implement anything and instead, gather 
 
 ## Component architecture layers
 
-- L1 external registries (immutable): `components/ui/*`, `components/ai-elements/*`. Only compose/wrap, never edit.
-- L2 primitives (low opinion): `components/ui-custom/**/primitives/*`. No app hooks, no app types, no i18n mapping, no product copy, minimal styling.
-- L3 composed UI (opinionated): `components/ui-custom/**` (non-primitives). Receive data/actions via props. No app hooks or app state.
-- L4 app binding: `components/chat/**` or route-level. Uses hooks, maps metadata to props, selects i18n strings, builds action arrays.
-- Placement rule: if it imports app hooks or app types or derives UI from metadata, it must be L4. If it hardcodes product copy or layout conventions, it is L3. If it is a small layout/behavior piece with minimal styles, it is L2.
+> Full guide with decision trees and examples: `apps/web/src/components/README.md`
+
+**3-Layer Model** (dependency direction):
+
+- **L1 External** (`ui/`, `ai-elements/`): Immutable registries. Never edit, only compose/wrap.
+- **L2 Design System** (`ui-custom/[domain]/`): App-agnostic compound components. No app hooks, no app types. Exports namespace objects (`Message.*`, `Sidebar.*`).
+- **L3 App Layer** (`[feature]/`, `shared/`): Feature-specific components. Uses hooks, knows app types, composes L2.
+
+**Quick placement rule**: If it imports app hooks or app types → L3. Otherwise → L2.
+
+**L3 sub-organization**:
+- Feature Root: `[feature].tsx` — main export, hooks + composition
+- Feature Layout: `[feature]-layout.tsx` — pure composition (optional, for complex cases)
+- Feature Part: `[feature]-[part].tsx` — sub-component for this feature
+- Feature Hook: `_hooks/use-[purpose].ts` — feature-specific hooks
+- Shared: `shared/[name].tsx` — L3 components used by 2+ features
 
 ## UI/UX Design guidelines
 

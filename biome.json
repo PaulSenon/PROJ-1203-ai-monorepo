@@ -23,7 +23,8 @@
       "!**/_generated",
       "!**/opencode.jsonc",
       "!**/components/ui",
-      "!**/components/ai-elements"
+      "!**/components/ai-elements",
+      "!**/.llms"
     ]
   },
   "extends": ["ultracite/core", "ultracite/react"],

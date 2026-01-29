@@ -20,20 +20,6 @@
       },
       "enabled": true
     },
-    "firecrawl": {
-      "type": "local",
-      "command": ["npx", "-y", "firecrawl-mcp"],
-      "enabled": true,
-      "environment": {
-        "FIRECRAWL_API_KEY": "{env:FIRECRAWL_API_KEY}",
-        "FIRECRAWL_RETRY_MAX_ATTEMPTS": "3",
-        "FIRECRAWL_RETRY_INITIAL_DELAY": "2000",
-        "FIRECRAWL_RETRY_MAX_DELAY": "30000",
-        "FIRECRAWL_RETRY_BACKOFF_FACTOR": "3",
-        "FIRECRAWL_CREDIT_WARNING_THRESHOLD": "500",
-        "FIRECRAWL_CREDIT_CRITICAL_THRESHOLD": "100"
-      }
-    },
     "shadcn": {
       "type": "local",
       "command": ["npx", "shadcn@latest", "mcp"],
@@ -109,7 +95,7 @@
   // Disable specific providers even if credentials are available
   "disabled_providers": [
     // "openai",
-    "opencode",
+    // "opencode",
     "zen",
     "anthropic",
     "google"

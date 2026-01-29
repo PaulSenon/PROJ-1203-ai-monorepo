@@ -1,8 +1,33 @@
 1. Decide which task to work on next.
-This should be the one YOU decide has the highest priority,
+This should be the one YOU decide has the highest priority, keep changes small and focused:
 - not necessarily the first in the list.
-2. Check any feedback loops, such as types and tests.
-3. Append your progress to the progress.txt file.
+- One logical change per iteration
+- If a task feels too large, break it into subtasks
+- Prefer multiple small iterations over one large iteration
+- Run feedback loops after each change, not at the end
+Quality over speed. Small steps compound into big progress.
+When choosing the next task, prioritize in this order:
+  1. Architectural decisions and core abstractions
+  2. Integration points between modules
+  3. Unknown unknowns and spike work
+  4. Standard features and implementation
+  5. Polish, cleanup, and quick wins
+Fail fast on risky work. Save easy wins for later.
+
+2. Check any feedback loops, such as types and tests and LSP.
+Entropy Loop:
+Scan for code smells: unused exports, dead code, inconsistent patterns.
+Fix ONE issue per iteration.
+Document what you changed in progress.txt.
+
+3. After completing each task append your progress to the progress.txt file.
+  - Task completed and PRD item reference
+  - Key decisions made and reasoning
+  - Files changed
+  - Any blockers or notes for next iteration
+Keep entries concise. Sacrifice grammar for the sake of concision. This file helps future iterations skip exploration.
+(do run dev servers, do not commit any work)
 ONLY WORK ON A SINGLE FEATURE.
+
 If, while implementing the feature, you notice that all work
 is complete, output <promise>COMPLETE</promise>. 
