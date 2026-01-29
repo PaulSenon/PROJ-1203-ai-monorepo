@@ -52,86 +52,70 @@ Implement reasoning header state machine A/B/C/D with zero layout shift, collaps
 ### Layer Architecture
 
 - **L1 (Immutable)**: Use ai-elements Message, MessageResponse, Shimmer, Reasoning primitives. Do NOT modify.
-- **L2 (App-Agnostic)**: Single file `ui-custom/chat/message.tsx` exporting `Message.*` namespace. No app hooks, no app types.
-- **L3 (App Layer)**: `chat/chat-message.tsx` maps MyUIMessage + hooks to L2 context.
+- **L2 (App-Agnostic)**: Wrap L1 primitives with app styling. No app hooks, no app types. No custom context (use L1 context where it exists).
+- **L3 (App Layer)**: `chat/chat-message.tsx` maps MyUIMessage + hooks → L2 component props.
 
-### L2 Interface Sketch
+### CRITICAL: L2 Must Wrap L1, Not Reimplement
 
-```typescript
-// Context value injected by Message.Provider
-interface MessageContextValue {
-  state: {
-    role: 'user' | 'assistant';
-    content: string;
-    reasoning?: string;
-    isReasoningStreaming: boolean;
-    reasoningDuration?: number; // ms
-  };
-  meta?: {
-    sentAt?: number;
-    modelId?: string;
-    timing?: {
-      ttft?: number;      // time to first token (ms)
-      ttfm?: number;      // time to first message token (ms, after reasoning)
-      duration?: number;  // total generation time (ms)
-    };
-    usage?: {
-      inputTokens?: number;
-      outputTokens?: number;
-      reasoningTokens?: number;
-      cachedInputTokens?: number;
-    };
-  };
-}
+> **WARNING**: L2 components MUST wrap/compose L1 primitives from ai-elements. Do NOT reimplement functionality that already exists in L1.
+>
+> Before creating any L2 component, check:
+> 1. Does ai-elements already have this? → Wrap it with styling
+> 2. Does an existing L2 fragment already have this? → Reuse it
+> 3. Neither exists? → Only then create new component
 
-// Action schema for footer
-interface MessageActionDef {
-  id: string;
-  icon: ReactNode;
-  label: string;
-  tooltip: string;
-  priority: 'primary' | 'secondary' | 'tertiary';
-  onClick?: () => void;
-  menuItems?: MessageMenuItem[];    // dropdown on click
-  contextItems?: MessageMenuItem[]; // right-click/long-press
-}
+### Existing L2 Fragments (DO NOT RECREATE)
 
-interface MessageMenuItem {
-  id: string;
-  label: string;
-  icon?: ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-}
+These already exist and implement most PRD requirements:
 
-// Stat schema for footer
-interface MessageStatDef {
-  id: string;
-  icon: ReactNode;
-  label: string;
-  value: string | number;
-  tooltip?: string;
-  priority: 'primary' | 'secondary';
-}
-```
+| Fragment | Location | What it does |
+|----------|----------|--------------|
+| `ThinkingBlock` | `thinking-block.tsx` | A/B/C/D state machine, preview, toggle |
+| `ChatStatusMessage.*` | `message-status.tsx` | Error/cancelled compound |
+| `ChatMessageErrorBlock` | `message-status.tsx` | Error status with actions |
+| `ChatMessageCancelledBlock` | `message-status.tsx` | Cancelled status with actions |
+| `ChatMessageFooter` | `message-footer.tsx` | Hover-reveal footer container |
+| `ChatMessageActions` | `message-actions.tsx` | Action button container |
+| `ChatMessageAction` | `message-action.tsx` | Button with tooltip + context menu |
+| `ChatMessageInfos` | `message-infos.tsx` | Stats container |
+| `ChatMessageInfo` | `message-info.tsx` | Single stat display |
+| `ChatMessageContent` | `message-content.tsx` | Role-based content styling |
 
-### L2 Compound Exports
+### L2 Namespace Purpose
+
+The `message.tsx` file creates a unified namespace that:
+1. **Wraps L1** with thin styling wrappers (memoized)
+2. **Does NOT re-export** existing L2 fragments (barrel exports forbidden by linter)
+3. **Does NOT create new context** (use ai-elements context like `useReasoning()`)
 
 ```typescript
+// message.tsx wraps L1 ai-elements only
 export const Message = {
-  Provider,     // Context injection point
-  Root,         // Container with role-based alignment
-  Header,       // Reasoning header (A/B/C/D states)
-  Reasoning,    // Collapsible reasoning block
-  Content,      // Markdown content wrapper
-  Status,       // Error/warning/info callout
-  Footer,       // Actions + stats container
-  Actions,      // Action buttons container
-  Action,       // Single action button
-  Stats,        // Stats container
-  Stat,         // Single stat display
+  Root,             // wraps ai-elements Message
+  Content,          // wraps ai-elements MessageContent
+  Response,         // wraps ai-elements MessageResponse
+  Actions,          // wraps ai-elements MessageActions
+  Action,           // wraps ai-elements MessageAction
+  Toolbar,          // wraps ai-elements MessageToolbar
+  Reasoning,        // wraps ai-elements Reasoning
+  ReasoningTrigger, // wraps ai-elements ReasoningTrigger
+  ReasoningContent, // wraps ai-elements ReasoningContent
 };
+
+// Other L2 fragments imported separately:
+// import { ThinkingBlock } from "./thinking-block";
+// import { ChatMessageFooter } from "./message-footer";
+// import { ChatStatusMessage } from "./message-status";
+// etc.
 ```
+
+### L3 Adapter Role
+
+L3 (`chat-message.tsx`) does the work:
+1. Extracts data from `MyUIMessage` (app type)
+2. Computes derived state (isReasoningStreaming, etc.)
+3. Passes props to L2 components (no context injection needed)
+4. Composes L2 primitives into the final message UI
 
 ### L3 Signal Derivation
 
@@ -325,136 +309,150 @@ Each task has:
 
 ---
 
-### T1: Create L2 Message Compound API Skeleton
+### T1: Create L2 Message Compound API (Wrap L1)
 
-**Goal**: Establish the L2 compound component structure with stub implementations.
+**Goal**: Create thin wrappers around L1 ai-elements under a unified namespace.
 
 **Files to create**:
 - `apps/web/src/components/ui-custom/chat/message.tsx`
 
 **Implementation details**:
-1. Create context with `MessageContextValue` interface
-2. Create `Message.Provider` that accepts state/meta/actions
-3. Create stub components: `Root`, `Header`, `Reasoning`, `Content`, `Status`, `Footer`, `Actions`, `Action`, `Stats`, `Stat`
-4. Each stub renders placeholder div with component name for now
-5. Export as `Message` namespace object
-6. `Root` should apply role-based alignment (user = end, assistant = start)
+1. Import L1 primitives from `@/components/ai-elements/message` and `@/components/ai-elements/reasoning`
+2. Create thin wrapper components that apply app styling via `cn()`:
+   - `MessageRoot` wraps `Message` from ai-elements
+   - `MessageContent` wraps `MessageContent` from ai-elements
+   - `MessageResponse` wraps `MessageResponse` from ai-elements
+   - `MessageActions` wraps `MessageActions` from ai-elements
+   - `MessageAction` wraps `MessageAction` from ai-elements
+   - `MessageToolbar` wraps `MessageToolbar` from ai-elements
+   - `MessageReasoning` wraps `Reasoning` from ai-elements
+   - `MessageReasoningTrigger` wraps `ReasoningTrigger` from ai-elements
+   - `MessageReasoningContent` wraps `ReasoningContent` from ai-elements
+3. Memoize all wrappers with `React.memo`
+4. Export as `Message` namespace object
+5. Export types via `ComponentProps<typeof ...>`
+6. **DO NOT**: create custom context, re-export existing L2 fragments, define app-specific types
 
 **Verify**: 
 - LSP shows no type errors
-- Can import `Message` from `@/components/ui-custom/chat/message` in any file
-- Demo page (T6) can render `<Message.Root>` with visible output
+- No linter errors (no barrel exports)
+- Each export is a thin wrapper around L1, not a reimplementation
 
 **Depends**: None
 
 ---
 
-### T2: Implement Reasoning Header + Preview + Toggle
+### T2: Verify/Enhance ThinkingBlock for A/B/C/D States
 
-**Goal**: Full A/B/C/D state machine with stable layout.
+**Goal**: Verify existing `ThinkingBlock` meets PRD requirements, enhance if needed.
 
-**Files to modify**:
-- `apps/web/src/components/ui-custom/chat/message.tsx`
+**Files to review/modify**:
+- `apps/web/src/components/ui-custom/chat/thinking-block.tsx` (already exists)
 
-**Implementation details**:
-1. `Message.Header` computes state from context (A/B/C/D)
-2. Import and use `<Shimmer>` from ai-elements for "Thinking..."/"Reasoning..." text
-3. Header row: `flex items-center min-h-6 text-sm text-muted-foreground`
-4. Toggle button: fixed width slot (16px), uses ChevronDown icon, rotates when open
-5. Toggle has `aria-expanded`, focus ring
-6. `Message.Reasoning` uses Radix Collapsible (or ai-elements Reasoning primitive)
-7. Collapsed preview: last N lines with fade mask, computed via CSS line-clamp or JS
-8. Expanded: subtle box with border and muted bg
-9. Latch toggle state in local state, persist across B→C transition
-10. State D: render nothing (not even empty div)
+**NOTE**: `ThinkingBlock` already implements:
+- A/B/C/D state machine via `isStreaming` + `hasResponseText` props
+- Preview with fade mask
+- Toggle persistence
+- Shimmer animation
+- `min-h-6` header
 
-**Verify**:
-- Demo page shows all 4 states without layout shift
-- Toggle works, persists across state transitions
-- Shimmer animates
-- Preview shows last lines with fade
+**Verification checklist**:
+1. [ ] State A: "Thinking..." shimmer shows when no text
+2. [ ] State B: "Reasoning..." shimmer + preview when streaming reasoning
+3. [ ] State C: "Thought for Xs" static when reasoning ended
+4. [ ] State D: Nothing renders when no reasoning exists
+5. [ ] Toggle state persists across B→C transition
+6. [ ] No layout shift between states
+7. [ ] Preview shows last N lines with fade mask
+8. [ ] Expanded shows full content in subtle box
 
-**Depends**: T1
-
----
-
-### T3: Implement Content with Overflow Guards
-
-**Goal**: Markdown content that never breaks layout.
-
-**Files to modify**:
-- `apps/web/src/components/ui-custom/chat/message.tsx`
-
-**Implementation details**:
-1. `Message.Content` wraps children (typically `<MessageResponse>` from ai-elements)
-2. Apply: `max-w-full overflow-x-auto` for horizontal scroll on wide content
-3. Apply: `break-words overflow-wrap-anywhere` for long tokens
-4. Memoize via `React.memo` with shallow children comparison
-5. Role-based styling: user = bubble with bg, assistant = transparent
-
-**Verify**:
-- Demo page with long code block scrolls horizontally
-- Demo page with long single word wraps
-- No layout breakout
+**If gaps found**: Enhance `ThinkingBlock`, do NOT create new component
 
 **Depends**: T1
 
 ---
 
-### T4: Implement Status Primitive + Error/Cancelled Variants
+### T3: Verify/Enhance ChatMessageContent Overflow Guards
 
-**Goal**: Composable status callouts.
+**Goal**: Verify existing content components handle overflow correctly.
 
-**Files to modify**:
-- `apps/web/src/components/ui-custom/chat/message.tsx`
+**Files to review/modify**:
+- `apps/web/src/components/ui-custom/chat/message-content.tsx` (already exists)
+- `apps/web/src/components/ui-custom/chat/message.tsx` (Message.Response wrapper)
 
-**Implementation details**:
-1. `Message.Status` base: renders callout with kind-based styling (colors, icons)
-2. Kinds: info (blue), warning (amber), error (red), debug (gray)
-3. Layout: icon + title row, optional description below, optional actions slot
-4. `Message.StatusError`: reads error from context.meta, renders procedural content
-5. `Message.StatusCancelled`: fixed content with action buttons slot
-6. Use shadcn Alert or custom callout styling
+**NOTE**: `ChatMessageContent` already implements role-based styling. `Message.Response` wraps `MessageResponse` from ai-elements.
 
-**L3 adapter changes** (in T1 or separate):
-- Map `message.metadata.liveStatus === 'error'` to show StatusError
-- Map `message.metadata.liveStatus === 'cancelled'` to show StatusCancelled
+**Verification checklist**:
+1. [ ] Long code blocks scroll horizontally (not break layout)
+2. [ ] Long single words wrap (not overflow)
+3. [ ] Tables don't break container
+4. [ ] User messages have bubble styling
+5. [ ] Assistant messages are transparent
 
-**Verify**:
-- Demo page shows error status with correct styling
-- Demo page shows cancelled status
-- Actions render and are clickable (console.log for now)
+**If gaps found**: Add overflow styles to existing components:
+- `max-w-full overflow-x-auto` for horizontal scroll
+- `break-words` / `overflow-wrap: anywhere` for long tokens
 
 **Depends**: T1
 
 ---
 
-### T5: Implement Footer with Actions/Stats + Responsive Behavior
+### T4: Verify/Enhance ChatStatusMessage Components
 
-**Goal**: Full footer with breakpoint-aware overflow.
+**Goal**: Verify existing status components meet PRD requirements.
 
-**Files to modify**:
-- `apps/web/src/components/ui-custom/chat/message.tsx`
+**Files to review/modify**:
+- `apps/web/src/components/ui-custom/chat/message-status.tsx` (already exists)
+- `apps/web/src/components/ui-custom/chat/primitives/status-message.tsx` (base primitive)
 
-**Implementation details**:
-1. `Message.Footer`: container with `flex justify-between` layout
-2. Desktop: `opacity-0 group-hover:opacity-100` transition (parent Root needs `group` class)
-3. Mobile: always visible
-4. `Message.Actions`: flex container for action buttons
-5. `Message.Action`: button with tooltip, handles click/dropdown/context menu
-6. Use shadcn `Tooltip`, `DropdownMenu`, `ContextMenu`
-7. Priority-based partitioning: filter by viewport + priority, overflow to "More" menu
-8. `Message.Stats`: flex container for stats
-9. `Message.Stat`: icon + value + optional tooltip
-10. Mobile: "(i)" button opens popover with all stats
-11. Copy action: icon swap feedback pattern
+**NOTE**: Already implements:
+- `ChatStatusMessage.*` compound (Root, Header, Icon, Title, Content, Description, Actions, Footer)
+- `ChatMessageErrorBlock` with retry actions
+- `ChatMessageCancelledBlock` with continue/retry actions
+- Tone-based styling (error=red, cancelled=amber)
+- i18n support structure
 
-**Verify**:
-- Demo page shows footer on hover (desktop)
-- Demo page shows footer always (mobile or simulated)
-- More menu contains overflow items
-- Copy shows checkmark briefly
-- Tooltips work
+**Verification checklist**:
+1. [ ] Error block shows correct icon and styling
+2. [ ] Cancelled block shows correct icon and styling
+3. [ ] Actions render and are clickable
+4. [ ] Error metadata is correctly displayed
+5. [ ] Retry/Continue buttons work
+
+**If gaps found**: Enhance existing components, do NOT create new ones
+
+**Depends**: T1
+
+---
+
+### T5: Verify/Enhance Footer Responsive Behavior
+
+**Goal**: Verify existing footer components meet PRD responsive requirements.
+
+**Files to review/modify**:
+- `apps/web/src/components/ui-custom/chat/message-footer.tsx` (already exists)
+- `apps/web/src/components/ui-custom/chat/message-actions.tsx` (already exists)
+- `apps/web/src/components/ui-custom/chat/message-action.tsx` (already exists)
+- `apps/web/src/components/ui-custom/chat/message-infos.tsx` (already exists)
+- `apps/web/src/components/ui-custom/chat/message-info.tsx` (already exists)
+
+**NOTE**: Already implements:
+- `ChatMessageFooter` with `revealOnHover` and `stackOnMobile` props
+- `ChatMessageAction` with tooltip and context menu support
+- `ChatMessageInfos` / `ChatMessageInfo` for stats display
+
+**Verification checklist**:
+1. [ ] Footer hidden on desktop until hover
+2. [ ] Footer always visible on mobile
+3. [ ] Actions have tooltips
+4. [ ] Context menu works on right-click
+5. [ ] Stats display correctly
+6. [ ] Copy feedback (checkmark) works
+
+**Gaps to potentially address**:
+- [ ] "More" overflow menu for small screens (may need implementation)
+- [ ] "(i)" button for stats popover on mobile (may need implementation)
+- [ ] Priority-based action filtering (may need implementation)
 
 **Depends**: T1, T3
 
@@ -507,59 +505,61 @@ Each task has:
 
 ---
 
-### T7: Create L3 Adapter + Wire to App
+### T7: Refactor L3 Adapter to Use Unified L2
 
-**Goal**: Connect L2 Message to real app state.
+**Goal**: Update L3 to compose L2 components cleanly.
 
 **Files to modify**:
-- `apps/web/src/components/chat/chat-message.tsx` (rewrite)
+- `apps/web/src/components/chat/chat-message.tsx` (refactor, not rewrite)
 
-**Files to delete** (after verification):
-- `apps/web/src/components/chat/chat-message-status.tsx`
-- `apps/web/src/components/ui-custom/chat/message-action.tsx`
-- `apps/web/src/components/ui-custom/chat/message-actions.tsx`
-- `apps/web/src/components/ui-custom/chat/message-content.tsx`
-- `apps/web/src/components/ui-custom/chat/message-footer.tsx`
-- `apps/web/src/components/ui-custom/chat/message-info.tsx`
-- `apps/web/src/components/ui-custom/chat/message-infos.tsx`
-- `apps/web/src/components/ui-custom/chat/message-status.tsx`
+**Files to keep** (these are L2 fragments, not legacy):
+- `apps/web/src/components/ui-custom/chat/message-action.tsx` ✓
+- `apps/web/src/components/ui-custom/chat/message-actions.tsx` ✓
+- `apps/web/src/components/ui-custom/chat/message-content.tsx` ✓
+- `apps/web/src/components/ui-custom/chat/message-footer.tsx` ✓
+- `apps/web/src/components/ui-custom/chat/message-info.tsx` ✓
+- `apps/web/src/components/ui-custom/chat/message-infos.tsx` ✓
+- `apps/web/src/components/ui-custom/chat/message-status.tsx` ✓
+- `apps/web/src/components/ui-custom/chat/thinking-block.tsx` ✓
 
 **Implementation details**:
-1. Import `Message` from L2
-2. Import hooks: `useChatActive` (or equivalent for isThreadStreaming)
+1. Import `Message` from `@/components/ui-custom/chat/message` (L1 wrappers)
+2. Import L2 fragments directly: `ThinkingBlock`, `ChatMessageFooter`, `ChatStatusMessage`, etc.
 3. Extract content/reasoning from `message.parts`
 4. Compute derived signals (isReasoningStreaming, reasoningEnded, etc.)
-5. Map `message.metadata` to L2 meta interface
-6. Wire actions: copy, retry, continue, branch (can be props or from hook)
-7. Compose L2 components based on role:
-   - User: simple content + minimal footer
-   - Assistant: header + reasoning + content + status + full footer
+5. Pass props to L2 components (no context injection)
+6. Wire actions: copy, retry, continue, branch
+7. Compose based on role:
+   - User: `ChatMessageContent` + minimal `ChatMessageFooter`
+   - Assistant: `ThinkingBlock` + `ChatMessageContent` + status + `ChatMessageFooter`
 8. Memoize appropriately
 
 **Verify**:
 - Real chat messages render correctly
 - Streaming works end-to-end
-- Actions fire (at least console.log)
-- No legacy imports remain
-- Delete legacy files only after all imports updated
+- Actions fire correctly
+- Clean composition with no redundant code
 
 **Depends**: T1, T2, T3, T4, T5, T6
 
 ---
 
-### T8: Cleanup Legacy Files
+### T8: Cleanup Unused Legacy Code
 
-**Goal**: Remove old code after migration verified.
+**Goal**: Remove genuinely unused code after migration verified.
 
-**Files to delete**:
-- `apps/web/src/components/chat/chat-messages/*.tsx` (entire folder if empty)
+**Files to potentially delete** (verify unused first):
+- `apps/web/src/components/chat/chat-messages/*.tsx` (legacy folder if exists)
+- `apps/web/src/components/chat/chat-message-status.tsx` (if duplicates message-status.tsx)
 - Any orphaned imports
 
 **Implementation details**:
-1. Search codebase for imports from deleted paths
-2. Update any remaining imports to use new L2/L3
-3. Delete files
-4. Verify no broken imports
+1. Search codebase for imports from potential delete paths
+2. Verify files are truly unused (not just renamed)
+3. Delete only files with zero imports
+4. Verify no broken imports after deletion
+
+**NOTE**: Do NOT delete the L2 fragments (message-*.tsx in ui-custom/chat/). These are the design system components we're using.
 
 **Verify**:
 - LSP shows no import errors
