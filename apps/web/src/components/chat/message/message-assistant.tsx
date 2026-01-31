@@ -10,8 +10,12 @@ export type ChatMessageAssistantProps = ComponentProps<"div"> & {
 
 function hasContentParts(parts: MyUIMessage["parts"]) {
   return parts.some((part) => {
-    if (part.type === "text" || part.type === "reasoning") {
+    if (part.type === "text") {
       return Boolean(part.text?.trim());
+    }
+
+    if (part.type === "reasoning") {
+      return true;
     }
 
     return false;

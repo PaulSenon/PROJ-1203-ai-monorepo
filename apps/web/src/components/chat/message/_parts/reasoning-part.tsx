@@ -13,6 +13,8 @@ export type ReasoningPartProps = {
 };
 
 const PREVIEW_LINES = 2;
+const MARKDOWN_OVERFLOW_GUARDS =
+  "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto";
 
 export function ReasoningPart({ part }: ReasoningPartProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -52,8 +54,10 @@ export function ReasoningPart({ part }: ReasoningPartProps) {
       {isOpen ? (
         <Reasoning.Content>
           <SmoothMarkdown
-            className="text-muted-foreground text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
-            startStreaming={isStreaming}
+            className={cn(
+              "text-muted-foreground text-sm",
+              MARKDOWN_OVERFLOW_GUARDS
+            )}
           >
             {text}
           </SmoothMarkdown>
