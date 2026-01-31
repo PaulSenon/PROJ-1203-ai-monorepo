@@ -15,6 +15,7 @@ When choosing the next task, prioritize in this order:
 Fail fast on risky work. Save easy wins for later.
 
 2. Check any feedback loops, such as types and tests and LSP.
+Ask sub-agent review using specific skills to better performances, best practices, security, accessibility when necessary.
 Entropy Loop:
 Scan for code smells: unused exports, dead code, inconsistent patterns.
 Fix ONE issue per iteration.
