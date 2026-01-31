@@ -236,3 +236,7 @@ Follow‑up PRDs:
 - Demo renders all states without layout shift
 - L2/L3 match `apps/web/src/components/README.md`
 - Legacy message code removed or unused
+
+## Notes
+
+- We don't care about previous existing code for message ui. We are starting from scratch.
