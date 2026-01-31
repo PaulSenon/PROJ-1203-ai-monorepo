@@ -1,18 +1,8 @@
-import type {
-  MyUIMessage,
-  MyUIMessageMetadata,
-} from "@ai-monorepo/ai/types/uiMessage";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ClockIcon,
-  CopyIcon,
-  CpuIcon,
-  RefreshCcwIcon,
-  ZapIcon,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { Message, MessageResponse } from "@/components/ai-elements/message";
-import { ChatMessage } from "@/components/chat/chat-message";
+import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { ChatMessage } from "@/components/chat/message/message";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -20,648 +10,255 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ChatCodeBlock } from "@/components/ui-custom/chat/code-block";
-import { ChatMessageAction } from "@/components/ui-custom/chat/message-action";
-import { ChatMessageActions } from "@/components/ui-custom/chat/message-actions";
-import { ChatMessageContent } from "@/components/ui-custom/chat/message-content";
-import { ChatMessageFooter } from "@/components/ui-custom/chat/message-footer";
-import { ChatMessageInfo } from "@/components/ui-custom/chat/message-info";
-import { ChatMessageInfos } from "@/components/ui-custom/chat/message-infos";
-import { ThinkingBlock } from "@/components/ui-custom/chat/thinking-block";
 
 export const Route = createFileRoute("/components/_components/messages")({
   component: RouteComponent,
 });
 
-// ============================================================================
-// Demo Data
-// ============================================================================
+type DemoRole = "assistant" | "user";
 
-const SAMPLE_USER_TEXT = "Can you explain how React hooks work?";
-
-const SAMPLE_ASSISTANT_TEXT = `React hooks are functions that let you "hook into" React state and lifecycle features from function components.
-
-## Core Hooks
-
-### useState
-Manages local component state:
-
-\`\`\`tsx
-const [count, setCount] = useState(0);
-\`\`\`
-
-### useEffect
-Handles side effects like data fetching, subscriptions, or DOM manipulation:
-
-\`\`\`tsx
-useEffect(() => {
-  document.title = \`Count: \${count}\`;
-}, [count]);
-\`\`\`
-
-### useContext
-Accesses context values without prop drilling.
-
-## Rules of Hooks
-
-1. Only call hooks at the top level
-2. Only call hooks from React functions`;
-
-const SAMPLE_REASONING = `Let me think about how to explain React hooks clearly...
-
-First, I should cover what hooks are conceptually - they're a way to use state and other React features without writing a class.
-
-The most important hooks to cover are:
-- useState for state management
-- useEffect for side effects
-- useContext for context consumption
-
-I should also mention the rules of hooks since they're important for correct usage.`;
-
-const SAMPLE_REASONING_STREAM = `${SAMPLE_REASONING}
-
-To make this easier to follow, I will walk through a small example, then summarize the mental model.
-
-The key is that hooks let function components keep stateful logic without classes.`;
-
-const SAMPLE_CODE_TYPESCRIPT = `import { useState, useEffect, useCallback } from 'react';
-
-interface User {
+type DemoPart = {
   id: string;
-  name: string;
-  email: string;
-}
+  text: string;
+};
 
-export function useUser(userId: string) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+const SAMPLE_TEXT_1 =
+  "This is the first text chunk. It should render before the next part.";
+const SAMPLE_TEXT_2 =
+  "This is the second chunk. Ordering should be preserved across parts.";
 
-  const fetchUser = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(\`/api/users/\${userId}\`);
-      if (!response.ok) throw new Error('Failed to fetch user');
-      const data = await response.json();
-      setUser(data);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
+let partCounter = 0;
 
-  useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+const createPart = (text: string): DemoPart => ({
+  id: `part-${partCounter++}`,
+  text,
+});
 
-  return { user, loading, error, refetch: fetchUser };
-}`;
+const createInitialParts = () => [
+  createPart(SAMPLE_TEXT_1),
+  createPart(SAMPLE_TEXT_2),
+];
 
-const SAMPLE_CODE_PYTHON = `from dataclasses import dataclass
-from typing import Optional, List
-import asyncio
+type PartEditorProps = {
+  part: DemoPart;
+  index: number;
+  total: number;
+  onChange: (id: string, text: string) => void;
+  onMove: (from: number, to: number) => void;
+  onRemove: (id: string) => void;
+};
 
-@dataclass
-class Message:
-    role: str
-    content: str
-    metadata: Optional[dict] = None
-
-class ChatAgent:
-    def __init__(self, model: str = "gpt-4"):
-        self.model = model
-        self.messages: List[Message] = []
-    
-    async def chat(self, user_input: str) -> str:
-        self.messages.append(Message(role="user", content=user_input))
-        
-        # Simulate API call
-        await asyncio.sleep(0.1)
-        response = f"Response to: {user_input}"
-        
-        self.messages.append(Message(role="assistant", content=response))
-        return response
-    
-    def clear_history(self) -> None:
-        self.messages = []`;
-
-const EXHAUSTIVE_MARKDOWN = `# Heading 1
-## Heading 2
-### Heading 3
-#### Heading 4
-##### Heading 5
-###### Heading 6
-
----
-
-## Text Formatting
-
-This is a paragraph with **bold text**, *italic text*, and ***bold italic text***.
-
-You can also use ~~strikethrough~~ and \`inline code\`.
-
-Here's a [link to React docs](https://react.dev) and an autolink: https://example.com
-
-## Lists
-
-### Unordered List
-- First item
-- Second item
-  - Nested item
-  - Another nested
-- Third item
-
-### Ordered List
-1. First step
-2. Second step
-   1. Sub-step A
-   2. Sub-step B
-3. Third step
-
-### Task List
-- [x] Completed task
-- [ ] Incomplete task
-- [ ] Another task
-
-## Blockquotes
-
-> This is a blockquote.
-> It can span multiple lines.
->
-> > And can be nested.
-
-## Code
-
-Inline: \`const x = 42;\`
-
-\`\`\`typescript
-interface Props {
-  name: string;
-  count: number;
-}
-
-function Component({ name, count }: Props) {
-  return <div>{name}: {count}</div>;
-}
-\`\`\`
-
-\`\`\`python
-def fibonacci(n: int) -> int:
-    if n <= 1:
-        return n
-    return fibonacci(n - 1) + fibonacci(n - 2)
-\`\`\`
-
-## Tables
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Hooks | ✅ Done | Fully supported |
-| Streaming | ✅ Done | With Streamdown |
-| Actions | 🚧 WIP | In progress |
-
-## Math (if supported)
-
-Inline: $E = mc^2$
-
-Block:
-$$
-\\sum_{i=1}^{n} x_i = x_1 + x_2 + \\cdots + x_n
-$$
-
-## Footnotes
-
-Here's a statement with a footnote[^1].
-
-[^1]: This is the footnote content.
-
-## Horizontal Rules
-
----
-
-***
-
-___`;
-
-// ============================================================================
-// Demo Helpers
-// ============================================================================
-
-const demoAction = (label: string) => () => console.log(`[demo] ${label}`);
-
-function Section({
-  id,
-  title,
-  description,
-  children,
-}: {
-  id: string;
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
+function PartEditor({
+  part,
+  index,
+  total,
+  onChange,
+  onMove,
+  onRemove,
+}: PartEditorProps) {
   return (
-    <Card id={id}>
-      <CardHeader>
-        <Link hash={`#${id}`} to=".">
-          <CardTitle># {title}</CardTitle>
-        </Link>
-        {description && <CardDescription>{description}</CardDescription>}
-      </CardHeader>
-      <CardContent className="space-y-6">{children}</CardContent>
-    </Card>
-  );
-}
-
-function DemoContainer({
-  label,
-  children,
-}: {
-  label?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      {label && (
-        <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-          {label}
-        </p>
-      )}
-      <div className="rounded-lg border bg-background p-4">{children}</div>
+    <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-background p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+          Part {index + 1}
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            disabled={index === 0}
+            onClick={() => onMove(index, index - 1)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Up
+          </Button>
+          <Button
+            disabled={index === total - 1}
+            onClick={() => onMove(index, index + 1)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Down
+          </Button>
+          <Button
+            onClick={() => onRemove(part.id)}
+            size="sm"
+            type="button"
+            variant="ghost"
+          >
+            Remove
+          </Button>
+        </div>
+      </div>
+      <textarea
+        aria-label={`Part ${index + 1} text`}
+        autoComplete="off"
+        className="min-h-[96px] w-full rounded-md border border-border/70 bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        name={`part-${part.id}`}
+        onChange={(event) => onChange(part.id, event.target.value)}
+        value={part.text}
+      />
     </div>
   );
 }
 
-const STREAM_TICK_MS = 80;
-const STREAM_CHUNK_SIZE = 10;
-
-function StreamingThinkingBlockDemo() {
-  const [index, setIndex] = useState(0);
-  const fullText = SAMPLE_REASONING_STREAM;
-  const isStreaming = true;
-
-  useEffect(() => {
-    if (index >= fullText.length) return undefined;
-
-    const timerId = setTimeout(() => {
-      setIndex((prev) => Math.min(prev + STREAM_CHUNK_SIZE, fullText.length));
-    }, STREAM_TICK_MS);
-
-    return () => clearTimeout(timerId);
-  }, [fullText.length, index]);
-
-  return (
-    <ThinkingBlock
-      hasResponseText={false}
-      isStreaming={isStreaming}
-      previewLines={1}
-    >
-      {fullText.slice(0, index)}
-    </ThinkingBlock>
-  );
-}
-
-// ============================================================================
-// Sample messages for ChatMessage meta component
-// ============================================================================
-
-type ExtraStats = {
-  modelId?: string;
-  tokensPerSec?: number;
-  totalTokens?: number;
-  timeToFirst?: number;
-};
-
-const baseMeta = (liveStatus: MyUIMessageMetadata["liveStatus"]) =>
-  ({
-    modelId: "claude-3.5-sonnet",
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    liveStatus,
-    lifecycleState: "active" as const,
-    tokensPerSec: 45.2,
-    totalTokens: 342,
-    timeToFirst: 0.67,
-  }) as MyUIMessage["metadata"] & ExtraStats;
-
-const assistantCompleted: MyUIMessage = {
-  id: "assistant-1",
-  role: "assistant",
-  parts: [{ type: "text", text: SAMPLE_ASSISTANT_TEXT }],
-  metadata: baseMeta("completed"),
-};
-
-const assistantStreaming: MyUIMessage = {
-  id: "assistant-2",
-  role: "assistant",
-  parts: [
-    { type: "reasoning", text: SAMPLE_REASONING },
-    { type: "text", text: "The response is still coming in..." },
-  ],
-  metadata: baseMeta("streaming"),
-};
-
-const assistantErrorEmtpy: MyUIMessage = {
-  id: "assistant-3",
-  role: "assistant",
-  parts: [],
-  metadata: { ...baseMeta("error"), error: { kind: "UNKNOWN_ERROR" } },
-};
-
-const assistantError: MyUIMessage = {
-  id: "assistant-3",
-  role: "assistant",
-  parts: [{ type: "text", text: SAMPLE_ASSISTANT_TEXT.slice(0, 200) }],
-  metadata: { ...baseMeta("error"), error: { kind: "UNKNOWN_ERROR" } },
-};
-
-const assistantCancelledEmpty: MyUIMessage = {
-  id: "assistant-4",
-  role: "assistant",
-  parts: [],
-  metadata: baseMeta("cancelled"),
-};
-
-const assistantCancelled: MyUIMessage = {
-  id: "assistant-4",
-  role: "assistant",
-  parts: [{ type: "text", text: SAMPLE_ASSISTANT_TEXT.slice(0, 200) }],
-  metadata: baseMeta("cancelled"),
-};
-
-const userMessage: MyUIMessage = {
-  id: "user-1",
-  role: "user",
-  parts: [{ type: "text", text: SAMPLE_USER_TEXT }],
-  metadata: { ...baseMeta("completed"), modelId: undefined },
-};
-
-// ============================================================================
-// Demo Sections
-// ============================================================================
-
-function MetaMessagesSection() {
-  return (
-    <Section
-      description="L4 ChatMessage component: maps UIMessage to L3 message blocks."
-      id="meta-messages"
-      title="Meta Messages"
-    >
-      <DemoContainer label="User message">
-        <ChatMessage message={userMessage} />
-      </DemoContainer>
-
-      <DemoContainer label="Assistant completed (with stats)">
-        <ChatMessage
-          message={assistantCompleted}
-          onBranch={demoAction("Branch clicked")}
-          onRetry={demoAction("Retry clicked")}
-        />
-      </DemoContainer>
-
-      <DemoContainer label="Assistant streaming">
-        <ChatMessage message={assistantStreaming} />
-      </DemoContainer>
-
-      <DemoContainer label="Assistant error">
-        <ChatMessage
-          message={assistantError}
-          onRetry={demoAction("Retry clicked")}
-          onRetryWithModel={demoAction("Retry with model clicked")}
-        />
-      </DemoContainer>
-
-      <DemoContainer label="Assistant cancelled">
-        <ChatMessage
-          message={assistantCancelled}
-          onContinue={demoAction("Continue clicked")}
-          onRetryWithModel={demoAction("Retry with model clicked")}
-        />
-      </DemoContainer>
-
-      <DemoContainer label="Assistant error (empty message)">
-        <ChatMessage
-          message={assistantErrorEmtpy}
-          onRetry={demoAction("Retry clicked")}
-          onRetryWithModel={demoAction("Retry with model clicked")}
-        />
-      </DemoContainer>
-
-      <DemoContainer label="Assistant cancelled (empty message)">
-        <ChatMessage
-          message={assistantCancelledEmpty}
-          onContinue={demoAction("Continue clicked")}
-          onRetryWithModel={demoAction("Retry with model clicked")}
-        />
-      </DemoContainer>
-    </Section>
-  );
-}
-
-function PrimitiveCompositionSection() {
-  return (
-    <Section
-      description="L3 message blocks composed with ai-elements Message (L1)."
-      id="primitives"
-      title="Primitive Composition"
-    >
-      <DemoContainer label="Assistant message with custom footer">
-        <Message from="assistant">
-          <ChatMessageContent variant="assistant">
-            <MessageResponse>{SAMPLE_ASSISTANT_TEXT}</MessageResponse>
-          </ChatMessageContent>
-          <ChatMessageFooter>
-            <ChatMessageActions>
-              <ChatMessageAction
-                icon={<CopyIcon className="size-4" />}
-                onClick={demoAction("Copy clicked")}
-                tooltip="Copy"
-              />
-              <ChatMessageAction
-                icon={<RefreshCcwIcon className="size-4" />}
-                onClick={demoAction("Retry clicked")}
-                tooltip="Retry"
-              />
-            </ChatMessageActions>
-            <ChatMessageInfos>
-              <ChatMessageInfo
-                icon={<CpuIcon className="size-3" />}
-                label="claude-3.5-sonnet"
-              />
-              <ChatMessageInfo icon={<ZapIcon className="size-3" />}>
-                45.2 tok/sec
-              </ChatMessageInfo>
-              <ChatMessageInfo icon={<ClockIcon className="size-3" />}>
-                TTFT: 0.67s
-              </ChatMessageInfo>
-            </ChatMessageInfos>
-          </ChatMessageFooter>
-        </Message>
-      </DemoContainer>
-    </Section>
-  );
-}
-
-function ThinkingBlockSection() {
-  return (
-    <Section
-      description="Collapsible thinking blocks, collapsed by default. User-controlled only (no auto-open/close)."
-      id="thinking-blocks"
-      title="Thinking Blocks"
-    >
-      <DemoContainer label="Collapsed (default)">
-        <ThinkingBlock durationMs={12_000}>{SAMPLE_REASONING}</ThinkingBlock>
-      </DemoContainer>
-
-      <DemoContainer label="Streaming (mock)">
-        <StreamingThinkingBlockDemo />
-      </DemoContainer>
-
-      <DemoContainer label="Initially open">
-        <ThinkingBlock defaultOpen durationMs={8000}>
-          {SAMPLE_REASONING}
-        </ThinkingBlock>
-      </DemoContainer>
-    </Section>
-  );
-}
-
-function CodeBlockSection() {
-  return (
-    <Section
-      description="Enhanced code blocks with sticky header, language label, and copy button."
-      id="code-blocks"
-      title="Code Blocks"
-    >
-      <DemoContainer label="TypeScript with all features">
-        <ChatCodeBlock
-          code={SAMPLE_CODE_TYPESCRIPT}
-          language="typescript"
-          maxHeight="300px"
-          showCopy
-          showLanguage
-          stickyHeader
-        />
-      </DemoContainer>
-
-      <DemoContainer label="Python">
-        <ChatCodeBlock
-          code={SAMPLE_CODE_PYTHON}
-          language="python"
-          maxHeight="250px"
-        />
-      </DemoContainer>
-
-      <DemoContainer label="With line numbers">
-        <ChatCodeBlock
-          code={`function greet(name: string) {
-  console.log(\`Hello, \${name}!\`);
-}
-
-greet("World");`}
-          language="typescript"
-          showLineNumbers
-        />
-      </DemoContainer>
-
-      <DemoContainer label="Minimal (no header)">
-        <ChatCodeBlock
-          code="npm install @tanstack/react-query"
-          language="bash"
-          showCopy={false}
-          showLanguage={false}
-        />
-      </DemoContainer>
-    </Section>
-  );
-}
-
-function MarkdownDemoSection() {
-  return (
-    <Section
-      description="Exhaustive markdown rendering test via Streamdown."
-      id="markdown-demo"
-      title="Full Markdown Demo"
-    >
-      <DemoContainer>
-        <ChatMessage
-          message={{
-            id: "assistant-markdown",
-            role: "assistant",
-            parts: [{ type: "text", text: EXHAUSTIVE_MARKDOWN }],
-            metadata: baseMeta("completed"),
-          }}
-        />
-      </DemoContainer>
-    </Section>
-  );
-}
-
-// ============================================================================
-// Main Component
-// ============================================================================
-
 function RouteComponent() {
+  const [role, setRole] = useState<DemoRole>("assistant");
+  const [parts, setParts] = useState<DemoPart[]>(createInitialParts);
+  const [showEmpty, setShowEmpty] = useState(false);
+
+  const message = useMemo<MyUIMessage>(
+    () => ({
+      id: "demo-message",
+      role,
+      parts: showEmpty
+        ? []
+        : parts.map((part) => ({ type: "text", text: part.text })),
+    }),
+    [parts, role, showEmpty]
+  );
+
+  const movePart = (from: number, to: number) => {
+    setParts((prev) => {
+      if (to < 0 || to >= prev.length) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
+
+  const updatePart = (id: string, text: string) => {
+    setParts((prev) =>
+      prev.map((part) => (part.id === id ? { ...part, text } : part))
+    );
+  };
+
+  const addPart = () => {
+    setParts((prev) => [...prev, createPart("")]);
+  };
+
+  const removePart = (id: string) => {
+    setParts((prev) => prev.filter((part) => part.id !== id));
+  };
+
+  const resetParts = () => {
+    setParts(createInitialParts());
+  };
+
+  const isAssistant = role === "assistant";
+
   return (
-    <div className="mx-auto flex max-w-4xl flex-1 flex-col gap-6 p-6">
-      <div className="rounded-lg border bg-card p-6">
-        <h2 className="mb-2 font-semibold text-xl">Messages UI Components</h2>
-        <p className="text-muted-foreground">
-          Modular message components for the chat interface. Includes
-          user/assistant messages, thinking blocks, action bars, and enhanced
-          code blocks.
-        </p>
-      </div>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Message UI Refactor</CardTitle>
+          <CardDescription>
+            Text-only parts demo. Order should match the parts list.
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
-      <nav className="flex flex-wrap gap-2 text-sm">
-        <Link
-          className="text-primary hover:underline"
-          hash="#user-messages"
-          to="."
-        >
-          User Messages
-        </Link>
-        <span className="text-muted-foreground">•</span>
-        <Link
-          className="text-primary hover:underline"
-          hash="#assistant-messages"
-          to="."
-        >
-          Assistant Messages
-        </Link>
-        <span className="text-muted-foreground">•</span>
-        <Link
-          className="text-primary hover:underline"
-          hash="#thinking-blocks"
-          to="."
-        >
-          Thinking Blocks
-        </Link>
-        <span className="text-muted-foreground">•</span>
-        <Link
-          className="text-primary hover:underline"
-          hash="#code-blocks"
-          to="."
-        >
-          Code Blocks
-        </Link>
-        <span className="text-muted-foreground">•</span>
-        <Link
-          className="text-primary hover:underline"
-          hash="#markdown-demo"
-          to="."
-        >
-          Markdown Demo
-        </Link>
-      </nav>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+        <Card>
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-base">Controls</CardTitle>
+            <CardDescription>
+              Build the parts list and preview it.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                Role
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => setRole("assistant")}
+                  size="sm"
+                  type="button"
+                  variant={role === "assistant" ? "default" : "outline"}
+                >
+                  Assistant
+                </Button>
+                <Button
+                  onClick={() => setRole("user")}
+                  size="sm"
+                  type="button"
+                  variant={role === "user" ? "default" : "outline"}
+                >
+                  User
+                </Button>
+              </div>
+            </div>
 
-      <div className="flex flex-col gap-8">
-        <MetaMessagesSection />
-        <PrimitiveCompositionSection />
-        <ThinkingBlockSection />
-        <CodeBlockSection />
-        <MarkdownDemoSection />
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                checked={showEmpty}
+                className="h-4 w-4 rounded border-border"
+                disabled={!isAssistant}
+                name="empty-message"
+                onChange={(event) => setShowEmpty(event.target.checked)}
+                type="checkbox"
+              />
+              Empty message (assistant only)
+            </label>
+
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                Parts
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={addPart}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Add Part
+                </Button>
+                <Button
+                  onClick={resetParts}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  Reset
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              {parts.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No parts yet.</p>
+              ) : null}
+              {parts.map((part, index) => (
+                <PartEditor
+                  index={index}
+                  key={part.id}
+                  onChange={updatePart}
+                  onMove={movePart}
+                  onRemove={removePart}
+                  part={part}
+                  total={parts.length}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Preview</CardTitle>
+            <CardDescription>
+              New L3 message entry + ordered parts.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChatMessage message={message} />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

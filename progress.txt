@@ -1,0 +1,11 @@
+- T1.1 scaffold L3 message + parts (PRD T1)
+- Decisions: new L3 ChatMessage entry/variants; add Message.Thinking (output aria-live) in L2; demo refactor preview
+- Files: apps/web/src/components/chat/message/message.tsx, apps/web/src/components/chat/message/message-user.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/_parts/content.tsx, apps/web/src/components/chat/message/_parts/text-part.tsx, apps/web/src/components/ui-custom/chat/message.tsx, apps/web/src/routes/components/_components/messages.tsx
+- Entropy: rename assistantErrorEmtpy -> assistantErrorEmpty
+- Notes: typecheck/tests not run
+
+- T1 complete: rewrite L2 Message + demo (PRD T1)
+- Decisions: L2 Message rebuilt from scratch (no memo wrappers); demo rebuilt to text-only parts builder; Message.Content handles variant
+- Files: apps/web/src/components/ui-custom/chat/message.tsx, apps/web/src/components/chat/message/message-user.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/_parts/content.tsx, apps/web/src/routes/components/_components/messages.tsx
+- Entropy: part key now prefers part.id before index
+- Notes: typecheck/tests not run

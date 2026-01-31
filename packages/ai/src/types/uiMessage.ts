@@ -176,6 +176,7 @@ export type MyUIMessage = UIMessage<
   Tools
 >;
 export type MyUIMessageChunk = InferUIMessageChunk<MyUIMessage>;
+export type MyUIMessagePart = MyUIMessage["parts"][number];
 export async function validateMyUIMessages(messages: unknown[]) {
   return validateUIMessages<MyUIMessage>({ messages });
   // TODO: fix this, validation is not working
