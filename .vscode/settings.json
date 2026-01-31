@@ -38,5 +38,9 @@
     "**/.hg": true,
     "**/.DS_Store": true,
     "**/Thumbs.db": true
-  }
+  },
+  "chatgpt.commentCodeLensEnabled": true,
+  "cSpell.words": [
+    "workpool"
+  ]
 }

@@ -52,12 +52,15 @@ Third-party registries installed via CLI. Never modify directly.
 
 Compound component sets that embed your design decisions but know nothing about your app's domain (no `Thread`, `User`, `Message` types).
 
+L2 may accept L1 contract types it wraps (e.g., `UIMessage`), but never app-extended types (e.g., `MyUIMessage`).
+
 **Characteristics**:
 - Wraps/composes L1 primitives
 - Exports namespace object: `Message.*`, `Sidebar.*`, `ChatInput.*`
 - May have internal context for compound component state
 - Embeds styling, spacing, visual decisions
 - Receives all data via props or context injection
+- May import L1 types it wraps (e.g., `UIMessage`)
 
 **Example domains**:
 ```
@@ -66,12 +69,18 @@ ui-custom/
   sidebar/         # Sidebar.* compound
   chat/            # Message.*, ChatInput.* compounds
   user-profile/    # UserProfile.* compound
+  feedback/        # StatusBlock.* compound
+  actions/         # ActionList.* compound
 ```
 
 **What belongs here**:
 - `Sidebar.Root`, `Sidebar.Item`, `Sidebar.Footer`
 - `Message.Root`, `Message.Content`, `Message.Actions`
 - Generic slots and layouts, no app logic
+
+**Domain, not feature**:
+- L2 groups by UI concern (reasoning, status, actions), not by app feature (chat).
+- L2 can be multi-file per domain; each file exports its own namespace object.
 
 ---
 
@@ -80,6 +89,8 @@ ui-custom/
 **Location**: `[feature]/` (e.g., `chat/`, `sidebar/`, `settings/`)
 
 Components that know about your app's domain. They use hooks, reference app types, and make app-specific composition decisions.
+
+For complex features with multiple variants, create a subfolder and use the entry file named after the folder (e.g., `message/message.tsx`).
 
 **L3 has two concerns** (can be combined or separated):
 
@@ -119,7 +130,12 @@ components/
       sidebar.tsx              # Sidebar.* compound export
     chat/
       message.tsx              # Message.* compound export
+      reasoning.tsx            # Reasoning.* compound export
       chat-input.tsx           # ChatInput.* compound export
+    feedback/
+      status-block.tsx         # StatusBlock.* compound export
+    actions/
+      action-list.tsx          # ActionList.* compound export
     user-profile/
       user-profile.tsx         # UserProfile.* compound export
   
@@ -127,21 +143,30 @@ components/
   sidebar/
     app-sidebar.tsx            # Feature Root
     app-sidebar-layout.tsx     # Feature Layout (if separated)
-    sidebar-thread-item.tsx    # Feature Part
-    sidebar-user-menu.tsx      # Feature Part
+    _parts/
+      thread-item.tsx          # Feature Part
+      user-menu.tsx            # Feature Part
     _hooks/
       use-sidebar-state.ts     # Feature Hook
   
   chat/
-    chat-message.tsx           # Feature Root
-    chat-message-layout.tsx    # Feature Layout (if separated)
-    chat-message-status.tsx    # Feature Part
-    chat-input.tsx             # Feature Root
-    _parts/                    # Internal parts (complex features)
-      message-reasoning.tsx
-      message-footer.tsx
-    _hooks/
-      use-message-actions.ts
+    chat-sidebar.tsx           # Simple feature at root
+    message/                   # Complex feature subfolder
+      message.tsx              # Entry = folder name
+      message-user.tsx         # Variant
+      message-assistant.tsx    # Variant
+      message-layout.tsx       # Layout (if separated)
+      _parts/
+        reasoning.tsx
+        footer.tsx
+        status.tsx
+      _hooks/
+        use-message-actions.ts
+    prompt-input/
+      prompt-input.tsx         # Entry = folder name
+      prompt-input-chat.tsx    # Variant
+      _parts/
+        attachments.tsx
   
   shared/                      # Cross-feature L3 components
     user-avatar.tsx
@@ -156,15 +181,19 @@ components/
 
 | Type | Pattern | Example |
 |------|---------|---------|
-| Feature Root | `[feature].tsx` or `[parent]-[feature].tsx` | `chat-message.tsx` |
-| Feature Layout | `[feature]-layout.tsx` | `chat-message-layout.tsx` |
-| Feature Part | `[feature]-[part].tsx` | `chat-message-status.tsx` |
-| Feature Hook | `use-[feature]-[purpose].ts` | `use-message-actions.ts` |
+| Simple Feature Root | `[feature].tsx` or `[parent]-[feature].tsx` | `chat-sidebar.tsx` |
+| Complex Feature Entry | `[feature]/[feature].tsx` | `message/message.tsx` |
+| Variant | `[feature]/[feature]-[variant].tsx` | `message/message-user.tsx` |
+| Feature Layout | `[feature]/[feature]-layout.tsx` | `message/message-layout.tsx` |
+| Feature Part | `[feature]/_parts/[part].tsx` | `sidebar/_parts/thread-item.tsx` |
+| Feature Hook | `[feature]/_hooks/use-[purpose].ts` | `message/_hooks/use-message-actions.ts` |
 | Internal folder | `_[type]/` | `_parts/`, `_hooks/` |
+
+All feature parts and hooks live under `_parts/` and `_hooks/` (no root-level parts or hooks).
 
 ### L2 Compound Exports
 
-Always export as namespace object:
+Always export as namespace object (one per file, no barrel exports):
 
 ```tsx
 // ui-custom/chat/message.tsx
@@ -176,12 +205,21 @@ export const Message = {
 };
 ```
 
+```tsx
+// ui-custom/chat/reasoning.tsx
+export const Reasoning = {
+  Root: ReasoningRoot,
+  Trigger: ReasoningTrigger,
+  Content: ReasoningContent,
+};
+```
+
 ### L3 Imports
 
 ```tsx
-// chat/chat-message.tsx
+// chat/message/message.tsx
 import { Message } from "@/components/ui-custom/chat/message";
-import { SidebarThreadItem } from "./sidebar-thread-item";  // same feature
+import { MessageFooter } from "./_parts/footer";  // same feature
 import { UserAvatar } from "@/components/shared/user-avatar"; // cross-feature
 ```
 
@@ -240,14 +278,15 @@ Otherwise → Combined is fine
 
 ```
 Is it the main entry point for this feature?
-├─ YES → [feature].tsx (Feature Root)
+├─ Simple feature → [feature].tsx (Feature Root)
+├─ Complex feature → [feature]/[feature].tsx (Entry)
 
 Is it a pure composition separated from hooks?
-├─ YES → [feature]-layout.tsx (Feature Layout)
+├─ Simple feature → [feature]-layout.tsx (Feature Layout)
+├─ Complex feature → [feature]/[feature]-layout.tsx
 
 Is it a sub-component used only in this feature?
-├─ Simple feature → [feature]-[part].tsx (same level)
-└─ Complex feature → _parts/[part].tsx (subfolder)
+└─ [feature]/_parts/[part].tsx
 
 Is it a hook specific to this feature?
 └─ [feature]/_hooks/use-[purpose].ts
@@ -272,15 +311,11 @@ Is it a hook specific to this feature?
 - `ai-elements/reasoning` — Reasoning collapse primitives
 - `ui/button`, `ui/dropdown-menu` — Action primitives
 
-**L2 (Design System)**: `ui-custom/chat/message.tsx`
-- `Message.Root` — Container with role-based alignment
-- `Message.Content` — Markdown renderer wrapper
-- `Message.Reasoning` — Collapsible reasoning block
-- `Message.Actions` — Action button container
-- `Message.Action` — Single action with tooltip/dropdown support
-- `Message.Footer` — Stats + actions container
-- `Message.Stat` — Single stat with optional tooltip
-- `Message.Status` — Error/warning/info block
+**L2 (Design System)**:
+- `ui-custom/chat/message.tsx` — `Message.*` container + content
+- `ui-custom/chat/reasoning.tsx` — `Reasoning.*` collapsible reasoning
+- `ui-custom/feedback/status-block.tsx` — `StatusBlock.*` generic status UI
+- `ui-custom/actions/action-list.tsx` — `ActionList.*` generic actions UI
 
 Exports generic context interface:
 ```
@@ -291,15 +326,17 @@ MessageContextValue {
 }
 ```
 
-**L3 (App Layer)**: `chat/`
+**L3 (App Layer)**: `chat/message/`
 ```
-chat/
-  chat-message.tsx              # Feature Root: routes to User/Assistant
-  chat-message-user.tsx         # Variant: user message composition
-  chat-message-assistant.tsx    # Variant: assistant message composition  
-  chat-message-status.tsx       # Feature Part: error/cancelled adapter
+chat/message/
+  message.tsx                   # Entry: routes to User/Assistant
+  message-user.tsx              # Variant: user message composition
+  message-assistant.tsx         # Variant: assistant message composition
+  message-layout.tsx            # Layout (if separated)
+  _parts/
+    status.tsx                  # L3 adapter: error/cancelled
   _hooks/
-    use-chat-message-context.ts # Maps MyUIMessage → MessageContextValue
+    use-message-context.ts      # Maps MyUIMessage → L2 props/context
 ```
 
 ### Data Flow
@@ -344,8 +381,9 @@ Message.* components (L2 compound)
 ```
 sidebar/
   app-sidebar.tsx              # Feature Root: hooks + composition
-  sidebar-thread-item.tsx      # Feature Part: knows Thread type
-  sidebar-user-menu.tsx        # Feature Part: knows User type
+  _parts/
+    thread-item.tsx            # Feature Part: knows Thread type
+    user-menu.tsx              # Feature Part: knows User type
 ```
 
 ### Why SidebarThreadItem is L3
@@ -384,7 +422,7 @@ But it composes L2 primitives:
 When refactoring a component:
 
 - [ ] Identify which layer it should be (L2 or L3)
-- [ ] If L2: remove all app hooks and app type imports
+- [ ] If L2: remove all app hooks and app type imports (L1 types OK)
 - [ ] If L3: move to feature folder, create compound L2 if reusable
 - [ ] Export L2 as namespace object (`Component.*`)
 - [ ] L3 adapter maps app types → L2 props/context
@@ -397,7 +435,7 @@ When refactoring a component:
 ### The Golden Rules
 
 1. **L1 is immutable** — Never edit `ui/` or `ai-elements/`
-2. **L2 is app-agnostic** — No hooks, no app types, only props/context
+2. **L2 is app-agnostic** — No app hooks/types; L1 types OK
 3. **L3 is app-aware** — Hooks, app types, composition decisions
 4. **Compound over boolean** — `Message.User` not `<Message isUser />`
 5. **Explicit variants** — `ChatMessageAssistant` not `<ChatMessage role="assistant" />`
@@ -410,6 +448,13 @@ When refactoring a component:
 import { Button } from "@/components/ui/button";           // L1 ✓
 import { Reasoning } from "@/components/ai-elements/..."; // L1 ✓
 import { cn } from "@/lib/utils";                         // utils ✓
+import type { UIMessage, FileUIPart } from "ai";          // L1 type ✓
+
+// L2 MUST define its own interfaces:
+interface MessageContextValue {
+  content: string;
+  isStreaming: boolean;
+}
 
 // L2 CANNOT import:
 import { useChat } from "@/hooks/use-chat";               // app hook ✗
@@ -420,7 +465,7 @@ import { SomeComponent } from "@/components/chat/...";    // L3 ✗
 import { Message } from "@/components/ui-custom/chat/message"; // L2 ✓
 import { useChat } from "@/hooks/use-chat";                    // app hook ✓
 import type { MyUIMessage } from "@/types";                    // app type ✓
-import { SidebarThreadItem } from "./sidebar-thread-item";     // same feature ✓
+import { SidebarThreadItem } from "./_parts/thread-item";      // same feature ✓
 import { UserAvatar } from "@/components/shared/user-avatar";  // shared L3 ✓
 ```
 
