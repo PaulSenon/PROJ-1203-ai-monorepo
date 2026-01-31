@@ -17,26 +17,52 @@ export const Route = createFileRoute("/components/_components/messages")({
 
 type DemoRole = "assistant" | "user";
 
-type DemoPart = {
+type ReasoningState = "streaming" | "done";
+
+type DemoTextPart = {
   id: string;
+  type: "text";
   text: string;
 };
+
+type DemoReasoningPart = {
+  id: string;
+  type: "reasoning";
+  text: string;
+  state: ReasoningState;
+};
+
+type DemoPart = DemoTextPart | DemoReasoningPart;
 
 const SAMPLE_TEXT_1 =
   "This is the first text chunk. It should render before the next part.";
 const SAMPLE_TEXT_2 =
   "This is the second chunk. Ordering should be preserved across parts.";
+const SAMPLE_REASONING_1 =
+  "First, verify the order of the parts.\nThen, confirm reasoning collapses after streaming.\nFinally, ensure the toggle preserves state.";
 
 let partCounter = 0;
 
-const createPart = (text: string): DemoPart => ({
+const createTextPart = (text: string): DemoTextPart => ({
   id: `part-${partCounter++}`,
+  type: "text",
   text,
 });
 
+const createReasoningPart = (
+  text: string,
+  state: ReasoningState
+): DemoReasoningPart => ({
+  id: `part-${partCounter++}`,
+  type: "reasoning",
+  text,
+  state,
+});
+
 const createInitialParts = () => [
-  createPart(SAMPLE_TEXT_1),
-  createPart(SAMPLE_TEXT_2),
+  createTextPart(SAMPLE_TEXT_1),
+  createReasoningPart(SAMPLE_REASONING_1, "streaming"),
+  createTextPart(SAMPLE_TEXT_2),
 ];
 
 type PartEditorProps = {
@@ -44,6 +70,7 @@ type PartEditorProps = {
   index: number;
   total: number;
   onChange: (id: string, text: string) => void;
+  onStateChange: (id: string, state: ReasoningState) => void;
   onMove: (from: number, to: number) => void;
   onRemove: (id: string) => void;
 };
@@ -53,15 +80,23 @@ function PartEditor({
   index,
   total,
   onChange,
+  onStateChange,
   onMove,
   onRemove,
 }: PartEditorProps) {
+  const isReasoning = part.type === "reasoning";
+
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-background p-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-muted-foreground text-xs uppercase tracking-wide">
-          Part {index + 1}
-        </span>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-col gap-1">
+          <span className="text-muted-foreground text-xs uppercase tracking-wide">
+            Part {index + 1}
+          </span>
+          <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
+            {part.type}
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           <Button
             disabled={index === 0}
@@ -91,8 +126,33 @@ function PartEditor({
           </Button>
         </div>
       </div>
+      {isReasoning ? (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-muted-foreground text-xs uppercase tracking-wide">
+            State
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => onStateChange(part.id, "streaming")}
+              size="sm"
+              type="button"
+              variant={part.state === "streaming" ? "default" : "outline"}
+            >
+              Streaming
+            </Button>
+            <Button
+              onClick={() => onStateChange(part.id, "done")}
+              size="sm"
+              type="button"
+              variant={part.state === "done" ? "default" : "outline"}
+            >
+              Done
+            </Button>
+          </div>
+        </div>
+      ) : null}
       <textarea
-        aria-label={`Part ${index + 1} text`}
+        aria-label={`Part ${index + 1} ${part.type} text`}
         autoComplete="off"
         className="min-h-[96px] w-full rounded-md border border-border/70 bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         name={`part-${part.id}`}
@@ -107,16 +167,22 @@ function RouteComponent() {
   const [role, setRole] = useState<DemoRole>("assistant");
   const [parts, setParts] = useState<DemoPart[]>(createInitialParts);
   const [showEmpty, setShowEmpty] = useState(false);
+  const isAssistant = role === "assistant";
+  const showEmptyMessage = isAssistant && showEmpty;
 
   const message = useMemo<MyUIMessage>(
     () => ({
       id: "demo-message",
       role,
-      parts: showEmpty
+      parts: showEmptyMessage
         ? []
-        : parts.map((part) => ({ type: "text", text: part.text })),
+        : parts.map((part) =>
+            part.type === "text"
+              ? { type: "text", text: part.text }
+              : { type: "reasoning", text: part.text, state: part.state }
+          ),
     }),
-    [parts, role, showEmpty]
+    [parts, role, showEmptyMessage]
   );
 
   const movePart = (from: number, to: number) => {
@@ -124,6 +190,7 @@ function RouteComponent() {
       if (to < 0 || to >= prev.length) return prev;
       const next = [...prev];
       const [moved] = next.splice(from, 1);
+      if (!moved) return prev;
       next.splice(to, 0, moved);
       return next;
     });
@@ -135,8 +202,20 @@ function RouteComponent() {
     );
   };
 
-  const addPart = () => {
-    setParts((prev) => [...prev, createPart("")]);
+  const updateReasoningState = (id: string, state: ReasoningState) => {
+    setParts((prev) =>
+      prev.map((part) =>
+        part.id === id && part.type === "reasoning" ? { ...part, state } : part
+      )
+    );
+  };
+
+  const addTextPart = () => {
+    setParts((prev) => [...prev, createTextPart("")]);
+  };
+
+  const addReasoningPart = () => {
+    setParts((prev) => [...prev, createReasoningPart("", "streaming")]);
   };
 
   const removePart = (id: string) => {
@@ -147,15 +226,13 @@ function RouteComponent() {
     setParts(createInitialParts());
   };
 
-  const isAssistant = role === "assistant";
-
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
       <Card>
         <CardHeader>
           <CardTitle>Message UI Refactor</CardTitle>
           <CardDescription>
-            Text-only parts demo. Order should match the parts list.
+            Text and reasoning parts demo. Order should match the parts list.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -211,12 +288,20 @@ function RouteComponent() {
               </span>
               <div className="flex items-center gap-2">
                 <Button
-                  onClick={addPart}
+                  onClick={addTextPart}
                   size="sm"
                   type="button"
                   variant="outline"
                 >
-                  Add Part
+                  Add Text
+                </Button>
+                <Button
+                  onClick={addReasoningPart}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Add Reasoning
                 </Button>
                 <Button
                   onClick={resetParts}
@@ -240,6 +325,7 @@ function RouteComponent() {
                   onChange={updatePart}
                   onMove={movePart}
                   onRemove={removePart}
+                  onStateChange={updateReasoningState}
                   part={part}
                   total={parts.length}
                 />

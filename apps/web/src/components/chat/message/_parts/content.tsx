@@ -1,4 +1,5 @@
 import type { MyUIMessagePart } from "@ai-monorepo/ai/types/uiMessage";
+import { ReasoningPart } from "./reasoning-part";
 import { TextPart } from "./text-part";
 
 export type MessageContentPartsProps = {
@@ -24,7 +25,7 @@ export function MessageContentParts({ parts }: MessageContentPartsProps) {
         }
 
         if (part.type === "reasoning") {
-          return null;
+          return <ReasoningPart key={key} part={part} />;
         }
 
         return null;
