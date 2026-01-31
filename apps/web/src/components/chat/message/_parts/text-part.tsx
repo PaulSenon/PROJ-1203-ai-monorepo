@@ -1,5 +1,5 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import { Message } from "@/components/ui-custom/chat/message";
+import { SmoothMarkdown } from "@/components/ui-custom/markdown/smooth-markdown";
 
 type TextPart = Extract<MyUIMessage["parts"][number], { type: "text" }>;
 
@@ -7,10 +7,15 @@ export type TextPartProps = {
   part: TextPart;
 };
 
+const MARKDOWN_OVERFLOW_GUARDS =
+  "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto";
+
 export function TextPart({ part }: TextPartProps) {
-  if (!part.text?.trim()) return null;
+  const text = part.text ?? "";
+
+  if (!text.trim()) return null;
 
   return (
-    <Message.Response className="overflow-x-auto">{part.text}</Message.Response>
+    <SmoothMarkdown className={MARKDOWN_OVERFLOW_GUARDS}>{text}</SmoothMarkdown>
   );
 }

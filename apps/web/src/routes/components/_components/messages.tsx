@@ -40,6 +40,26 @@ const SAMPLE_TEXT_2 =
   "This is the second chunk. Ordering should be preserved across parts.";
 const SAMPLE_REASONING_1 =
   "First, verify the order of the parts.\nThen, confirm reasoning collapses after streaming.\nFinally, ensure the toggle preserves state.";
+const LONG_MARKDOWN = [
+  "```ts",
+  "const config = {",
+  '  endpoint: "https://example.com/api/v1/streaming/super/long/path",',
+  "  headers: {",
+  '    \\"x-long-header-name\\": \\"this-is-a-very-long-header-value-that-should-scroll\\",',
+  "  },",
+  "};",
+  "```",
+  "",
+  "| column-one | column-two | column-three | column-four | column-five | column-six |",
+  "| --- | --- | --- | --- | --- | --- |",
+  "| alpha | beta | gamma | delta | epsilon | zeta |",
+  "| supercalifragilisticexpialidocious | very-long-value-with-no-breaks | 1234567890 | 1234567890 | 1234567890 | 1234567890 |",
+].join("\n");
+const STREAM_CHUNKS = [
+  " Streaming chunk one.",
+  " Then chunk two arrives with more content.",
+  " Finally chunk three closes the stream.",
+];
 
 let partCounter = 0;
 
@@ -167,6 +187,7 @@ function RouteComponent() {
   const [role, setRole] = useState<DemoRole>("assistant");
   const [parts, setParts] = useState<DemoPart[]>(createInitialParts);
   const [showEmpty, setShowEmpty] = useState(false);
+  const [streamCursor, setStreamCursor] = useState(0);
   const isAssistant = role === "assistant";
   const showEmptyMessage = isAssistant && showEmpty;
 
@@ -224,6 +245,44 @@ function RouteComponent() {
 
   const resetParts = () => {
     setParts(createInitialParts());
+    setStreamCursor(0);
+  };
+
+  const appendStreamChunk = () => {
+    const chunk = STREAM_CHUNKS[streamCursor];
+    if (!chunk) return;
+
+    setParts((prev) => {
+      const index = prev.findIndex((part) => part.type === "text");
+      if (index === -1) return prev;
+
+      const next = [...prev];
+      const part = next[index];
+      if (part?.type !== "text") return prev;
+
+      next[index] = { ...part, text: `${part.text}${chunk}` };
+      return next;
+    });
+
+    setStreamCursor((value) => Math.min(value + 1, STREAM_CHUNKS.length));
+  };
+
+  const resetStream = () => {
+    setStreamCursor(0);
+  };
+
+  const insertLongContent = () => {
+    setParts((prev) => {
+      const index = prev.findIndex((part) => part.type === "text");
+      if (index === -1) return [...prev, createTextPart(LONG_MARKDOWN)];
+
+      const next = [...prev];
+      const part = next[index];
+      if (part?.type !== "text") return prev;
+
+      next[index] = { ...part, text: LONG_MARKDOWN };
+      return next;
+    });
   };
 
   return (
@@ -312,6 +371,45 @@ function RouteComponent() {
                   Reset
                 </Button>
               </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                Streaming
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  disabled={streamCursor >= STREAM_CHUNKS.length}
+                  onClick={appendStreamChunk}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Append Chunk
+                </Button>
+                <Button
+                  onClick={resetStream}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  Reset Stream
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                Overflow
+              </span>
+              <Button
+                onClick={insertLongContent}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Insert Long Content
+              </Button>
             </div>
 
             <div className="flex flex-col gap-4">
