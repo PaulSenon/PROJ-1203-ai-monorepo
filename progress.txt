@@ -9,3 +9,9 @@
 - Files: apps/web/src/components/ui-custom/chat/message.tsx, apps/web/src/components/chat/message/message-user.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/_parts/content.tsx, apps/web/src/routes/components/_components/messages.tsx
 - Entropy: part key now prefers part.id before index
 - Notes: typecheck/tests not run
+
+- T2: reasoning part block + demo controls (PRD T2)
+- Decisions: L2 Reasoning compound; L2 SmoothMarkdown in ui-custom/markdown; L3 ReasoningPart keeps open state, preview only while streaming
+- Files: apps/web/src/components/ui-custom/chat/reasoning.tsx, apps/web/src/components/ui-custom/markdown/smooth-markdown.tsx, apps/web/src/components/chat/message/_parts/reasoning-part.tsx, apps/web/src/components/chat/message/_parts/content.tsx, apps/web/src/routes/components/_components/messages.tsx
+- Entropy: demo empty-message now assistant-only effect
+- Notes: typecheck/tests not run

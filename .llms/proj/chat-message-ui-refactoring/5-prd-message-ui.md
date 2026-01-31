@@ -109,7 +109,7 @@ This enables tool/file parts later without re‑architecture.
 Each reasoning part renders a block. No grouping.
 
 - `part.state === "streaming"` -> header “Reasoning…” + toggle + preview
-- `part.state === "done"` -> header “Thought for Xs” if duration known; otherwise “Reasoning” (no ellipsis)
+- `part.state === "done"` -> header “Thought for Xs” if duration known otherwise "Thought for a few seconds".
 - When done, content collapsed by default; preview hidden.
 
 Layout stability:
