@@ -3,6 +3,10 @@ import type { ComponentProps } from "react";
 import { Message } from "@/components/ui-custom/chat/message";
 import { cn } from "@/lib/utils";
 import { MessageContentParts } from "./_parts/content";
+import {
+  MessageFooterAssistant,
+  type MessageFooterHandlerProps,
+} from "./_parts/footer";
 import { StatusPart } from "./_parts/status";
 
 export type ChatMessageAssistantProps = ComponentProps<"div"> & {
@@ -51,6 +55,16 @@ export function ChatMessageAssistant({
 }: ChatMessageAssistantProps) {
   const showThinking = shouldShowThinking(message);
 
+  const handleCopy: MessageFooterHandlerProps["onActionCopy"] = (kind) => {
+    // TODO: implement
+    console.log("handleCopy", { kind });
+  };
+
+  const handleRetry: MessageFooterHandlerProps["onActionRetry"] = (modelId) => {
+    // TODO: implement
+    console.log("handleRetry", { modelId });
+  };
+
   return (
     <div
       className={cn("flex w-full flex-col items-start gap-2", className)}
@@ -62,6 +76,13 @@ export function ChatMessageAssistant({
           <MessageContentParts parts={message.parts} />
           <StatusPart metadata={message.metadata} />
         </Message.Content>
+        <Message.Footer>
+          <MessageFooterAssistant
+            metadata={message.metadata}
+            onActionCopy={handleCopy}
+            onActionRetry={handleRetry}
+          />
+        </Message.Footer>
       </Message.Root>
     </div>
   );

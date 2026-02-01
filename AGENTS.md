@@ -11,6 +11,7 @@ Always start answer giving your name and version (e.g. "Claude Sonnet 4.5").
 Never run any dev commands. User will always run the dev server before asking you anything. If something isn't working as intended, ask the user to perform the action and stop answering. Only command allowed are non-destructive / readonly commands for searching content etc.
 Raise warning if you think user is asking something that is going to be a bad idea.
 When user ask technical question, do not implement anything and instead, gather all official documentation and resources to answer the question in educative way. (like a dev blog article with code examples and explanations)
+Never guess product/spec details. If ambiguity, ask and wait; update PRD/AGENTS before implementation.
 
 ## Code principles
 

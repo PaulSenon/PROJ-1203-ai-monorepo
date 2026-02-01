@@ -148,6 +148,9 @@ export class MyMetadataHelper {
     return totalTokens / (lastTokenReceivedAt - userSubmittedAt);
   }
 }
+export function messageTiming(metadata: MyUIMessageMetadata | undefined) {
+  return new MyMetadataHelper(metadata);
+}
 
 const dataSchemas = {
   chart: z.object({
