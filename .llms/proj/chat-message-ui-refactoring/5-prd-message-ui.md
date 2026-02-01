@@ -102,7 +102,7 @@ This enables tool/file parts later without re‑architecture.
 ### Message‑Level State
 
 - `hasContentParts = any reasoning/text with non‑empty text`
-- If `!hasContentParts`, show `Message.Thinking` placeholder (L2) in assistant layout.
+- If `!hasContentParts` and no error/cancel status, show `Message.Thinking` placeholder (L2) in assistant layout.
 
 ### Reasoning Block State (per part)
 
@@ -167,6 +167,7 @@ No L2 Action/Stat list API in this PRD.
 - Split stable vs streaming data to minimize re‑renders
 - Keep per‑part rendering isolated (text part component memoized)
 - Avoid passing stream props through heavy layout
+- Pass metadata and parts separately; avoid passing full message to non‑stream UI (parts stream and are rerender‑heavy)
 
 ### Demo Page
 
