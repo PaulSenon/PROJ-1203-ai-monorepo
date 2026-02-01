@@ -20,6 +20,7 @@ export const AIErrorKind = z.enum([
   "UNKNOWN_ERROR",
   "MAX_OUTPUT_TOKENS_EXCEEDED",
 ]) satisfies StandardSchemaV1<ChatErrorKind>;
+export type AIErrorKind = z.infer<typeof AIErrorKind>;
 
 export const AIErrorMetadata = z.union([
   z.object({
@@ -39,6 +40,7 @@ export const AIErrorMetadata = z.union([
     message: z.string().optional(),
   }),
 ]) satisfies StandardSchemaV1<ChatErrorMetadata>;
+export type AIErrorMetadata = z.infer<typeof AIErrorMetadata>;
 
 export const LiveStatus = z.enum([
   "pending",

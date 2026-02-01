@@ -187,14 +187,35 @@ function RouteComponent() {
   const [role, setRole] = useState<DemoRole>("assistant");
   const [parts, setParts] = useState<DemoPart[]>(createInitialParts);
   const [showEmpty, setShowEmpty] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
+  const [showError, setShowError] = useState(false);
   const [streamCursor, setStreamCursor] = useState(0);
   const isAssistant = role === "assistant";
   const showEmptyMessage = isAssistant && showEmpty;
 
-  const message = useMemo<MyUIMessage>(
-    () => ({
+  const message = useMemo<MyUIMessage>(() => {
+    const now = Date.now();
+    const errorMetadata = showError
+      ? ({
+          kind: "UNKNOWN_ERROR",
+          message: "Something went wrong while generating the response.",
+        } as const)
+      : undefined;
+    const hasStatus = showCancelled || showError;
+    const metadata = hasStatus
+      ? {
+          createdAt: now,
+          updatedAt: now,
+          liveStatus: showCancelled ? "cancelled" : "error",
+          lifecycleState: "active",
+          error: errorMetadata,
+        }
+      : undefined;
+
+    return {
       id: "demo-message",
       role,
+      metadata,
       parts: showEmptyMessage
         ? []
         : parts.map((part) =>
@@ -202,9 +223,8 @@ function RouteComponent() {
               ? { type: "text", text: part.text }
               : { type: "reasoning", text: part.text, state: part.state }
           ),
-    }),
-    [parts, role, showEmptyMessage]
-  );
+    };
+  }, [parts, role, showEmptyMessage, showCancelled, showError]);
 
   const movePart = (from: number, to: number) => {
     setParts((prev) => {
@@ -340,6 +360,34 @@ function RouteComponent() {
               />
               Empty message (assistant only)
             </label>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                Status
+              </span>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  checked={showCancelled}
+                  className="h-4 w-4 rounded border-border"
+                  disabled={!isAssistant}
+                  name="status-cancelled"
+                  onChange={(event) => setShowCancelled(event.target.checked)}
+                  type="checkbox"
+                />
+                Cancelled
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  checked={showError}
+                  className="h-4 w-4 rounded border-border"
+                  disabled={!isAssistant}
+                  name="status-error"
+                  onChange={(event) => setShowError(event.target.checked)}
+                  type="checkbox"
+                />
+                Error
+              </label>
+            </div>
 
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-xs uppercase tracking-wide">

@@ -26,3 +26,27 @@
   - Files: apps/web/src/components/chat/message/message-assistant.tsx
   - Entropy: align placeholder condition with rendered UI
   - Notes: typecheck/tests not run
+
+# T4: status placeholder + demo toggles (PRD T4)
+  - Decisions: add L2 StatusBlock slots; L3 StatusPart uses cancelled > error mapping; aria-live polite for status updates
+  - Files: apps/web/src/components/ui-custom/feedback/status-block.tsx, apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/routes/components/_components/messages.tsx
+  - Entropy: remove derived showStatus flag in demo
+  - Notes: typecheck/tests not run
+
+# T4 followup: status priority + metadata-only props (PRD T4)
+  - Decisions: error wins over cancelled; StatusPart now takes metadata only; getErrorContent normalizes title/body
+  - Files: apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/message-assistant.tsx, .llms/proj/chat-message-ui-refactoring/5-prd-message-ui.md
+  - Entropy: remove TODO/NOTE comments in status part
+  - Notes: typecheck/tests not run
+
+# T4 followup: hide thinking for status-only (PRD T4)
+  - Decisions: Message.Thinking hidden when error/cancelled status present
+  - Files: apps/web/src/components/chat/message/message-assistant.tsx, .llms/proj/chat-message-ui-refactoring/5-prd-message-ui.md
+  - Entropy: none
+  - Notes: typecheck/tests not run
+
+# T4 followup: thinking visibility helper (PRD T4)
+  - Decisions: consolidate placeholder visibility into shouldShowThinking helper
+  - Files: apps/web/src/components/chat/message/message-assistant.tsx
+  - Entropy: none
+  - Notes: typecheck/tests not run
