@@ -41,7 +41,7 @@ In scope:
 - Core message refactor + demo page
 - Ordered parts rendering (text + reasoning)
 - Minimal, working Reasoning + Status L2 with stable APIs
-- Footer placeholder implemented in L3 only
+- L2 Message.Footer container + L3 footer content placeholders (user + assistant)
 
 Deferred to separate PRDs:
 
@@ -146,14 +146,25 @@ L3 `_parts/status.tsx` adapts:
 - Placement: after content, before footer
 - Precedence: cancelled > error > none
 
-### Actions/Stats Lists (L3‑only placeholder)
+### Footer Container (L2)
 
-L3 `_parts/footer.tsx` placeholder behavior:
+L2 `Message.Footer` provides:
 
-- Actions: Copy, Retry (simple click only)
-- Stats: model id, output tokens, tps (if available)
-- Desktop: footer visible on hover, fixed footprint
-- Mobile: footer always visible
+- Container slot for footer content
+- Visibility logic: hover‑reveal on desktop, always visible on mobile
+- Constant footprint when hidden (no layout shift)
+- Placement: inside `Message.Root`, after `Message.Content`, for both roles
+
+### Footer Content (L3 placeholders)
+
+L3 footer content components (separate per role):
+
+- `footer-assistant`: placeholder actions + stats
+  - Actions: Copy, Retry (simple click only)
+  - Stats: model id, output tokens, tps (if available)
+- `footer-user`: placeholder actions only
+  - Actions: Copy (simple click only)
+  - Stats: none
 
 No L2 Action/Stat list API in this PRD.
 
@@ -227,7 +238,7 @@ Follow‑up PRDs:
 - T2: Add reasoning part block + reasoning state + demo controls
 - T3: Integrate SmoothMarkdown streaming + overflow guards + demo streaming
 - T4: Add status placeholder mapping + demo toggles (error/cancelled)
-- T5: Add footer L3‑only placeholder + hover/mobile visibility + demo controls
+- T5: Add L2 Message.Footer container + L3 user/assistant footer placeholders + hover/mobile visibility + demo controls
 - T6: Cleanup legacy message components
 
 ## Definition of Done

@@ -50,3 +50,32 @@
   - Files: apps/web/src/components/chat/message/message-assistant.tsx
   - Entropy: none
   - Notes: typecheck/tests not run
+
+# T5: footer placeholder + demo controls (PRD T5)
+  - Decisions: L3 MessageFooter inside Message.Root; Copy/Retry actions (Retry placeholder); stats from metadata (modelId/outputTokens/tps); desktop hover + mobile always; isLastMessage gates footer; demo adds thread streaming/last message/mobile preview + sample stats metadata
+  - Files: apps/web/src/components/chat/message/_parts/footer.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/message.tsx, apps/web/src/routes/components/_components/messages.tsx
+  - Entropy: reset demo partCounter in createInitialParts
+  - Notes: typecheck/tests not run
+
+# T5 spec fix: footer container + role footers (PRD T5)
+  - Decisions: L2 Message.Footer container; footer on all messages; L3 assistant/user footer placeholders; remove last-message control in PRD; add explicit DOD
+  - Files: .llms/proj/chat-message-ui-refactoring/5-prd-message-ui.md, AGENTS.md
+  - Entropy: none
+  - Notes: typecheck/tests not run
+
+# T5 fix: L2 footer container + role footers (PRD T5)
+  - Decisions: move visibility/footprint to L2 Message.Footer; L3 assistant/user footer content split; footer always rendered for both roles; remove last-message demo control
+  - Files: apps/web/src/components/ui-custom/chat/message.tsx, apps/web/src/components/chat/message/_parts/get-copy-text.ts, apps/web/src/components/chat/message/_parts/footer-assistant.tsx, apps/web/src/components/chat/message/_parts/footer-user.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/message-user.tsx, apps/web/src/components/chat/message/message.tsx, apps/web/src/routes/components/_components/messages.tsx
+  - Entropy: remove footer TODOs + delete old footer file
+  - Notes: typecheck/tests not run
+
+# T5 QA fix: user footer align + overflow guard
+  - Decisions: user Message.Root now w-fit max-w; L2 MessageRoot/Content add min-w-0; user content max-w-full to prevent nested max-w shrink; aim align footer with bubble + allow overflow scroll
+  - Files: apps/web/src/components/ui-custom/chat/message.tsx, apps/web/src/components/chat/message/message-user.tsx
+  - Entropy: none
+  - Notes: typecheck/tests not run
+
+# T5 Manual user edits
+  - deleted footer-assistant and footer-user for one single footer part. 
+  - moved action handler implementation to message L3 composition (message-user and message-assistant) will probably come from business hook at some point, of a L3 contextualized action hook for message to avoid prop drilling.
+  - mocked the copy action implementation (because wasn't)

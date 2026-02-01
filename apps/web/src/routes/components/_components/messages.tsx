@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/components/_components/messages")({
   component: RouteComponent,
@@ -79,11 +80,14 @@ const createReasoningPart = (
   state,
 });
 
-const createInitialParts = () => [
-  createTextPart(SAMPLE_TEXT_1),
-  createReasoningPart(SAMPLE_REASONING_1, "streaming"),
-  createTextPart(SAMPLE_TEXT_2),
-];
+const createInitialParts = () => {
+  partCounter = 0;
+  return [
+    createTextPart(SAMPLE_TEXT_1),
+    createReasoningPart(SAMPLE_REASONING_1, "streaming"),
+    createTextPart(SAMPLE_TEXT_2),
+  ];
+};
 
 type PartEditorProps = {
   part: DemoPart;
@@ -189,25 +193,45 @@ function RouteComponent() {
   const [showEmpty, setShowEmpty] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [isThreadStreaming, setIsThreadStreaming] = useState(false);
+  const [isMobilePreview, setIsMobilePreview] = useState(false);
   const [streamCursor, setStreamCursor] = useState(0);
   const isAssistant = role === "assistant";
   const showEmptyMessage = isAssistant && showEmpty;
 
   const message = useMemo<MyUIMessage>(() => {
     const now = Date.now();
+    const nowSeconds = Math.round(now / 1000);
     const errorMetadata = showError
       ? ({
           kind: "UNKNOWN_ERROR",
           message: "Something went wrong while generating the response.",
         } as const)
       : undefined;
-    const hasStatus = showCancelled || showError;
-    const metadata = hasStatus
+    const liveStatus = showCancelled
+      ? "cancelled"
+      : showError
+        ? "error"
+        : showEmptyMessage
+          ? "pending"
+          : isThreadStreaming
+            ? "streaming"
+            : "completed";
+    const metadata = isAssistant
       ? {
           createdAt: now,
           updatedAt: now,
-          liveStatus: showCancelled ? "cancelled" : "error",
+          liveStatus,
           lifecycleState: "active",
+          modelId: "gpt-5.2-codex",
+          usage: {
+            outputTokens: 512,
+            totalTokens: 768,
+          },
+          timing: {
+            userSubmittedAt: nowSeconds - 12,
+            lastTokenReceivedAt: nowSeconds,
+          },
           error: errorMetadata,
         }
       : undefined;
@@ -224,7 +248,15 @@ function RouteComponent() {
               : { type: "reasoning", text: part.text, state: part.state }
           ),
     };
-  }, [parts, role, showEmptyMessage, showCancelled, showError]);
+  }, [
+    parts,
+    role,
+    showEmptyMessage,
+    showCancelled,
+    showError,
+    isThreadStreaming,
+    isAssistant,
+  ]);
 
   const movePart = (from: number, to: number) => {
     setParts((prev) => {
@@ -389,6 +421,34 @@ function RouteComponent() {
               </label>
             </div>
 
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                Footer
+              </span>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  checked={isThreadStreaming}
+                  className="h-4 w-4 rounded border-border"
+                  name="thread-streaming"
+                  onChange={(event) =>
+                    setIsThreadStreaming(event.target.checked)
+                  }
+                  type="checkbox"
+                />
+                Thread streaming
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  checked={isMobilePreview}
+                  className="h-4 w-4 rounded border-border"
+                  name="preview-mobile"
+                  onChange={(event) => setIsMobilePreview(event.target.checked)}
+                  type="checkbox"
+                />
+                Mobile preview
+              </label>
+            </div>
+
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-xs uppercase tracking-wide">
                 Parts
@@ -488,7 +548,11 @@ function RouteComponent() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ChatMessage message={message} />
+            <div
+              className={cn("w-full", isMobilePreview && "mx-auto max-w-sm")}
+            >
+              <ChatMessage message={message} />
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -14,7 +14,7 @@ type MessageVariant = "user" | "assistant";
 export type MessageRootProps = ComponentProps<typeof AIMessage>;
 
 function MessageRoot({ className, ...props }: MessageRootProps) {
-  return <AIMessage className={cn("w-full", className)} {...props} />;
+  return <AIMessage className={cn("w-full min-w-0", className)} {...props} />;
 }
 
 export type MessageContentProps = ComponentProps<typeof AIMessageContent> & {
@@ -22,7 +22,7 @@ export type MessageContentProps = ComponentProps<typeof AIMessageContent> & {
 };
 
 const contentStyles: Record<MessageVariant, string> = {
-  user: "ml-auto max-w-[90%] sm:max-w-[80%]",
+  user: "ml-auto max-w-full",
   assistant: "w-full max-w-none",
 };
 
@@ -33,7 +33,7 @@ function MessageContent({
 }: MessageContentProps) {
   return (
     <AIMessageContent
-      className={cn(contentStyles[variant], className)}
+      className={cn("min-w-0", contentStyles[variant], className)}
       {...props}
     />
   );
@@ -45,6 +45,21 @@ function MessageResponse({ className, ...props }: MessageResponseProps) {
   return (
     <AIMessageResponse
       className={cn("[&>*:first-child]:mt-0 [&>*:last-child]:mb-0", className)}
+      {...props}
+    />
+  );
+}
+
+export type MessageFooterProps = ComponentProps<"div">;
+
+function MessageFooter({ className, ...props }: MessageFooterProps) {
+  return (
+    <div
+      className={cn(
+        "min-h-7 w-full",
+        "opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
+        className
+      )}
       {...props}
     />
   );
@@ -73,5 +88,6 @@ export const Message = {
   Root: MessageRoot,
   Content: MessageContent,
   Response: MessageResponse,
+  Footer: MessageFooter,
   Thinking: MessageThinking,
 };
