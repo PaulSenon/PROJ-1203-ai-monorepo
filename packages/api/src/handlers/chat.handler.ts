@@ -310,7 +310,15 @@ export const chatProcedure = chatProcedures.chat
       },
       messageMetadata({ part }) {
         // skip metadata computation for non-final parts
-        if (!["finish", "abort", "error", "start"].includes(part.type)) {
+        if (
+          ![
+            "finish",
+            "abort",
+            "error",
+            "start", // important to detect pending state
+            "start-step", // important to detect streaming state
+          ].includes(part.type)
+        ) {
           return;
         }
 
