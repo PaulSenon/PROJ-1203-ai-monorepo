@@ -1,3 +1,4 @@
+import { env } from "@ai-monorepo/env/server";
 import { ORPCError } from "@orpc/client";
 import { os } from "@orpc/server";
 import {
@@ -5,7 +6,6 @@ import {
   fetchQuery as fetchConvexQuery,
 } from "convex/nextjs";
 import type { FunctionReference, OptionalRestArgs } from "convex/server";
-import { env } from "../../env";
 import type { ClerkAuthContext } from "../orpc.context";
 
 export const convexContextMiddleware = os

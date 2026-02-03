@@ -37,6 +37,7 @@ export default defineConfig({
     //   },
     // },
     host: true, // Ensure Vite listens on all interfaces
+    port: 3001,
   },
   resolve: {
     alias: {

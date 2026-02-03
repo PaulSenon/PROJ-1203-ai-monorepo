@@ -111,8 +111,8 @@ const threads = [
 ] satisfies Doc<"threads">[];
 
 function RouteComponent() {
-  const [_threads, setThreads] = useState<Doc<"threads">[]>(threads);
-  const i = useRef(0);
+  const [_threads, _setThreads] = useState<Doc<"threads">[]>(threads);
+  // const i = useRef(0);
   // useEffect(() => {
   //   i.current++;
   //   const interval = setInterval(() => {
@@ -234,8 +234,8 @@ function InitialScroll() {
 
 function Content() {
   const { bottomRef } = useScrollToBottomState();
-  const { state: sidebarState } = useSidebar();
-  const isCollapsed = sidebarState === "collapsed";
+  // const { state: sidebarState } = useSidebar();
+  // const isCollapsed = sidebarState === "collapsed";
   return (
     <>
       {/* <CollapsibleButtonGroupAnimated className="fixed top-3 top-safe-offset-2 left-3" /> */}

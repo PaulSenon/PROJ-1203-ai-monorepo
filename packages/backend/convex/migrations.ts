@@ -63,3 +63,10 @@ export const runAddUserPreferencesModelToPickForNewThread = migrations.runner(
   internal.migrations
     ._1_2025_11_12_add_user_preferences_model_to_pick_for_new_thread
 );
+
+// pnpm dlx convex run migrations:runAll
+export const runAll = migrations.runner([
+  // internal.migrations._1_2025_11_07_add_created_at_bulk_order_to_messages, // dev:DONE prod:DONE
+  // internal.migrations._1_2025_11_12_add_user_preferences_model_to_pick_for_new_thread,, // dev:DONE prod:DONE
+  // TODO: next migrations here
+]);

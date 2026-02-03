@@ -1,13 +1,17 @@
 {
   "name": "@ai-monorepo/convex",
   "version": "1.0.0",
-  "description": "",
+  "description": "Convex backend",
   "scripts": {
     "dev": "convex dev",
-    "setup": "convex dev --until-success"
+    "dev:setup": "convex dev --configure --until-success",
+    "deploy": "convex deploy",
+    "check-types": "tsc --noEmit",
+    "migrate:check-dev": "convex run --component migrations lib:getStatus --watch",
+    "migrate:check-prod": "convex run --component migrations lib:getStatus --watch --prod",
+    "migrate:dev": "convex run migrations:runAll && pnpm run migrate:check-dev",
+    "migrate:prod": "convex run migrations:runAll --prod && pnpm run migrate:check-prod"
   },
-  "author": "",
-  "packageManager": "pnpm@10.19.0",
   "devDependencies": {
     "typescript": "catalog:"
   },
@@ -15,6 +19,7 @@
     "@ai-monorepo/ai": "workspace:*",
     "@convex-dev/migrations": "catalog:convex",
     "@convex-dev/workpool": "catalog:convex",
+    "@ai-monorepo/config": "workspace:*",
     "convex": "catalog:convex",
     "convex-helpers": "catalog:convex"
   }

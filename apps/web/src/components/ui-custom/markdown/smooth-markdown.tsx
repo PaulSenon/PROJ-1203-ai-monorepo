@@ -17,10 +17,10 @@ export function SmoothMarkdown({
   startStreaming,
   ...props
 }: SmoothMarkdownProps) {
-  const [text] = useSmoothText(
-    children,
-    startStreaming === undefined ? undefined : { startStreaming }
-  );
+  const [text] = useSmoothText(children, {
+    startStreaming: startStreaming ?? false,
+    charsPerSec: 1000,
+  });
 
   return <Streamdown {...props}>{text}</Streamdown>;
 }

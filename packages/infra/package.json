@@ -1,0 +1,25 @@
+{
+  "name": "@ai-monorepo/infra",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "with-dev-envs": "cross-env NODE_ENV=development dotenvx run --convention=nextjs --",
+    "with-prod-envs": "cross-env NODE_ENV=production dotenvx run --convention=nextjs --",
+    "dev": "pnpm with-dev-envs alchemy dev",
+    "deploy": "pnpm with-prod-envs alchemy deploy",
+    "destroy": "pnpm with-prod-envs alchemy destroy",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "catalog:",
+    "zod": "catalog:",
+    "@t3-oss/env-core": "catalog:env"
+  },
+  "devDependencies": {
+    "@dotenvx/dotenvx": "catalog:",
+    "cross-env": "catalog:",
+    "typescript": "catalog:",
+    "@ai-monorepo/config": "workspace:*",
+    "alchemy": "catalog:"
+  }
+}

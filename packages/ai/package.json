@@ -4,30 +4,23 @@
   "description": "",
   "exports": {
     "./*": {
-      "types": "./dist/*.d.ts",
       "default": "./src/*.ts"
     },
     "./libs/deltaStreamChunker": {
-      "types": "./dist/libs/deltaStreamChunker.d.ts",
       "default": "./src/libs/deltaStreamChunker.ts"
     }
   },
   "type": "module",
-  "scripts": {
-    "build": "tsdown"
-  },
-  "devDependencies": {
-    "tsdown": "catalog:"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
+  "scripts": {},
   "dependencies": {
-    "@ai-monorepo/convex": "workspace:^",
     "@ai-sdk/anthropic": "catalog:ai",
     "@ai-sdk/google": "catalog:ai",
     "@ai-sdk/openai": "catalog:ai",
     "ai": "catalog:ai",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "@ai-monorepo/config": "workspace:*"
   }
 }

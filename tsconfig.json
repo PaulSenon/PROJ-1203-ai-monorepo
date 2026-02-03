@@ -1,6 +1,3 @@
 {
-  "extends": "./tsconfig.base.json",
-  "compilerOptions": {
-    "strictNullChecks": true
-  }
+  "extends": "@ai-monorepo/config/tsconfig.base.json"
 }

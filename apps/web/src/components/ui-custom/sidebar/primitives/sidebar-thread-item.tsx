@@ -20,7 +20,6 @@ import {
 import { Pulse2Icon } from "@/components/ui/icons/svg-spinners-pulse-2";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "../../tooltip";
 
@@ -74,7 +73,7 @@ function LiveStateIndicatorIcon({
         />
         {variant === "pending" && (
           <Pulse2Icon
-            className="-left-1/2 -top-1/2 absolute origin-center animate-in text-muted-foreground/80"
+            className="-top-1/2 -left-1/2 absolute origin-center animate-in text-muted-foreground/80"
             size={16}
           />
         )}
@@ -153,29 +152,29 @@ function TruncatedText({
   );
 }
 
-function MyTooltipContent({
-  children,
-  className,
-  ...props
-}: React.ComponentProps<typeof TooltipContent>) {
-  return (
-    <TooltipContent
-      alignOffset={10}
-      arrow={false}
-      className={cn(
-        "wrap-break-word max-h-[var(--radix-tooltip-content-available-height)]whitespace-normal max-w-(--radix-tooltip-content-available-width) overflow-auto",
-        "pointer-events-none select-none bg-sidebar text-foreground text-xs md:bg-background",
-        className
-      )}
-      collisionPadding={10}
-      side="bottom"
-      // sticky="always"
-      {...props}
-    >
-      {children}
-    </TooltipContent>
-  );
-}
+// function MyTooltipContent({
+//   children,
+//   className,
+//   ...props
+// }: React.ComponentProps<typeof TooltipContent>) {
+//   return (
+//     <TooltipContent
+//       alignOffset={10}
+//       arrow={false}
+//       className={cn(
+//         "wrap-break-word max-h-[var(--radix-tooltip-content-available-height)]whitespace-normal max-w-(--radix-tooltip-content-available-width) overflow-auto",
+//         "pointer-events-none select-none bg-sidebar text-foreground text-xs md:bg-background",
+//         className
+//       )}
+//       collisionPadding={10}
+//       side="bottom"
+//       // sticky="always"
+//       {...props}
+//     >
+//       {children}
+//     </TooltipContent>
+//   );
+// }
 
 export type ThreadAction = {
   id: string;

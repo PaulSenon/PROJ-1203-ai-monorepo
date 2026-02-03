@@ -1,7 +1,9 @@
+/** biome-ignore-all lint/nursery/noShadow: tkt */
+/** biome-ignore-all lint/style/noNamespace: tkt */
+import type { server } from "@ai-monorepo/infra/alchemy.run";
+
 // This file infers types for the cloudflare:workers environment from your Alchemy Worker.
 // @see https://alchemy.run/concepts/bindings/#type-safe-bindings
-
-import type { server } from "../../alchemy.run";
 
 export type CloudflareEnv = typeof server.Env;
 
@@ -10,9 +12,7 @@ declare global {
 }
 
 declare module "cloudflare:workers" {
-  // biome-ignore lint/style/noNamespace: cloudflare
   namespace Cloudflare {
-    // biome-ignore lint/nursery/noShadow: cloudflare
     export interface Env extends CloudflareEnv {}
   }
 }

@@ -3,48 +3,53 @@ packages:
   - packages/*
 
 catalog:
-  alchemy: ^0.75.1
+  "@cloudflare/workers-types": ^4.20251213.0
+  "@types/node": ^22.13.14
+  ai: ^6.0.3
+  alchemy: ^0.82.1
   dotenv: ^17.2.2
   hono: ^4.8.2
   nanoid: 5.1.6
-  tsdown: ^0.15.5
-  typescript: 5.9.3
-  zod: 4.1.12
+  tsdown: ^0.16.5
+  typescript: ^5
+  zod: ^4.3.6
+  cross-env: ^10.1.0
+  "@dotenvx/dotenvx": "^1.51.0"
 
 catalogs:
   ai:
-    '@ai-sdk/anthropic': ^2.0.40
-    '@ai-sdk/google': 2.0.25
-    '@ai-sdk/openai': ^2.0.60
-    '@ai-sdk/provider': ^2.0.0
-    '@ai-sdk/react': ^2.0.81
-    ai: 5.0.81
+    "@ai-sdk/anthropic": ^3.0.35
+    "@ai-sdk/google": ^3.0.20
+    "@ai-sdk/openai": ^3.0.25
+    "@ai-sdk/provider": ^3.0.7
+    "@ai-sdk/react": ^3.0.69
+    ai: ^6.0.67
   clerk:
-    '@clerk/backend': ^2.19.1
-    '@clerk/clerk-react': ^5.53.4
-    '@clerk/themes': ^2.4.33
-    '@hono/clerk-auth': ^3.0.3
+    "@clerk/backend": ^2.19.1
+    "@clerk/clerk-react": ^5.53.4
+    "@clerk/themes": ^2.4.33
+    "@hono/clerk-auth": ^3.0.3
   convex:
-    '@convex-dev/agent': ^0.2.12
-    '@convex-dev/migrations': ^0.2.9
-    '@convex-dev/workpool': ^0.3.1
-    convex: ^1.31.6
-    convex-helpers: 0.1.104
+    "@convex-dev/agent": ^0.2.12
+    "@convex-dev/migrations": ^0.3.1
+    "@convex-dev/workpool": ^0.3.1
+    convex: ^1.31.7
+    convex-helpers: ^0.1.111
   env:
-    '@t3-oss/env-core': 0.13.8
+    "@t3-oss/env-core": ^0.13.10
   orpc:
-    '@orpc/client': 1.10.2
-    '@orpc/contract': 1.10.2
-    '@orpc/openapi': 1.10.2
-    '@orpc/openapi-client': ^1.10.2
-    '@orpc/server': 1.10.2
-    '@orpc/tanstack-query': ^1.10.2
-    '@orpc/zod': 1.10.2
+    "@orpc/server": ^1.12.2
+    "@orpc/openapi": ^1.12.2
+    "@orpc/zod": ^1.12.2
+    "@orpc/client": ^1.12.2
+    "@orpc/contract": ^1.12.2
+    "@orpc/openapi-client": ^1.12.2
+    "@orpc/tanstack-query": ^1.12.2
   schema:
-    '@standard-schema/spec': ^1.0.0
+    "@standard-schema/spec": ^1.0.0
 
 ignoredBuiltDependencies:
-  - '@clerk/shared'
+  - "@clerk/shared"
 
 onlyBuiltDependencies:
   - esbuild

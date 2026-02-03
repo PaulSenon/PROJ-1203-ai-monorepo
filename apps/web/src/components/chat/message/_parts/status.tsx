@@ -1,6 +1,6 @@
 import type {
-  AIErrorKind,
-  AIErrorMetadata,
+  MessageError,
+  MessageErrorKind,
   MyUIMessageMetadata,
 } from "@ai-monorepo/ai/types/uiMessage";
 import { StatusBlock } from "@/components/ui-custom/feedback/status-block";
@@ -14,19 +14,19 @@ const CANCELLED_BODY = "Response cancelled.";
 const DEFAULT_ERROR_TITLE = "Error";
 const DEFAULT_ERROR_BODY = "Something went wrong.";
 
-const errorTitleByKind: Record<AIErrorKind, string> = {
+const errorTitleByKind: Record<MessageErrorKind, string> = {
   AI_API_ERROR: "Provider error",
   UNKNOWN_ERROR: "Error",
   MAX_OUTPUT_TOKENS_EXCEEDED: "Response limit reached",
 };
 
-const errorBodyByKind: Record<AIErrorKind, string> = {
+const errorBodyByKind: Record<MessageErrorKind, string> = {
   AI_API_ERROR: "The provider returned an error.",
   UNKNOWN_ERROR: DEFAULT_ERROR_BODY,
   MAX_OUTPUT_TOKENS_EXCEEDED: "Max output tokens exceeded.",
 };
 
-function getErrorContent(error: AIErrorMetadata | undefined) {
+function getErrorContent(error: MessageError | undefined) {
   if (!error) {
     return { title: DEFAULT_ERROR_TITLE, body: DEFAULT_ERROR_BODY };
   }
@@ -50,7 +50,7 @@ function getErrorContent(error: AIErrorMetadata | undefined) {
 }
 
 type ErrorStatusPartProps = {
-  error?: AIErrorMetadata;
+  error?: MessageError;
 };
 
 function ErrorStatusPart({ error }: ErrorStatusPartProps) {

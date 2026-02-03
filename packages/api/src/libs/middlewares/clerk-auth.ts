@@ -1,7 +1,7 @@
+import { env } from "@ai-monorepo/env/server";
 import { createClerkClient } from "@clerk/backend";
 import { ORPCError } from "@orpc/client";
 import { os } from "@orpc/server";
-import { env } from "../../env";
 import type { ClerkAuthContext, RequestContext } from "../orpc.context";
 
 const client = createClerkClient({

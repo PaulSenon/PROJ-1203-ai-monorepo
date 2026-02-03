@@ -12,6 +12,7 @@ import {
   validateMyUIMessages,
 } from "@ai-monorepo/ai/types/uiMessage";
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
+import { env } from "@ai-monorepo/env/server";
 import { implement, ORPCError, streamToEventIterator } from "@orpc/server";
 import {
   AISDKError,
@@ -24,7 +25,6 @@ import {
 } from "ai";
 import { nanoid } from "nanoid";
 import { chatRouterContract } from "../contracts/chat.contract";
-import { env } from "../env";
 import { clerkAuthMiddleware } from "../libs/middlewares/clerk-auth";
 import { convexContextMiddleware } from "../libs/middlewares/convex-helpers";
 import type { RequestContext } from "../libs/orpc.context";

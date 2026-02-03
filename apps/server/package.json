@@ -4,15 +4,12 @@
   "type": "module",
   "scripts": {
     "build": "tsdown",
-    "check-types": "tsc -b",
-    "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
-    "dev": "alchemy dev",
-    "deploy": "alchemy deploy",
-    "destroy": "alchemy destroy"
+    "check-types": "tsc --noEmit",
+    "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server"
   },
   "dependencies": {
     "@ai-monorepo/api": "workspace:*",
-    "@ai-sdk/google": "catalog:ai",
+    "@ai-monorepo/env": "workspace:*",
     "@clerk/backend": "catalog:clerk",
     "@hono/clerk-auth": "catalog:clerk",
     "@orpc/contract": "catalog:orpc",
@@ -20,17 +17,17 @@
     "@orpc/server": "catalog:orpc",
     "@orpc/zod": "catalog:orpc",
     "@t3-oss/env-core": "catalog:env",
-    "ai": "catalog:ai",
     "dotenv": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250822.0",
-    "@types/node": "^22.13.11",
-    "alchemy": "^0.75.1",
-    "tsdown": "catalog:",
     "typescript": "catalog:",
-    "wrangler": "^4.40.3"
+    "@ai-monorepo/config": "workspace:*",
+    "tsdown": "catalog:",
+    "alchemy": "catalog:",
+    "wrangler": "^4.54.0",
+    "@types/node": "catalog:",
+    "@cloudflare/workers-types": "catalog:"
   }
 }

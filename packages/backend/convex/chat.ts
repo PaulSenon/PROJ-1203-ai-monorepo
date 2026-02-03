@@ -535,6 +535,12 @@ export const upsertMessage = mutationWithRLS({
     const { threadId, uiMessage, lifecycleState, liveStatus, modelId, role } =
       args;
     const [validUiMessage] = await validateMyUIMessages([uiMessage]);
+    if (validUiMessage === undefined) {
+      throw new ConvexError(
+        "Critical UIMessage validation error. Returned undefined without validation error."
+      );
+    }
+
     const messageId = await InternalUpsertMessageWithParts(ctx, {
       threadId,
       userId: user._id,
@@ -569,6 +575,11 @@ export const updateMessage = mutationWithRLS({
     const { messageId, uiMessage, lifecycleState, liveStatus, modelId, role } =
       args;
     const [validUiMessage] = await validateMyUIMessages([uiMessage]);
+    if (validUiMessage === undefined) {
+      throw new ConvexError(
+        "Critical UIMessage validation error. Returned undefined without validation error."
+      );
+    }
 
     const messagePatch = {
       role: role ?? validUiMessage.role,

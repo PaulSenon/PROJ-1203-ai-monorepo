@@ -1,6 +1,6 @@
-import type { env as cfEnv } from "cloudflare:workers";
+import type { WebEnvs } from "@ai-monorepo/infra/alchemy.run";
 import { createEnv } from "@t3-oss/env-core";
-import z from "zod";
+import { z } from "zod";
 
 export const env = createEnv({
   clientPrefix: "VITE_",
@@ -11,6 +11,8 @@ export const env = createEnv({
     VITE_CLERK_PUBLISHABLE_KEY: z.string(),
     VITE_CONVEX_URL: z.string(),
   },
-  runtimeEnv: import.meta.env,
-}) satisfies Omit<typeof cfEnv, "ASSETS">;
+  // biome-ignore lint/suspicious/noExplicitAny: we are not in vite context here
+  runtimeEnv: (import.meta as any).env,
+  emptyStringAsUndefined: true,
+}) satisfies WebEnvs;
 // N.B. if satisfy error, go change bindings in alchemy.run.ts
