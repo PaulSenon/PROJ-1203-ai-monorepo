@@ -12,6 +12,9 @@ const originSchema = z
 
 export const env = createEnv({
   clientPrefix: "PUBLIC_",
+  server: {
+    ALCHEMY_PASSWORD: z.string(),
+  },
   shared: {
     // Base
     NODE_ENV: z.enum(["production", "development"]).default("development"),
@@ -20,8 +23,8 @@ export const env = createEnv({
     CLERK_SECRET_KEY: z.string(),
 
     // AI
-    GOOGLE_API_KEY: z.string(),
-    OPENAI_API_KEY: z.string(),
+    __GOOGLE_API_KEY: z.string(),
+    __OPENAI_API_KEY: z.string(),
   },
   client: {
     // Origins
@@ -39,6 +42,7 @@ export const env = createEnv({
     PUBLIC_CONVEX_HTTP_ACTION_URL: z.string(),
   },
   runtimeEnv: process.env,
+  emptyStringAsUndefined: true,
 });
 
 export type Env = typeof env;

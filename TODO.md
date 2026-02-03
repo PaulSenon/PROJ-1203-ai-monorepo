@@ -72,3 +72,5 @@ Problems:
   class="bg-noise ease-snappy absolute inset-0 -top-3.5 bg-fixed bg-bottom-right transition-transform"
 ></div>
 ```
+
+- [ ] update all deps to latest `pnpm -r update --latest` but will broke things with alchemy update and env.ts import. So first make sure all typecheck are passing. also could be nice to scaffold another better-t-stack project with updated alchemy just to see how it shapes this up in a monorepo.

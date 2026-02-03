@@ -7,35 +7,32 @@
     "packages/*"
   ],
   "scripts": {
-    "with-envs": "dotenvx run --convention=nextjs --",
-    "check": "biome check --write .",
-    "dev": "pnpm run dev:convex & pnpm run dev:alchemy",
-    "dev:alchemy": "pnpm with-envs alchemy dev",
-    "dev:convex": "pnpm --filter='@ai-monorepo/convex' exec convex dev",
-    "build": "pnpm with-envs pnpm turbo build",
-    "check-types": "pnpm with-envs turbo check-types",
-    "dev:web": "pnpm with-envs turbo -F web dev",
-    "dev:server": "pnpm with-envs turbo -F server dev",
-    "deploy": "pnpm deploy:convex && pnpm deploy:alchemy",
-    "deploy:alchemy": "cross-env NODE_ENV=production pnpm with-envs pnpm alchemy deploy",
-    "deploy:convex": "pnpm --filter='@ai-monorepo/convex' exec convex deploy",
-    "destroy": "alchemy destroy"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "check-types": "turbo check-types",
+    "dev:web": "turbo -F web dev",
+    "dev:server": "turbo -F server dev",
+    "deploy:infra": "turbo -F @ai-monorepo/infra deploy",
+    "deploy:convex": "turbo -F @ai-monorepo/convex deploy",
+    "deploy": "pnpm deploy:convex && pnpm deploy:infra",
+    "destroy:infra": "turbo -F @ai-monorepo/infra deploy",
+    "destroy": "pnpm destroy:infra"
   },
   "dependencies": {
-    "@dotenvx/dotenvx": "^1.51.0",
     "@t3-oss/env-core": "catalog:env",
     "cross-env": "^10.1.0",
-    "dotenv": "^17.2.2",
-    "zod": "^4.1.11"
+    "dotenv": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.0",
     "@cloudflare/workers-types": "^4.20250822.0",
+    "@ai-monorepo/config": "workspace:*",
     "@types/node": "^22.13.11",
     "alchemy": "catalog:",
-    "tsdown": "^0.15.5",
+    "tsdown": "catalog:",
     "turbo": "^2.5.4",
     "ultracite": "6.0.4"
   },
-  "packageManager": "pnpm@10.19.0"
+  "packageManager": "pnpm@10.28.2+sha512.41872f037ad22f7348e3b1debbaf7e867cfd448f2726d9cf74c08f19507c31d2c8e7a11525b983febc2df640b5438dee6023ebb1f84ed43cc2d654d2bc326264"
 }

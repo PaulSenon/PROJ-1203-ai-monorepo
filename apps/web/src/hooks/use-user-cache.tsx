@@ -64,17 +64,17 @@ export function useUserCache() {
 }
 
 // TODO: move in helpers
-function passThroughSchema<T>(): StandardSchemaV1<T> {
-  return {
-    "~standard": {
-      validate: (value): StandardSchemaV1.SuccessResult<T> => ({
-        value: value as T,
-      }),
-      vendor: "pass-through",
-      version: 1,
-    },
-  };
-}
+// function passThroughSchema<T>(): StandardSchemaV1<T> {
+//   return {
+//     "~standard": {
+//       validate: (value): StandardSchemaV1.SuccessResult<T> => ({
+//         value: value as T,
+//       }),
+//       vendor: "pass-through",
+//       version: 1,
+//     },
+//   };
+// }
 
 export function useUserCacheEntryOnce<T>(
   key: string | SkipCache, // TODO: make it string[]

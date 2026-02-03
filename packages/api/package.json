@@ -1,40 +1,30 @@
 {
   "name": "@ai-monorepo/api",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
-    },
     "./*": {
-      "types": "./dist/*.d.ts",
       "default": "./src/*.ts"
     },
     "./contracts": {
-      "types": "./dist/*.d.ts",
       "default": "./src/contracts/*.ts"
     },
     "./libs": {
-      "types": "./dist/*.d.ts",
       "default": "./src/libs/*.ts"
     },
     "./router": {
-      "types": "./dist/*.d.ts",
       "default": "./src/routers/*.ts"
     }
   },
   "type": "module",
-  "scripts": {
-    "build": "tsdown"
-  },
+  "scripts": {},
   "devDependencies": {
-    "tsdown": "catalog:"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "catalog:",
+    "@ai-monorepo/config": "workspace:*",
+    "dotenv": "catalog:"
   },
   "dependencies": {
     "@ai-monorepo/ai": "workspace:^",
     "@ai-monorepo/convex": "workspace:^",
+    "@ai-monorepo/env": "workspace:^",
     "@ai-sdk/anthropic": "catalog:ai",
     "@ai-sdk/google": "catalog:ai",
     "@ai-sdk/openai": "catalog:ai",
@@ -47,8 +37,6 @@
     "@orpc/zod": "catalog:orpc",
     "ai": "catalog:ai",
     "convex": "catalog:convex",
-    "dotenv": "catalog:",
-    "hono": "catalog:",
     "nanoid": "catalog:",
     "zod": "catalog:"
   }

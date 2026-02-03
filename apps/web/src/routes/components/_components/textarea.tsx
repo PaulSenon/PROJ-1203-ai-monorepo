@@ -5,7 +5,7 @@ import {
   PromptInputProvider,
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
-import { CardContent, CardFooter } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import {
   Field,
   FieldContent,
@@ -42,14 +42,14 @@ function RouteComponent() {
   );
 }
 
-function DemoFooter({ children }: { children: React.ReactNode }) {
-  return (
-    <CardFooter className="flex flex-col items-start gap-2">
-      <h3 className="font-medium text-sm">Settings</h3>
-      <div className="flex flex-col items-center gap-2">{children}</div>
-    </CardFooter>
-  );
-}
+// function DemoFooter({ children }: { children: React.ReactNode }) {
+//   return (
+//     <CardFooter className="flex flex-col items-start gap-2">
+//       <h3 className="font-medium text-sm">Settings</h3>
+//       <div className="flex flex-col items-center gap-2">{children}</div>
+//     </CardFooter>
+//   );
+// }
 
 function DemoContent({ children }: { children: React.ReactNode }) {
   return (
@@ -61,9 +61,9 @@ function DemoContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SettingWrapper({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-row items-center gap-2">{children}</div>;
-}
+// function SettingWrapper({ children }: { children: React.ReactNode }) {
+//   return <div className="flex flex-row items-center gap-2">{children}</div>;
+// }
 
 function AutoGrowTextarea() {
   return (

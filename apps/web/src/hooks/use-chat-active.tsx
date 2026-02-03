@@ -169,7 +169,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     ...cvx.mutationV3.threads.upsert.options()
   );
 
-  const [messagesQueue, setMessagesQueue] = useState<MyUIMessage[]>([]);
+  const [messagesQueue, _setMessagesQueue] = useState<MyUIMessage[]>([]);
 
   const {
     sendMessage: sdkSendMessage,
@@ -274,7 +274,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       return __sendMessageInternal(uiMessage);
       // }
     },
-    [__sendMessageInternal, thread?.liveStatus]
+    [__sendMessageInternal]
   );
 
   const cancel = useCallback(async () => {

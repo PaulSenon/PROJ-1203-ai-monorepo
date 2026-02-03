@@ -17,6 +17,7 @@ export function useActiveThreadQuery({ skip }: { skip?: boolean } = {}) {
   );
 }
 
-export function useActiveThreadMutation() {
-  return cvx.mutations.upsertThread();
-}
+// export function useActiveThreadMutation() {
+//   // TODO: never used yet, might be broken
+//   return cvx.mutationV3.threads.upsert.options();
+// }

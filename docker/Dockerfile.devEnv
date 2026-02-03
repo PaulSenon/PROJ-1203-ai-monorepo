@@ -11,9 +11,11 @@ RUN apt-get update && \
 RUN npm i -g @anthropic-ai/claude-code
 RUN npm i -g opencode-ai@latest
 RUN npm i -g @openai/codex@latest
+RUN npm install -g agent-browser && \
+  agent-browser install --with-deps
 
 COPY package.json .
-# COPY pnpm-lock.yaml .
+COPY pnpm-lock.yaml .
 
 # Install system dependencies and package manager
 RUN npm install -g corepack && \

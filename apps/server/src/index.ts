@@ -3,17 +3,15 @@ import {
   protectedRouter,
   publicRouter,
 } from "@ai-monorepo/api/routers/index";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { env } from "@ai-monorepo/env/server";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
-import { convertToModelMessages, streamText } from "ai";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { env } from "./env";
 
 const app = new Hono();
 app.use(logger());
@@ -118,20 +116,6 @@ app.use("/rpc/private/*", async (ctx, next) => {
   }
 
   await next();
-});
-
-app.post("/ai", async (c) => {
-  const body = await c.req.json();
-  const uiMessages = body.messages || [];
-  const google = createGoogleGenerativeAI({
-    apiKey: "",
-  });
-  const result = streamText({
-    model: google("gemini-2.5-flash"),
-    messages: convertToModelMessages(uiMessages),
-  });
-
-  return result.toUIMessageStreamResponse();
 });
 
 app.get("/", (c) => c.text("OK"));

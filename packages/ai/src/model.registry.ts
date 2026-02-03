@@ -1,11 +1,13 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: need any */
+/** biome-ignore-all lint/suspicious/noTsIgnore: testing types */
+/** biome-ignore-all lint/correctness/noUnusedVariables: testing types */
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import {
   createProviderRegistry as __createProviderRegistry,
   type ProviderRegistryProvider,
 } from "ai";
-import type { MockProviderV2 } from "ai/test";
+import type { MockProviderV3 } from "ai/test";
 import z, { type ZodType } from "zod";
 import type { ProviderSlug } from "./types/providers.types";
 
@@ -39,10 +41,12 @@ type MyProviderRegistry = ReturnType<typeof createMyProviderRegistry>;
 export type InferProviderSplitChar<
   T extends ProviderRegistryProvider<any, any>,
 > = T extends ProviderRegistryProvider<any, infer P> ? P : never;
+// @ts-ignore
 type t4 = InferProviderSplitChar<MyProviderRegistry>;
 
 export type InferProviders<T extends ProviderRegistryProvider<any, any>> =
   T extends ProviderRegistryProvider<infer P, any> ? P : never;
+// @ts-ignore
 type t5 = InferProviders<MyProviderRegistry>;
 
 // export type InferModelIdFromProvider<
@@ -58,18 +62,20 @@ type ExtractLiteralUnion<T> = T extends string
   : never;
 
 type InferAllLanguageModelFullIdForProvider<
-  T extends ProviderRegistryProvider<Record<string, MockProviderV2>, string>,
+  T extends ProviderRegistryProvider<Record<string, MockProviderV3>, string>,
   KEY,
 > = KEY extends string
   ? `${KEY & string}${InferProviderSplitChar<T>}${ExtractLiteralUnion<
       Parameters<NonNullable<InferProviders<T>[KEY]["languageModel"]>>[0]
     >}`
   : never;
+// @ts-ignore
 type t8 = InferAllLanguageModelFullIdForProvider<MyProviderRegistry, "openai">;
 
 export type InferAllLanguageModelFullId<
-  T extends ProviderRegistryProvider<Record<string, MockProviderV2>, string>,
+  T extends ProviderRegistryProvider<Record<string, MockProviderV3>, string>,
 > = InferAllLanguageModelFullIdForProvider<T, keyof InferProviders<T>>;
+// @ts-ignore
 type t7 = InferAllLanguageModelFullId<MyProviderRegistry>;
 
 // export type ExtractLanguageModelIds<
@@ -155,7 +161,10 @@ export function createLanguageModelSubListValidator<
 export const allowedModelIds =
   registryUtils<MyProviderRegistry>().createLanguageModelSubList([
     "openai:gpt-5-mini",
+    "openai:gpt-5.2",
     "google:gemini-2.5-flash-lite",
+    "google:gemini-2.5-pro",
+    "google:gemini-3-flash-preview",
   ]);
 export const modelIdValidator =
   registryUtils<MyProviderRegistry>().createLanguageModelSubListValidator(
@@ -178,9 +187,27 @@ export const modelsConfig = createLanguageModelConfig<AllowedModelIds>({
     chef: "openai",
     providers: ["openai"],
   },
+  "openai:gpt-5.2": {
+    id: "openai:gpt-5.2",
+    label: "GPT-5.2",
+    chef: "openai",
+    providers: ["openai"],
+  },
   "google:gemini-2.5-flash-lite": {
     id: "google:gemini-2.5-flash-lite",
     label: "Gemini 2.5 Flash Lite",
+    chef: "google",
+    providers: ["google"],
+  },
+  "google:gemini-2.5-pro": {
+    id: "google:gemini-2.5-pro",
+    label: "Gemini 2.5 Pro",
+    chef: "google",
+    providers: ["google"],
+  },
+  "google:gemini-3-flash-preview": {
+    id: "google:gemini-3-flash-preview",
+    label: "Gemini 3 Flash",
     chef: "google",
     providers: ["google"],
   },

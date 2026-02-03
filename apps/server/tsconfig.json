@@ -1,14 +1,19 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "composite": true,
-    "outDir": "dist",
-    "baseUrl": ".",
-    "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx",
-    "paths": {
-      "@ai-monorepo/api/*": ["../../packages/api/src/*"]
-    }
-  },
-  "references": [{ "path": "../../packages/api" }]
+	"extends": "@ai-monorepo/config/tsconfig.base.json",
+	"compilerOptions": {
+		"composite": true,
+		"outDir": "dist",
+		"baseUrl": ".",
+		"paths": {
+			"~/*": ["./src/*"],
+			"@ai-monorepo/api/*": ["../../packages/api/src/*"],
+			"@ai-monorepo/env/*": ["../../packages/env/src/*"]
+		},
+		"jsx": "react-jsx",
+		"jsxImportSource": "hono/jsx"
+	},
+	"references": [
+		{ "path": "../../packages/api" },
+		{ "path": "../../packages/env" }
+	]
 }

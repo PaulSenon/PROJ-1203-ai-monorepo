@@ -205,8 +205,8 @@ function UserDropDownMenuContent({
 function UserInfos() {
   const {
     data: user,
-    isPending,
-    isStale,
+    // isPending,
+    // isStale,
   } = useCvxQueryCached(...cvx.query.getCurrentUser().options.neverSkip());
 
   const tierText = () => {

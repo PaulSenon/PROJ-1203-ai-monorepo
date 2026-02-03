@@ -1,3 +1,4 @@
+import { env } from "@ai-monorepo/env/web";
 import { useChat } from "@ai-sdk/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { DefaultChatTransport } from "ai";
@@ -6,7 +7,6 @@ import { useEffect, useRef, useState } from "react";
 import { Response } from "@/components/response";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { env } from "@/env";
 
 export const Route = createFileRoute("/_protected/ai")({
   component: RouteComponent,

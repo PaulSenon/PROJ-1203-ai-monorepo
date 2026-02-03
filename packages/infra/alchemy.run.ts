@@ -1,11 +1,13 @@
 import alchemy from "alchemy";
 import { Vite, Worker } from "alchemy/cloudflare";
-import { env } from "./env";
+import { env } from "./env.ts";
 
-const app = await alchemy("ai-monorepo");
+const app = await alchemy("ai-monorepo", {
+  password: env.ALCHEMY_PASSWORD,
+});
 
 export const web = await Vite("web", {
-  cwd: "apps/web",
+  cwd: "../../apps/web",
   assets: "dist",
   bindings: {
     // Envs
@@ -17,13 +19,14 @@ export const web = await Vite("web", {
     // No secrets because static app
   },
   dev: {
-    command: "pnpm run dev",
+    // command: "pnpm run dev",
     // command: "pnpm run build && pnpm run serve",
   },
 });
+export type WebEnvs = Omit<typeof web.Env, "ASSETS">;
 
 export const server = await Worker("server", {
-  cwd: "apps/server",
+  cwd: "../../apps/server",
   entrypoint: "src/index.ts",
   compatibility: "node",
   limits: {
@@ -40,13 +43,14 @@ export const server = await Worker("server", {
     PUBLIC_CONVEX_URL: env.PUBLIC_CONVEX_URL,
     // Secrets
     CLERK_SECRET_KEY: alchemy.secret(env.CLERK_SECRET_KEY),
-    GOOGLE_API_KEY: alchemy.secret(env.GOOGLE_API_KEY),
-    OPENAI_API_KEY: alchemy.secret(env.OPENAI_API_KEY),
+    GOOGLE_API_KEY: alchemy.secret(env.__GOOGLE_API_KEY),
+    OPENAI_API_KEY: alchemy.secret(env.__OPENAI_API_KEY),
   },
   dev: {
     port: 3000,
   },
 });
+export type ServerEnvs = Omit<typeof server.Env, "ASSETS">;
 
 console.log(`Web    -> ${web.url}`);
 console.log(`Server -> ${server.url}`);

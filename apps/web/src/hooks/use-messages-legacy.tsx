@@ -653,23 +653,27 @@ export function UseChatProvider({ children }: { children: ReactNode }) {
   );
   const value = useMemo(
     () => ({
+      addToolApprovalResponse: chatOutput.addToolApprovalResponse,
+      addToolOutput: chatOutput.addToolOutput,
       addToolResult: chatOutput.addToolResult,
       clearError: chatOutput.clearError,
       error: chatOutput.error,
       id: chatOutput.id,
+      messages: throttledSdkMessages ?? [],
       regenerate: chatOutput.regenerate,
       resumeStream: chatOutput.resumeStream,
       sendMessage: chatOutput.sendMessage,
       setMessages: chatOutput.setMessages,
       status: chatOutput.status,
       stop: chatOutput.stop,
-      messages: throttledSdkMessages ?? [],
-      subscribeOnFinish,
       subscribeOnData,
       subscribeOnError,
+      subscribeOnFinish,
       subscribeOnToolCall,
     }),
     [
+      chatOutput.addToolApprovalResponse,
+      chatOutput.addToolOutput,
       chatOutput.addToolResult,
       chatOutput.clearError,
       chatOutput.error,
@@ -680,13 +684,13 @@ export function UseChatProvider({ children }: { children: ReactNode }) {
       chatOutput.setMessages,
       chatOutput.status,
       chatOutput.stop,
-      subscribeOnFinish,
       subscribeOnData,
       subscribeOnError,
+      subscribeOnFinish,
       subscribeOnToolCall,
       throttledSdkMessages,
     ]
-  );
+  ) satisfies UseChatContextValue;
 
   return (
     <UseChatContext.Provider value={value}>{children}</UseChatContext.Provider>

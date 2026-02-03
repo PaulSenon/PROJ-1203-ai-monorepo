@@ -1,4 +1,4 @@
-import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
+import type { LiveStatus, MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ChatMessage } from "@/components/chat/message/message";
@@ -208,21 +208,24 @@ function RouteComponent() {
           message: "Something went wrong while generating the response.",
         } as const)
       : undefined;
-    const liveStatus = showCancelled
-      ? "cancelled"
-      : showError
-        ? "error"
-        : showEmptyMessage
-          ? "pending"
-          : isThreadStreaming
-            ? "streaming"
-            : "completed";
+    let liveStatus: LiveStatus;
+    if (showCancelled) {
+      liveStatus = "cancelled";
+    } else if (showError) {
+      liveStatus = "error";
+    } else if (showEmptyMessage) {
+      liveStatus = "pending";
+    } else if (isThreadStreaming) {
+      liveStatus = "streaming";
+    } else {
+      liveStatus = "completed";
+    }
     const metadata = isAssistant
       ? {
           createdAt: now,
           updatedAt: now,
           liveStatus,
-          lifecycleState: "active",
+          lifecycleState: "active" as const,
           modelId: "gpt-5.2-codex",
           usage: {
             outputTokens: 512,
