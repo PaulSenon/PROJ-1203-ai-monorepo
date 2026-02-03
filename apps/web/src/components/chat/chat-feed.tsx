@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { ChatMessage } from "@/components/chat/message/message";
 import { Conversation } from "@/components/ui-custom/chat/conversation";
 import { useAppLoadStatusActions } from "@/hooks/use-app-load-status";
 import {
@@ -10,7 +11,6 @@ import {
   useScrollToBottomInit,
   useScrollToBottomState,
 } from "../ui-custom/chat/hooks/use-scroll-to-bottom";
-import { ChatMessage } from "./chat-message";
 
 // TODO: move
 function InitialScroll() {

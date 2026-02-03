@@ -1,5 +1,11 @@
+import {
+  LifecycleState,
+  LiveStatus,
+  MessageError,
+} from "@ai-monorepo/ai/types/uiMessage";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { zodOutputToConvex } from "convex-helpers/server/zod";
 import { typedV } from "convex-helpers/validators";
 
 export const subscriptionTiers = v.union(
@@ -8,42 +14,9 @@ export const subscriptionTiers = v.union(
 );
 export type SubscriptionTier = typeof subscriptionTiers.type;
 
-export const lifecycleStates = v.union(
-  v.literal("active"),
-  v.literal("archived"),
-  v.literal("deleted")
-);
-export type LifecycleState = typeof lifecycleStates.type;
-
-export const liveStatuses = v.union(
-  v.literal("pending"),
-  v.literal("streaming"),
-  v.literal("completed"),
-  v.literal("error"),
-  v.literal("cancelled")
-);
-export type LiveStatus = typeof liveStatuses.type;
-
-export const chatErrorMetadata = v.union(
-  v.object({
-    kind: v.literal("AI_API_ERROR"),
-    message: v.optional(v.string()),
-  }),
-  v.object({
-    kind: v.literal("UNKNOWN_ERROR"),
-    message: v.optional(v.string()),
-  }),
-  v.object({
-    kind: v.literal("MAX_OUTPUT_TOKENS_EXCEEDED"),
-    params: v.object({
-      maxOutputTokens: v.optional(v.number()),
-      retryWithSuggestedModelIds: v.optional(v.array(v.string())),
-    }),
-    message: v.optional(v.string()),
-  })
-);
-export type ChatErrorMetadata = typeof chatErrorMetadata.type;
-export type ChatErrorKind = ChatErrorMetadata["kind"];
+export const lifecycleStates = zodOutputToConvex(LifecycleState);
+export const liveStatuses = zodOutputToConvex(LiveStatus);
+export const chatErrorMetadata = zodOutputToConvex(MessageError);
 
 export const flexibleMetadata = v.record(v.string(), v.any());
 

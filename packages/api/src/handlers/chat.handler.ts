@@ -5,16 +5,13 @@ import {
   createMyProviderRegistry,
   modelIdValidator,
 } from "@ai-monorepo/ai/model.registry";
+import type { LiveStatus } from "@ai-monorepo/ai/types/uiMessage";
 import {
+  type MessageError,
   type MyUIMessage,
   validateMyUIMessages,
 } from "@ai-monorepo/ai/types/uiMessage";
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
-import type {
-  ChatErrorMetadata,
-  LiveStatus,
-} from "@ai-monorepo/convex/convex/schema";
-import type { LanguageModelV2FinishReason } from "@ai-sdk/provider";
 import { implement, ORPCError, streamToEventIterator } from "@orpc/server";
 import {
   AISDKError,
@@ -53,25 +50,25 @@ function assertNever(x: never): never {
   throw new Error(`Unhandled case: ${JSON.stringify(x)}`);
 }
 
-function reduceFinishReasonToLiveStatus(
-  finishReason: LanguageModelV2FinishReason
-): LiveStatus {
-  switch (finishReason) {
-    case "tool-calls":
-      return "streaming";
-    case "stop":
-      return "completed";
-    case "content-filter":
-    case "unknown":
-    case "length":
-    case "other":
-    case "error":
-      return "error";
-    default: {
-      return assertNever(finishReason);
-    }
-  }
-}
+// function reduceFinishReasonToLiveStatus(
+//   finishReason: LanguageModelV2FinishReason
+// ): LiveStatus {
+//   switch (finishReason) {
+//     case "tool-calls":
+//       return "streaming";
+//     case "stop":
+//       return "completed";
+//     case "content-filter":
+//     case "unknown":
+//     case "length":
+//     case "other":
+//     case "error":
+//       return "error";
+//     default: {
+//       return assertNever(finishReason);
+//     }
+//   }
+// }
 
 function reducePartTypeToLiveStatus<T extends ToolSet>(
   type: TextStreamPart<T>["type"]
@@ -95,6 +92,8 @@ function reducePartTypeToLiveStatus<T extends ToolSet>(
     case "text-delta":
     case "reasoning-start":
     case "reasoning-end":
+    case "tool-output-denied":
+    case "tool-approval-request":
     case "reasoning-delta":
     case "tool-input-start":
     case "tool-input-end":
@@ -110,7 +109,7 @@ function reducePartTypeToLiveStatus<T extends ToolSet>(
   }
 }
 
-function reducePartTypeToErrorMetadata(error: unknown): ChatErrorMetadata {
+function reducePartTypeToErrorMetadata(error: unknown): MessageError {
   // specific AI SDK error
   if (error instanceof APICallError) {
     return {
@@ -235,7 +234,7 @@ export const chatProcedure = chatProcedures.chat
 
     // 6. Start streaming
     const messages = [...messagesFromBackend];
-    const modelMessages = convertToModelMessages(messages);
+    const modelMessages = await convertToModelMessages(messages);
     const result = streamText({
       model: registry.languageModel(modelId),
       messages: modelMessages,
