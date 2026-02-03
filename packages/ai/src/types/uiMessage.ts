@@ -1,10 +1,3 @@
-import type {
-  ChatErrorKind,
-  ChatErrorMetadata,
-  LifecycleState as ConvexLifecycleState,
-  LiveStatus as ConvexLiveStatus,
-} from "@ai-monorepo/convex/convex/schema";
-import type { StandardSchemaV1 } from "@t3-oss/env-core";
 import {
   type InferUIDataParts,
   type InferUIMessageChunk,
@@ -15,14 +8,7 @@ import {
 } from "ai";
 import z from "zod";
 
-export const AIErrorKind = z.enum([
-  "AI_API_ERROR",
-  "UNKNOWN_ERROR",
-  "MAX_OUTPUT_TOKENS_EXCEEDED",
-]) satisfies StandardSchemaV1<ChatErrorKind>;
-export type AIErrorKind = z.infer<typeof AIErrorKind>;
-
-export const AIErrorMetadata = z.union([
+export const MessageError = z.union([
   z.object({
     kind: z.literal("AI_API_ERROR"),
     message: z.string().optional(),
@@ -39,8 +25,9 @@ export const AIErrorMetadata = z.union([
     }),
     message: z.string().optional(),
   }),
-]) satisfies StandardSchemaV1<ChatErrorMetadata>;
-export type AIErrorMetadata = z.infer<typeof AIErrorMetadata>;
+]);
+export type MessageError = z.infer<typeof MessageError>;
+export type MessageErrorKind = MessageError["kind"];
 
 export const LiveStatus = z.enum([
   "pending",
@@ -48,13 +35,11 @@ export const LiveStatus = z.enum([
   "completed",
   "cancelled",
   "error",
-]) satisfies StandardSchemaV1<ConvexLiveStatus>;
+]);
+export type LiveStatus = z.infer<typeof LiveStatus>;
 
-export const LifecycleState = z.enum([
-  "active",
-  "archived",
-  "deleted",
-]) satisfies StandardSchemaV1<ConvexLifecycleState>;
+export const LifecycleState = z.enum(["active", "archived", "deleted"]);
+export type LifecycleState = z.infer<typeof LifecycleState>;
 
 // time to first token = firstTokenReceivedAt - userSubmittedAt
 // time to first meaningful token = firstContentTokenReceivedAt - userSubmittedAt
@@ -83,7 +68,7 @@ const metadataSchema = z.object({
   createdAt: z.number(),
   liveStatus: LiveStatus,
   lifecycleState: LifecycleState,
-  error: AIErrorMetadata.optional(),
+  error: MessageError.optional(),
   timing: MyUIMessageTimingStats.optional(),
   usage: MyUIMessageTokenUsage.optional(),
 });

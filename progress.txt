@@ -79,3 +79,9 @@
   - deleted footer-assistant and footer-user for one single footer part. 
   - moved action handler implementation to message L3 composition (message-user and message-assistant) will probably come from business hook at some point, of a L3 contextualized action hook for message to avoid prop drilling.
   - mocked the copy action implementation (because wasn't)
+
+# T6: cleanup legacy message components (PRD T6)
+  - Decisions: ChatFeed now uses new L3 ChatMessage; remove legacy chat-message stack + old ui-custom message-* helpers
+  - Files: apps/web/src/components/chat/chat-feed.tsx, apps/web/src/components/chat/chat-message.tsx, apps/web/src/components/chat/chat-message-status.tsx, apps/web/src/components/chat/chat-messages/chat-message.tsx, apps/web/src/components/chat/chat-messages/chat-message-error.tsx, apps/web/src/components/chat/chat-messages/chat-message-parts/chat-message-part-reasoning.tsx, apps/web/src/components/chat/chat-messages/chat-message-parts/chat-message-part-text.tsx, apps/web/src/components/ui-custom/chat/message-content.tsx, apps/web/src/components/ui-custom/chat/message-footer.tsx, apps/web/src/components/ui-custom/chat/message-infos.tsx, apps/web/src/components/ui-custom/chat/message-info.tsx, apps/web/src/components/ui-custom/chat/message-status.tsx, apps/web/src/components/ui-custom/chat/message-actions.tsx, apps/web/src/components/ui-custom/chat/message-action.tsx
+  - Entropy: remove unused legacy message components
+  - Notes: typecheck/tests not run
