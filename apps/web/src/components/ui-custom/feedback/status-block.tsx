@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import { type ComponentProps, createContext, useContext } from "react";
 import { cn } from "@/lib/utils";
 
 export type StatusBlockKind = "info" | "warning" | "error" | "debug";
@@ -6,6 +6,8 @@ export type StatusBlockKind = "info" | "warning" | "error" | "debug";
 export type StatusBlockRootProps = ComponentProps<"div"> & {
   kind?: StatusBlockKind;
 };
+
+const StatusBlockKindContext = createContext<StatusBlockKind>("info");
 
 const kindStyles: Record<StatusBlockKind, string> = {
   info: "border-border/60 bg-muted/30",
@@ -20,15 +22,17 @@ function StatusBlockRoot({
   ...props
 }: StatusBlockRootProps) {
   return (
-    <div
-      className={cn(
-        "flex w-full items-start gap-3 rounded-md border px-3 py-2 text-foreground text-sm",
-        kindStyles[kind],
-        className
-      )}
-      data-kind={kind}
-      {...props}
-    />
+    <StatusBlockKindContext.Provider value={kind}>
+      <div
+        className={cn(
+          "flex w-full items-start gap-3 rounded-md border px-3 py-2 text-foreground text-sm",
+          kindStyles[kind],
+          className
+        )}
+        data-kind={kind}
+        {...props}
+      />
+    </StatusBlockKindContext.Provider>
   );
 }
 
@@ -45,10 +49,20 @@ function StatusBlockIcon({ className, ...props }: StatusBlockIconProps) {
 
 export type StatusBlockContentProps = ComponentProps<"div">;
 
-function StatusBlockContent({ className, ...props }: StatusBlockContentProps) {
+function StatusBlockContent({
+  className,
+  role,
+  "aria-live": ariaLive,
+  ...props
+}: StatusBlockContentProps) {
+  const kind = useContext(StatusBlockKindContext);
+  const isError = kind === "error";
+
   return (
     <div
+      aria-live={ariaLive ?? (isError ? "assertive" : "polite")}
       className={cn("flex min-w-0 flex-1 flex-col gap-1", className)}
+      role={role ?? (isError ? "alert" : "status")}
       {...props}
     />
   );
