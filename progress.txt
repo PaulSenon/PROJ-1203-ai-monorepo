@@ -103,3 +103,15 @@ Leaving simple placeholder for more complex sub-components that will be addresse
   - the L3 reasoning par of message L3 is currently unreadable with too many internal state (that should belong to L2) management, and too many derived states that are either inefficient or unreadable for latter maintainance.
   - T7 added task to initial prd has revealed this flaw. To implement this T7 feature, it will require deeper rewrite of the reasoning components (including L2), because the next prd is supposed to finalizing reasoning implementation, user choosed to stop trying to make T7 better for now and end the 5-prd-message-ui.md implementation here.
   - User will now start rewriting the already existing prd for reasoning implementation to make sure to address all the design flaw first then implement all the previously planned specs (unchanged)
+
+## 8-prd-reasoning-bloc rewritten 
+  - discussed all points with user and create a new version of the reasoning ui prd adding initial component restructuration phase before any feature changes, then clarified final expected behavior and the reasoning collapsed component logic.
+  - re-added to this prd the prior T7 spec that wasn't properly implemented in previous prd implementation as it makes more sens to redo it once reasoning component architecture is clean.
+  - Ready to start reasoning prd implementation.
+
+## T1: reasoning architecture reshape only (8-prd T1)
+  - Decisions: move open/collapse ownership to L2 ctx; Preview/Content gating now in L2; L3 reasoning-part now thin mapper only (isStreaming/text/disabled)
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx, apps/web/src/components/chat/message/_parts/reasoning-part.tsx
+  - Feedback loops: sub-agent review run (architecture/perf/a11y) after change; typecheck/tests/LSP not run (AGENTS no dev cmds)
+  - Entropy: removed static trigger aria-label to avoid overriding visible dynamic label in screen readers
+  - Notes: next iteration T2 API hardening (remove public control-state surface from L2)

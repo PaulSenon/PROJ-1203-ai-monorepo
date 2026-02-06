@@ -1,7 +1,7 @@
 "use client";
 
-import type { ComponentProps, CSSProperties, ReactNode } from "react";
-import { useMemo, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -17,6 +17,22 @@ export type ReasoningRootProps = ComponentProps<typeof Collapsible> & {
   disabled?: boolean;
 };
 
+type ReasoningContextValue = {
+  isOpen: boolean;
+  isStreaming: boolean;
+  disabled: boolean;
+};
+
+const ReasoningContext = createContext<ReasoningContextValue | null>(null);
+
+function useReasoningContext() {
+  const context = useContext(ReasoningContext);
+  if (!context) {
+    throw new Error("Reasoning components must be used within Reasoning.Root");
+  }
+  return context;
+}
+
 function ReasoningRoot({
   className,
   isStreaming = false,
@@ -29,26 +45,39 @@ function ReasoningRoot({
 }: ReasoningRootProps) {
   const isControlled = open !== undefined;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
-  const isOpen = isControlled ? open : uncontrolledOpen;
+  const rawOpen = isControlled ? open : uncontrolledOpen;
+  const isDisabled = Boolean(disabled);
+  const isOpen = !isDisabled && Boolean(rawOpen);
 
   const handleOpenChange = (nextOpen: boolean) => {
+    if (isDisabled) {
+      return;
+    }
+
     if (!isControlled) {
       setUncontrolledOpen(nextOpen);
     }
     onOpenChange?.(nextOpen);
   };
 
+  const contextValue = useMemo(
+    () => ({ isOpen, isStreaming, disabled: isDisabled }),
+    [isDisabled, isOpen, isStreaming]
+  );
+
   return (
-    <Collapsible
-      className={cn("not-prose", className)}
-      data-streaming={isStreaming ? "true" : "false"}
-      disabled={disabled}
-      onOpenChange={handleOpenChange}
-      open={isOpen}
-      {...props}
-    >
-      {children}
-    </Collapsible>
+    <ReasoningContext.Provider value={contextValue}>
+      <Collapsible
+        className={cn("not-prose", className)}
+        data-streaming={isStreaming ? "true" : "false"}
+        disabled={disabled}
+        onOpenChange={handleOpenChange}
+        open={isOpen}
+        {...props}
+      >
+        {children}
+      </Collapsible>
+    </ReasoningContext.Provider>
   );
 }
 
@@ -82,20 +111,21 @@ function ReasoningPreview({
   children,
   ...props
 }: ReasoningPreviewProps) {
+  const { isOpen, isStreaming, disabled } = useReasoningContext();
+
   const previewStyle = useMemo(
-    () =>
-      ({
-        height: `${lines * PREVIEW_LINE_HEIGHT_REM}rem`,
-        minHeight: `${lines * PREVIEW_LINE_HEIGHT_REM}rem`,
-        maskImage:
-          "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)",
-        WebkitMaskImage:
-          "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)",
-      }) satisfies CSSProperties,
+    () => ({
+      height: `${lines * PREVIEW_LINE_HEIGHT_REM}rem`,
+      minHeight: `${lines * PREVIEW_LINE_HEIGHT_REM}rem`,
+      maskImage:
+        "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)",
+      WebkitMaskImage:
+        "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)",
+    }),
     [lines]
   );
 
-  if (isEmptyChildren(children)) {
+  if (disabled || isOpen || !isStreaming || isEmptyChildren(children)) {
     return null;
   }
 
@@ -122,7 +152,9 @@ function ReasoningContent({
   children,
   ...props
 }: ReasoningContentProps) {
-  if (isEmptyChildren(children)) {
+  const { isOpen, disabled } = useReasoningContext();
+
+  if (disabled || !isOpen || isEmptyChildren(children)) {
     return null;
   }
 
