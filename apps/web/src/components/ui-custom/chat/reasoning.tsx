@@ -1,7 +1,8 @@
 "use client";
 
+import { BrainIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -9,11 +10,10 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
-export type ReasoningRootProps = ComponentProps<typeof Collapsible> & {
+export type ReasoningRootProps = {
+  children: ReactNode;
+  className?: string;
   isStreaming?: boolean;
-  open?: boolean;
-  defaultOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
   disabled?: boolean;
 };
 
@@ -36,28 +36,25 @@ function useReasoningContext() {
 function ReasoningRoot({
   className,
   isStreaming = false,
-  open,
-  defaultOpen = false,
-  onOpenChange,
-  disabled,
+  disabled = false,
   children,
-  ...props
 }: ReasoningRootProps) {
-  const isControlled = open !== undefined;
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
-  const rawOpen = isControlled ? open : uncontrolledOpen;
+  const [open, setOpen] = useState(false);
   const isDisabled = Boolean(disabled);
-  const isOpen = !isDisabled && Boolean(rawOpen);
+  const isOpen = !isDisabled && open;
+
+  useEffect(() => {
+    if (isDisabled) {
+      setOpen(false);
+    }
+  }, [isDisabled]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (isDisabled) {
       return;
     }
 
-    if (!isControlled) {
-      setUncontrolledOpen(nextOpen);
-    }
-    onOpenChange?.(nextOpen);
+    setOpen(nextOpen);
   };
 
   const contextValue = useMemo(
@@ -70,10 +67,9 @@ function ReasoningRoot({
       <Collapsible
         className={cn("not-prose", className)}
         data-streaming={isStreaming ? "true" : "false"}
-        disabled={disabled}
+        disabled={isDisabled}
         onOpenChange={handleOpenChange}
         open={isOpen}
-        {...props}
       >
         {children}
       </Collapsible>
@@ -81,9 +77,20 @@ function ReasoningRoot({
   );
 }
 
-export type ReasoningTriggerProps = ComponentProps<typeof CollapsibleTrigger>;
+export type ReasoningTriggerProps = {
+  label: ReactNode;
+  className?: string;
+  disabled?: boolean;
+};
 
-function ReasoningTrigger({ className, ...props }: ReasoningTriggerProps) {
+function ReasoningTrigger({
+  label,
+  className,
+  disabled = false,
+}: ReasoningTriggerProps) {
+  const { disabled: rootDisabled } = useReasoningContext();
+  const isDisabled = rootDisabled || disabled;
+
   return (
     <CollapsibleTrigger
       className={cn(
@@ -92,9 +99,16 @@ function ReasoningTrigger({ className, ...props }: ReasoningTriggerProps) {
         "data-disabled:cursor-not-allowed data-disabled:opacity-60",
         className
       )}
+      disabled={isDisabled}
       type="button"
-      {...props}
-    />
+    >
+      <BrainIcon aria-hidden="true" className="size-4 shrink-0" />
+      <span className="truncate">{label}</span>
+      <ChevronRightIcon
+        aria-hidden="true"
+        className="ml-auto size-4 shrink-0 transition-transform group-data-disabled:invisible group-data-[state=open]:rotate-90"
+      />
+    </CollapsibleTrigger>
   );
 }
 
