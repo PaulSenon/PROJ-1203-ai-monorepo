@@ -47,9 +47,7 @@ export function ReasoningPart({ part }: ReasoningPartProps) {
           >
             {deferredText}
           </SmoothMarkdown>
-        ) : (
-          ""
-        )}
+        ) : null}
       </Reasoning.Content>
     </Reasoning.Root>
   );
