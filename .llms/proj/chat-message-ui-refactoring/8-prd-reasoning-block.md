@@ -175,7 +175,7 @@ Implementation constraints:
 - Reuse existing observer infra; do not add new ad-hoc observer utilities in this PRD.
 - Keep current CSS preview structure contract unchanged (fixed viewport + absolute bottom content wrapper + min-height match).
 - No polling loops, no per-token layout reads, no forced-sync measurement flow.
-- If `IntersectionObserver` is unavailable, keep current heuristic-only fallback for fade trigger.
+- `IntersectionObserver` is required for fade trigger behavior in this PRD
 
 Rejected alternatives (explicit):
 
@@ -388,7 +388,6 @@ Implementation details:
 - Use existing hook from `apps/web/src/hooks/utils/use-intersection-observer.tsx` (or existing sentinel pattern from `apps/web/src/hooks/utils/use-scroll-edges.tsx`) instead of ad-hoc observer code.
 - Observer active only when preview is rendered and latch is false.
 - On first `not intersecting` event, set latch true and stop observing.
-- Keep heuristic as fallback only when IO API unavailable.
 - Keep top fade element decorative only (`aria-hidden`, `pointer-events-none`).
 - Do not alter preview sizing math, content wrapper placement, or markdown rendering policy.
 

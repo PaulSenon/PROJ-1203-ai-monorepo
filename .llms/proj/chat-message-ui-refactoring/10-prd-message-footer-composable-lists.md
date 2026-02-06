@@ -3,6 +3,7 @@
 ## Problem Statement
 
 The current message footer is a placeholder. It has hardcoded actions and limited infos. It does not support the real interaction matrix we need:
+
 - custom inline action components,
 - tier-based responsive collapsing,
 - parity between inline and More states,
@@ -14,6 +15,7 @@ Prior attempts trended toward heavy config and leaky abstractions. We need a sim
 ## Solution
 
 Implement one reusable footer list architecture with three L2 modules:
+
 1. `ResponsiveOverflowList` (generic orchestration primitive)
 2. `ActionList` (thin semantic wrapper)
 3. `InfoList` (thin semantic wrapper for infos)
@@ -21,8 +23,9 @@ Implement one reusable footer list architecture with three L2 modules:
 This keeps one shared responsive engine and two domain wrappers. L3 footer components compose these wrappers with custom inline nodes and custom overflow/detail nodes.
 
 Key decisions:
+
 - no discriminated unions for now,
-- dropdown overflow only for v1,
+- dropdown overflow only, for now,
 - runtime validation for invalid item shapes,
 - explicit overflow source policy per wrapper:
   - ActionList: collapsed-only items in More,
@@ -54,11 +57,13 @@ Key decisions:
 ### 1) Scope and Boundaries
 
 In scope:
+
 - Footer list architecture only (actions + infos).
 - Migration from placeholder footer internals to composable lists.
 - Demo examples covering full required behavior matrix.
 
 Out of scope for this PRD execution:
+
 - reasoning system,
 - status system,
 - backend metadata contract changes,
@@ -67,32 +72,38 @@ Out of scope for this PRD execution:
 ### 2) Locked Responsive Behavior
 
 Rules are fixed:
+
 - Desktop (`>= 768px`): primary + secondary inline, tertiary in More.
 - Mobile (`< 768px`): primary inline, secondary + tertiary in More.
 
 Order rule:
+
 - preserve declaration order inside each tier.
 
 ### 3) Shared L2 Architecture
 
 `ResponsiveOverflowList` responsibilities:
+
 - partition items by tier and breakpoint,
 - orchestrate inline region,
 - orchestrate More trigger and dropdown content,
 - expose policy switch controlling what More receives.
 
 `ResponsiveOverflowList` non-responsibilities:
+
 - no action business meaning,
 - no info business meaning,
 - no callback semantics.
 
 `ActionList` responsibilities:
+
 - wraps base primitive,
 - applies action-oriented defaults,
 - provides helper menu primitives for overflow row/submenu composition,
 - uses More policy `collapsed-only`.
 
 `InfoList` responsibilities:
+
 - wraps base primitive,
 - applies info-oriented defaults,
 - supports compact inline + detailed More rows,
@@ -101,6 +112,7 @@ Order rule:
 ### 4) Item Contract (No Union Version)
 
 Single minimal shape for both wrappers:
+
 - `id` (string, stable unique key per list)
 - `tier` (`primary | secondary | tertiary`)
 - `inline` (optional node)
@@ -110,39 +122,53 @@ Single minimal shape for both wrappers:
 - `disabled` (optional boolean)
 
 Wrapper runtime validation (dev mode warnings):
+
 - ActionList:
   - primary requires `inline`
   - secondary requires `inline` and `overflow`
   - tertiary requires `overflow`
 - InfoList:
-  - primary requires `inline`
-  - secondary requires `inline`
+  - primary requires `inline` and optioanl `details`
+  - secondary requires `inline` and optional `details`
   - tertiary requires `details` or `inline`
 
 Fallback rules:
+
 - InfoList More row content resolves as `details` if provided, else `inline`.
 - ActionList has no auto-fallback from inline to overflow.
 
 ### 5) Overflow Source Policy
 
 Base primitive supports policy input:
+
 - `collapsed-only`: More contains only items not inline in current viewport.
 - `all-items`: More contains all visible logical infos regardless of inline visibility.
 
 Wrapper mapping:
+
 - ActionList -> `collapsed-only`
 - InfoList -> `all-items`
 
 ### 6) Interaction Model
 
 Inline side:
+
 - fully custom component composition allowed (button, menu trigger, context behavior, tooltip).
+  - => actionList can give the icon button primitive but should allow all possible button config:
+    - button with onClick only
+    - button with that handle context menu on context trigger (shadcn contextmenu)
+    - button with actionmenu onclick before action
+    - button fully customizable (just the primitive button for design consistency)
+  - => and can also provide composable component for the overflow version of each item.
+  - => infoList can give the primitive for inline info items (icon and free text), same for the overflow version.
 
 More side:
+
 - custom dropdown rows/submenus allowed.
 - nested submenu support required for advanced actions.
 
 Parity policy:
+
 - any advanced capability exposed inline and not always visible across viewports must be reachable from More.
 
 ### 7) Accessibility
@@ -163,6 +189,7 @@ Parity policy:
 ### 9) Integration Contract with Existing Message Footer
 
 Keep current integration points stable:
+
 - `MessageFooterAssistant`
 - `MessageFooterUser`
 
@@ -171,6 +198,7 @@ Change only internal composition from hardcoded placeholder rows to new wrappers
 ### 10) Demo Contract (Mandatory Coverage)
 
 Actions scenarios:
+
 1. simple click action,
 2. click-submenu action,
 3. click default + variant submenu parity,
@@ -181,6 +209,7 @@ Actions scenarios:
 8. nested submenu depth 2.
 
 Infos scenarios:
+
 1. compact inline model info (`icon + modelId`),
 2. compact inline speed (`icon + tok/s`),
 3. compact inline total duration,
@@ -189,6 +218,7 @@ Infos scenarios:
 6. missing metadata hides only missing info rows.
 
 Mixed scenarios:
+
 1. assistant footer with both actions and infos,
 2. user footer with actions only,
 3. desktop/mobile toggle parity check,
@@ -197,22 +227,11 @@ Mixed scenarios:
 ## Testing Decisions
 
 Testing principle:
+
 - test observable behavior and contracts, not implementation internals.
 
-Unit tests (required):
-- tier partition function by viewport,
-- overflow source policy behavior (`collapsed-only`, `all-items`),
-- declaration order stability,
-- resolver fallback behavior for InfoList (`details` then `inline`).
-
-Component interaction tests (required):
-- More trigger visibility and open/close,
-- submenu interaction,
-- keyboard navigation basic path,
-- disabled behavior parity,
-- wrapper validation warnings in dev for invalid item shapes.
-
 Manual QA checklist (required):
+
 - all demo scenarios listed above,
 - no layout shift/regression in footer footprint,
 - mobile parity for advanced actions.
