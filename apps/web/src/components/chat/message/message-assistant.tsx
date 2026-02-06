@@ -11,6 +11,7 @@ import { StatusPart } from "./_parts/status";
 
 export type ChatMessageAssistantProps = ComponentProps<"div"> & {
   message: MyUIMessage;
+  reasoningPreviewLines?: number;
 };
 
 function shouldShowThinking(message: MyUIMessage) {
@@ -50,6 +51,7 @@ function shouldShowThinking(message: MyUIMessage) {
 
 export function ChatMessageAssistant({
   message,
+  reasoningPreviewLines,
   className,
   ...props
 }: ChatMessageAssistantProps) {
@@ -73,7 +75,10 @@ export function ChatMessageAssistant({
       <Message.Root className="w-full max-w-full" from="assistant">
         <Message.Content variant="assistant">
           {showThinking ? <Message.Thinking /> : null}
-          <MessageContentParts parts={message.parts} />
+          <MessageContentParts
+            parts={message.parts}
+            reasoningPreviewLines={reasoningPreviewLines}
+          />
           <StatusPart metadata={message.metadata} />
         </Message.Content>
         <Message.Footer>

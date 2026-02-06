@@ -5,15 +5,26 @@ import { ChatMessageUser } from "./message-user";
 
 export type ChatMessageProps = ComponentProps<"div"> & {
   message: MyUIMessage;
+  reasoningPreviewLines?: number;
 };
 
-export function ChatMessage({ message, ...props }: ChatMessageProps) {
+export function ChatMessage({
+  message,
+  reasoningPreviewLines,
+  ...props
+}: ChatMessageProps) {
   if (message.role === "user") {
     return <ChatMessageUser message={message} {...props} />;
   }
 
   if (message.role === "assistant") {
-    return <ChatMessageAssistant message={message} {...props} />;
+    return (
+      <ChatMessageAssistant
+        message={message}
+        reasoningPreviewLines={reasoningPreviewLines}
+        {...props}
+      />
+    );
   }
 
   return null;

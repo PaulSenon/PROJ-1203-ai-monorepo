@@ -150,6 +150,39 @@ Visual constraints:
 - Fade must be subtle and non-blocking (`pointer-events: none`).
 - Fade appear at top only once it overflow. (overflow detection can be approximated, we need something simple.)
 
+### Overflow Fade Trigger Strategy (Decision Locked)
+
+Decision:
+
+- **Selected: Option D - IntersectionObserver sentinel, one-way latch.**
+
+Why this decision:
+
+- Product wants better overflow truth than heuristic-only while keeping runtime cheap.
+- Product accepts stale behavior on later window/layout resize.
+- Repo already has reusable IntersectionObserver hooks/patterns, reducing implementation risk.
+
+Target behavior (authoritative):
+
+- Fade starts hidden (`showTopFade=false`) for each newly mounted reasoning block.
+- While preview is rendered (`!disabled && isStreaming && !isOpen`), observe a top-edge sentinel inside preview content with preview viewport as IO root.
+- Once sentinel is no longer intersecting root (overflow reached), latch fade on.
+- **Latch is one-way per reasoning block lifecycle**: once on, never auto-off until block unmount/remount.
+- After latch turns on, observer disconnects/unsubscribes (no ongoing observer cost).
+
+Implementation constraints:
+
+- Reuse existing observer infra; do not add new ad-hoc observer utilities in this PRD.
+- Keep current CSS preview structure contract unchanged (fixed viewport + absolute bottom content wrapper + min-height match).
+- No polling loops, no per-token layout reads, no forced-sync measurement flow.
+- If `IntersectionObserver` is unavailable, keep current heuristic-only fallback for fade trigger.
+
+Rejected alternatives (explicit):
+
+- **Option A - Heuristic-only**: rejected as primary due to known false positive/negative drift.
+- **Option B - One-way ResizeObserver latch**: rejected for this PRD because repo already has IO abstraction but no RO abstraction; IO path is simpler here.
+- **Option C - Continuous ResizeObserver**: rejected due to unnecessary callback churn for streaming-heavy chat.
+
 `Reasoning.Content`:
 
 - Inputs: `children`.
@@ -197,6 +230,7 @@ Chevron behavior for empty state:
 - Use baseline CSS features; avoid advanced/non-baseline-only techniques for critical behavior.
 - Do not use `mask-image`; use simple overlay gradient for fade.
 - Do not use text slicing, line counting in JS, per-token layout measurement, or measurement loops.
+- Clarification: bounded observer approach is selected in this PRD (IntersectionObserver one-way latch only); polling or forced-sync measurement loops remain forbidden.
 - Keep overflow guards for code blocks/tables in expanded content.
 
 ### Accessibility Contract
@@ -221,6 +255,8 @@ User will conduct manual QA against the demo message component that should be ab
 
 - Streaming + collapsed (underflow): first line starts at top, next lines flow downward.
 - Streaming + collapsed (overflow): latest line stays pinned to bottom, older lines clip/fade at top.
+- Streaming + collapsed (overflow transition): fade appears once true overflow happens, not before.
+- Streaming + collapsed (after latch): fade stays visible for that block lifecycle; no flicker on further chunk appends.
 - Done + collapsed: preview gone, header still present.
 - Expanded: full reasoning content visible.
 - Empty reasoning: trigger disabled, preview/content absent, chevron policy respected.
@@ -242,6 +278,8 @@ Primary references:
 - `.llms/proj/chat-message-ui-refactoring/1-ui-requirements.md`
 - `apps/web/src/components/README.md`
 - `apps/web/src/components/ai-elements/reasoning.tsx`
+- `apps/web/src/hooks/utils/use-intersection-observer.tsx`
+- `apps/web/src/hooks/utils/use-scroll-edges.tsx`
 
 Rejected alternative (documented, not selected):
 
@@ -338,9 +376,33 @@ Acceptance criteria:
 - Demo covers all states in this PRD.
 - Review passes confirm no layer drift.
 
+### T6 - Overflow fade trigger rework (IO one-way latch)
+
+Goal: replace heuristic-primary fade trigger with IO sentinel latch while keeping preview contract intact.
+
+Implementation details:
+
+- Scope: L2 only in `apps/web/src/components/ui-custom/chat/reasoning.tsx`; L3 should remain adapter-only.
+- Add internal preview-latch state in `Reasoning.Preview` (default false, per block lifecycle).
+- Add preview viewport root ref and sentinel target ref using existing IO hooks.
+- Use existing hook from `apps/web/src/hooks/utils/use-intersection-observer.tsx` (or existing sentinel pattern from `apps/web/src/hooks/utils/use-scroll-edges.tsx`) instead of ad-hoc observer code.
+- Observer active only when preview is rendered and latch is false.
+- On first `not intersecting` event, set latch true and stop observing.
+- Keep heuristic as fallback only when IO API unavailable.
+- Keep top fade element decorative only (`aria-hidden`, `pointer-events-none`).
+- Do not alter preview sizing math, content wrapper placement, or markdown rendering policy.
+
+Acceptance criteria:
+
+- Fade is hidden before overflow and appears once overflow is real.
+- Fade latches once and does not flicker during continued streaming.
+- Observer no longer runs after latch (or when preview not rendered).
+- No L3 open-state logic or observer logic added.
+- Existing underflow/overflow UX sequence remains compliant.
+
 ## Definition of Done
 
-- T1-T5 all complete.
+- T1-T6 all complete.
 - L2 owns reasoning interactive state.
 - L3 reasoning part is adapter-only and readable.
 - Empty reasoning uses disabled trigger and hidden chevron with reserved width.

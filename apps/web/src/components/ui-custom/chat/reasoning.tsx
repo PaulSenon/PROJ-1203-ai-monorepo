@@ -102,7 +102,6 @@ function ReasoningTrigger({
       className={cn(
         "group flex min-h-6 w-full items-center gap-2 text-muted-foreground text-sm",
         "rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        "data-disabled:cursor-not-allowed data-disabled:opacity-60",
         className
       )}
       disabled={isDisabled}
@@ -129,8 +128,15 @@ function ReasoningTrigger({
   );
 }
 
-export type ReasoningPreviewProps = ComponentProps<"div"> & {
+type ReasoningPreviewStyle = CSSProperties & {
+  "--reasoning-preview-lines": number;
+  "--reasoning-preview-line-height": string;
+};
+
+export type ReasoningPreviewProps = {
+  className?: string;
   lines?: number;
+  children?: string;
 };
 
 const DEFAULT_PREVIEW_LINES = 2;
@@ -141,26 +147,27 @@ function ReasoningPreview({
   className,
   lines = DEFAULT_PREVIEW_LINES,
   children,
-  ...props
 }: ReasoningPreviewProps) {
   const { isOpen, isStreaming, disabled } = useReasoningContext();
+  const text = children ?? "";
   const flooredLines = Math.floor(lines);
   const normalizedLines =
     Number.isFinite(lines) && flooredLines >= 1
       ? flooredLines
       : DEFAULT_PREVIEW_LINES;
-  const showTopFade = shouldShowPreviewFade(children, normalizedLines);
+  const showTopFade = shouldShowPreviewFade(text, normalizedLines);
   const previewStyle = {
     "--reasoning-preview-lines": normalizedLines,
     "--reasoning-preview-line-height": `${PREVIEW_LINE_HEIGHT_REM}rem`,
-  } as CSSProperties;
+  } satisfies ReasoningPreviewStyle;
 
-  if (disabled || isOpen || !isStreaming || isEmptyChildren(children)) {
+  if (disabled || isOpen || !isStreaming || text.trim().length === 0) {
     return null;
   }
 
   return (
     <div
+      aria-hidden="true"
       className={cn(
         "pointer-events-none relative mt-1 overflow-hidden text-muted-foreground text-xs",
         "leading-(--reasoning-preview-line-height)",
@@ -171,11 +178,9 @@ function ReasoningPreview({
         className
       )}
       style={previewStyle}
-      {...props}
-      aria-hidden="true"
     >
       <div className="absolute inset-x-0 bottom-0 min-h-[calc(var(--reasoning-preview-lines)*var(--reasoning-preview-line-height))] whitespace-pre-wrap">
-        {children}
+        {text}
       </div>
     </div>
   );
@@ -215,46 +220,16 @@ function isEmptyChildren(children: ReactNode) {
   return false;
 }
 
-function shouldShowPreviewFade(children: ReactNode, lines: number) {
-  if (children == null || typeof children === "boolean") {
-    return false;
-  }
-
-  if (typeof children === "string" || typeof children === "number") {
-    const text = String(children).trim();
-    if (text.length === 0) {
-      return false;
-    }
-
-    return (
-      text.includes("\n") || text.length > lines * APPROX_PREVIEW_CHARS_PER_LINE
-    );
-  }
-
-  const text = getPlainText(children).trim();
-  if (text.length === 0) {
+function shouldShowPreviewFade(text: string, lines: number) {
+  const normalizedText = text.trim();
+  if (normalizedText.length === 0) {
     return false;
   }
 
   return (
-    text.includes("\n") || text.length > lines * APPROX_PREVIEW_CHARS_PER_LINE
+    normalizedText.includes("\n") ||
+    normalizedText.length > lines * APPROX_PREVIEW_CHARS_PER_LINE
   );
-}
-
-function getPlainText(children: ReactNode): string {
-  if (children == null || typeof children === "boolean") {
-    return "";
-  }
-
-  if (typeof children === "string" || typeof children === "number") {
-    return String(children);
-  }
-
-  if (Array.isArray(children)) {
-    return children.map(getPlainText).join("");
-  }
-
-  return "";
 }
 
 export const Reasoning = {

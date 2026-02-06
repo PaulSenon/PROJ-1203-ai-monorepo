@@ -4,6 +4,7 @@ import { TextPart } from "./text-part";
 
 export type MessageContentPartsProps = {
   parts: MyUIMessagePart[];
+  reasoningPreviewLines?: number;
 };
 
 function getPartKey(part: MyUIMessagePart, index: number) {
@@ -14,7 +15,10 @@ function getPartKey(part: MyUIMessagePart, index: number) {
   return `${part.type}-${index}`;
 }
 
-export function MessageContentParts({ parts }: MessageContentPartsProps) {
+export function MessageContentParts({
+  parts,
+  reasoningPreviewLines,
+}: MessageContentPartsProps) {
   return (
     <>
       {parts.map((part, index) => {
@@ -25,7 +29,13 @@ export function MessageContentParts({ parts }: MessageContentPartsProps) {
         }
 
         if (part.type === "reasoning") {
-          return <ReasoningPart key={key} part={part} />;
+          return (
+            <ReasoningPart
+              key={key}
+              part={part}
+              previewLines={reasoningPreviewLines}
+            />
+          );
         }
 
         return null;
