@@ -55,14 +55,17 @@ Compound component sets that embed your design decisions but know nothing about 
 L2 may accept L1 contract types it wraps (e.g., `UIMessage`), but never app-extended types (e.g., `MyUIMessage`).
 
 **Characteristics**:
+
 - Wraps/composes L1 primitives
 - Exports namespace object: `Message.*`, `Sidebar.*`, `ChatInput.*`
 - May have internal context for compound component state
+- Owns internal interactive state/visibility rules for compound UI
 - Embeds styling, spacing, visual decisions
 - Receives all data via props or context injection
 - May import L1 types it wraps (e.g., `UIMessage`)
 
 **Example domains**:
+
 ```
 ui-custom/
   primitives/      # Browser/a11y fixes to L1 (textarea, etc.)
@@ -74,11 +77,13 @@ ui-custom/
 ```
 
 **What belongs here**:
+
 - `Sidebar.Root`, `Sidebar.Item`, `Sidebar.Footer`
 - `Message.Root`, `Message.Content`, `Message.Actions`
 - Generic slots and layouts, no app logic
 
 **Domain, not feature**:
+
 - L2 groups by UI concern (reasoning, status, actions), not by app feature (chat).
 - L2 can be multi-file per domain; each file exports its own namespace object.
 
@@ -94,18 +99,20 @@ For complex features with multiple variants, create a subfolder and use the entr
 
 **L3 has two concerns** (can be combined or separated):
 
-| Concern | Purpose | When to separate |
-|---------|---------|------------------|
-| **Adapter** | Hooks → data gathering | Complex hook logic |
-| **Layout** | Data → JSX composition | Complex structural decisions |
+| Concern     | Purpose                | When to separate             |
+| ----------- | ---------------------- | ---------------------------- |
+| **Adapter** | Hooks → data gathering | Complex hook logic           |
+| **Layout**  | Data → JSX composition | Complex structural decisions |
 
 **Simple case** (combined):
+
 ```
 sidebar/
   app-sidebar.tsx    # Both adapter + layout in one file
 ```
 
 **Complex case** (separated):
+
 ```
 sidebar/
   app-sidebar.tsx           # Adapter: hooks, passes data
@@ -121,7 +128,7 @@ components/
   # ─── L1: External (immutable) ───
   ui/                          # shadcn/ui
   ai-elements/                 # Vercel AI Elements
-  
+
   # ─── L2: Design System (app-agnostic) ───
   ui-custom/
     primitives/                # Browser/a11y fixes
@@ -138,7 +145,7 @@ components/
       action-list.tsx          # ActionList.* compound export
     user-profile/
       user-profile.tsx         # UserProfile.* compound export
-  
+
   # ─── L3: App Layer (feature folders) ───
   sidebar/
     app-sidebar.tsx            # Feature Root
@@ -148,7 +155,7 @@ components/
       user-menu.tsx            # Feature Part
     _hooks/
       use-sidebar-state.ts     # Feature Hook
-  
+
   chat/
     chat-sidebar.tsx           # Simple feature at root
     message/                   # Complex feature subfolder
@@ -167,7 +174,7 @@ components/
       prompt-input-chat.tsx    # Variant
       _parts/
         attachments.tsx
-  
+
   shared/                      # Cross-feature L3 components
     user-avatar.tsx
     model-badge.tsx
@@ -179,15 +186,15 @@ components/
 
 ### Files
 
-| Type | Pattern | Example |
-|------|---------|---------|
-| Simple Feature Root | `[feature].tsx` or `[parent]-[feature].tsx` | `chat-sidebar.tsx` |
-| Complex Feature Entry | `[feature]/[feature].tsx` | `message/message.tsx` |
-| Variant | `[feature]/[feature]-[variant].tsx` | `message/message-user.tsx` |
-| Feature Layout | `[feature]/[feature]-layout.tsx` | `message/message-layout.tsx` |
-| Feature Part | `[feature]/_parts/[part].tsx` | `sidebar/_parts/thread-item.tsx` |
-| Feature Hook | `[feature]/_hooks/use-[purpose].ts` | `message/_hooks/use-message-actions.ts` |
-| Internal folder | `_[type]/` | `_parts/`, `_hooks/` |
+| Type                  | Pattern                                     | Example                                 |
+| --------------------- | ------------------------------------------- | --------------------------------------- |
+| Simple Feature Root   | `[feature].tsx` or `[parent]-[feature].tsx` | `chat-sidebar.tsx`                      |
+| Complex Feature Entry | `[feature]/[feature].tsx`                   | `message/message.tsx`                   |
+| Variant               | `[feature]/[feature]-[variant].tsx`         | `message/message-user.tsx`              |
+| Feature Layout        | `[feature]/[feature]-layout.tsx`            | `message/message-layout.tsx`            |
+| Feature Part          | `[feature]/_parts/[part].tsx`               | `sidebar/_parts/thread-item.tsx`        |
+| Feature Hook          | `[feature]/_hooks/use-[purpose].ts`         | `message/_hooks/use-message-actions.ts` |
+| Internal folder       | `_[type]/`                                  | `_parts/`, `_hooks/`                    |
 
 All feature parts and hooks live under `_parts/` and `_hooks/` (no root-level parts or hooks).
 
@@ -219,7 +226,7 @@ export const Reasoning = {
 ```tsx
 // chat/message/message.tsx
 import { Message } from "@/components/ui-custom/chat/message";
-import { MessageFooter } from "./_parts/footer";  // same feature
+import { MessageFooter } from "./_parts/footer"; // same feature
 import { UserAvatar } from "@/components/shared/user-avatar"; // cross-feature
 ```
 
@@ -297,6 +304,7 @@ Is it a hook specific to this feature?
 ## Real Example: Chat Message Feature
 
 ### Requirements
+
 - Display user and assistant messages
 - Assistant messages have reasoning (collapsible), content, actions, stats
 - User messages are simpler (content, basic actions)
@@ -307,17 +315,20 @@ Is it a hook specific to this feature?
 ### Layer Breakdown
 
 **L1 (External)**:
+
 - `ai-elements/message` — Base message primitives
 - `ai-elements/reasoning` — Reasoning collapse primitives
 - `ui/button`, `ui/dropdown-menu` — Action primitives
 
 **L2 (Design System)**:
+
 - `ui-custom/chat/message.tsx` — `Message.*` container + content
 - `ui-custom/chat/reasoning.tsx` — `Reasoning.*` collapsible reasoning
 - `ui-custom/feedback/status-block.tsx` — `StatusBlock.*` generic status UI
 - `ui-custom/actions/action-list.tsx` — `ActionList.*` generic actions UI
 
 Exports generic context interface:
+
 ```
 MessageContextValue {
   state: { content, reasoning, isStreaming, owner }
@@ -327,6 +338,7 @@ MessageContextValue {
 ```
 
 **L3 (App Layer)**: `chat/message/`
+
 ```
 chat/message/
   message.tsx                   # Entry: routes to User/Assistant
@@ -362,6 +374,7 @@ Message.* components (L2 compound)
 ## Real Example: Sidebar Feature
 
 ### Requirements
+
 - Collapsible sidebar with header, content, footer
 - Thread list with context menu (delete, rename)
 - User profile menu in footer
@@ -370,6 +383,7 @@ Message.* components (L2 compound)
 ### Layer Breakdown
 
 **L2 (Design System)**: `ui-custom/sidebar/sidebar.tsx`
+
 - `Sidebar.Root` — Wraps shadcn sidebar with styling
 - `Sidebar.Header` — Logo + actions slot
 - `Sidebar.Content` — Scrollable list area
@@ -378,6 +392,7 @@ Message.* components (L2 compound)
 - `Sidebar.Trigger` — Mobile toggle
 
 **L3 (App Layer)**: `sidebar/`
+
 ```
 sidebar/
   app-sidebar.tsx              # Feature Root: hooks + composition
@@ -389,11 +404,13 @@ sidebar/
 ### Why SidebarThreadItem is L3
 
 It knows app concepts:
+
 - `Thread` type (id, title, createdAt)
 - `useThreadActions()` hook (delete, rename)
 - `useIsActiveThread()` hook
 
 But it composes L2 primitives:
+
 - `Sidebar.Item` for visual structure
 - `ContextMenu` from L1 for interactions
 
@@ -409,13 +426,13 @@ But it composes L2 primitives:
 
 ### Identifying Old Patterns
 
-| Old Pattern | Problem | New Pattern |
-|-------------|---------|-------------|
-| App hooks in `ui-custom/` | L2 has app dependency | Move to L3, keep L2 pure |
-| Flat files in `components/` | No feature grouping | Create feature folders |
-| Boolean prop explosion | Unmaintainable variants | Explicit variant components |
-| Single monolith component | Mixed concerns | Compound components + adapters |
-| Imports from multiple `ui-custom/` subfolders in one component | Sign of unclear boundaries | Re-evaluate layer placement |
+| Old Pattern                                                    | Problem                    | New Pattern                    |
+| -------------------------------------------------------------- | -------------------------- | ------------------------------ |
+| App hooks in `ui-custom/`                                      | L2 has app dependency      | Move to L3, keep L2 pure       |
+| Flat files in `components/`                                    | No feature grouping        | Create feature folders         |
+| Boolean prop explosion                                         | Unmaintainable variants    | Explicit variant components    |
+| Single monolith component                                      | Mixed concerns             | Compound components + adapters |
+| Imports from multiple `ui-custom/` subfolders in one component | Sign of unclear boundaries | Re-evaluate layer placement    |
 
 ### Progressive Migration Checklist
 
@@ -445,10 +462,10 @@ When refactoring a component:
 
 ```tsx
 // L2 can import:
-import { Button } from "@/components/ui/button";           // L1 ✓
+import { Button } from "@/components/ui/button"; // L1 ✓
 import { Reasoning } from "@/components/ai-elements/..."; // L1 ✓
-import { cn } from "@/lib/utils";                         // utils ✓
-import type { UIMessage, FileUIPart } from "ai";          // L1 type ✓
+import { cn } from "@/lib/utils"; // utils ✓
+import type { UIMessage, FileUIPart } from "ai"; // L1 type ✓
 
 // L2 MUST define its own interfaces:
 interface MessageContextValue {
@@ -457,28 +474,28 @@ interface MessageContextValue {
 }
 
 // L2 CANNOT import:
-import { useChat } from "@/hooks/use-chat";               // app hook ✗
-import type { MyUIMessage } from "@/types";               // app type ✗
-import { SomeComponent } from "@/components/chat/...";    // L3 ✗
+import { useChat } from "@/hooks/use-chat"; // app hook ✗
+import type { MyUIMessage } from "@/types"; // app type ✗
+import { SomeComponent } from "@/components/chat/..."; // L3 ✗
 
 // L3 can import:
 import { Message } from "@/components/ui-custom/chat/message"; // L2 ✓
-import { useChat } from "@/hooks/use-chat";                    // app hook ✓
-import type { MyUIMessage } from "@/types";                    // app type ✓
-import { SidebarThreadItem } from "./_parts/thread-item";      // same feature ✓
-import { UserAvatar } from "@/components/shared/user-avatar";  // shared L3 ✓
+import { useChat } from "@/hooks/use-chat"; // app hook ✓
+import type { MyUIMessage } from "@/types"; // app type ✓
+import { SidebarThreadItem } from "./_parts/thread-item"; // same feature ✓
+import { UserAvatar } from "@/components/shared/user-avatar"; // shared L3 ✓
 ```
 
 ---
 
 ## Summary Table
 
-| Aspect | L1 External | L2 Design System | L3 App Layer |
-|--------|-------------|------------------|--------------|
-| **Location** | `ui/`, `ai-elements/` | `ui-custom/[domain]/` | `[feature]/`, `shared/` |
-| **Mutability** | Immutable | Owned, app-agnostic | Owned, app-specific |
-| **App hooks** | N/A | NO | YES |
-| **App types** | N/A | NO | YES |
-| **Exports** | As installed | Namespace object | Named exports |
-| **Styling** | As installed | Embedded decisions | Minimal, uses L2 |
-| **Examples** | `Button`, `Dialog` | `Message.*`, `Sidebar.*` | `ChatMessage`, `AppSidebar` |
+| Aspect         | L1 External           | L2 Design System         | L3 App Layer                |
+| -------------- | --------------------- | ------------------------ | --------------------------- |
+| **Location**   | `ui/`, `ai-elements/` | `ui-custom/[domain]/`    | `[feature]/`, `shared/`     |
+| **Mutability** | Immutable             | Owned, app-agnostic      | Owned, app-specific         |
+| **App hooks**  | N/A                   | NO                       | YES                         |
+| **App types**  | N/A                   | NO                       | YES                         |
+| **Exports**    | As installed          | Namespace object         | Named exports               |
+| **Styling**    | As installed          | Embedded decisions       | Minimal, uses L2            |
+| **Examples**   | `Button`, `Dialog`    | `Message.*`, `Sidebar.*` | `ChatMessage`, `AppSidebar` |

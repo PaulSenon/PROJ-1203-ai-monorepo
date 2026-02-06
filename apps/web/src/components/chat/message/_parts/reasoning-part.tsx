@@ -1,6 +1,6 @@
 import type { MyUIMessagePart } from "@ai-monorepo/ai/types/uiMessage";
 import { BrainIcon, ChevronRightIcon } from "lucide-react";
-import { useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Reasoning } from "@/components/ui-custom/chat/reasoning";
 import { SmoothMarkdown } from "@/components/ui-custom/markdown/smooth-markdown";
@@ -19,50 +19,57 @@ const MARKDOWN_OVERFLOW_GUARDS =
 export function ReasoningPart({ part }: ReasoningPartProps) {
   const [isOpen, setIsOpen] = useState(false);
   const isStreaming = part.state === "streaming";
-  const showPreview = isStreaming && !isOpen;
   const text = part.text ?? "";
+  const deferredText = useDeferredValue(text);
+  const trimmedText = text.trim();
+  const hasText = trimmedText.length > 0;
+  const showPreview = hasText && isStreaming && !isOpen;
+  const showContent = hasText && isOpen;
+  const headerLabel = isStreaming ? (
+    <Shimmer as="span" duration={1}>
+      Reasoning...
+    </Shimmer>
+  ) : (
+    "Thought for a few seconds"
+  );
 
   return (
     <Reasoning.Root
       className="w-full"
+      disabled={!hasText}
       isStreaming={isStreaming}
-      onOpenChange={setIsOpen}
-      open={isOpen}
+      onOpenChange={hasText ? setIsOpen : undefined}
+      open={hasText ? isOpen : false}
     >
       <Reasoning.Trigger aria-label="Toggle reasoning">
         <BrainIcon aria-hidden="true" className="size-4 shrink-0" />
-        <span className="truncate">
-          {isStreaming ? (
-            <Shimmer as="span" duration={1}>
-              Reasoning...
-            </Shimmer>
-          ) : (
-            "Thought for a few seconds"
-          )}
-        </span>
+        <span className="truncate">{headerLabel}</span>
         <ChevronRightIcon
           aria-hidden="true"
           className={cn(
             "ml-auto size-4 shrink-0 transition-transform",
+            "group-data-disabled:invisible",
             isOpen && "rotate-90"
           )}
         />
       </Reasoning.Trigger>
-      {showPreview ? (
-        <Reasoning.Preview lines={PREVIEW_LINES}>{text}</Reasoning.Preview>
-      ) : null}
-      {isOpen ? (
-        <Reasoning.Content>
+      <Reasoning.Preview lines={PREVIEW_LINES}>
+        {showPreview ? text : ""}
+      </Reasoning.Preview>
+      <Reasoning.Content>
+        {showContent ? (
           <SmoothMarkdown
             className={cn(
               "text-muted-foreground text-sm",
               MARKDOWN_OVERFLOW_GUARDS
             )}
           >
-            {text}
+            {deferredText}
           </SmoothMarkdown>
-        </Reasoning.Content>
-      ) : null}
+        ) : (
+          ""
+        )}
+      </Reasoning.Content>
     </Reasoning.Root>
   );
 }
