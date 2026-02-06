@@ -57,12 +57,7 @@ function ErrorStatusPart({ error }: ErrorStatusPartProps) {
   const { title, body } = getErrorContent(error);
 
   return (
-    <StatusBlock.Root
-      aria-live="polite"
-      className="w-full"
-      kind="error"
-      role="status"
-    >
+    <StatusBlock.Root className="w-full" kind="error">
       <StatusBlock.Content>
         <StatusBlock.Title>{title}</StatusBlock.Title>
         <StatusBlock.Body>{body}</StatusBlock.Body>
@@ -73,12 +68,7 @@ function ErrorStatusPart({ error }: ErrorStatusPartProps) {
 
 function CancelledStatusPart() {
   return (
-    <StatusBlock.Root
-      aria-live="polite"
-      className="w-full"
-      kind="warning"
-      role="status"
-    >
+    <StatusBlock.Root className="w-full" kind="warning">
       <StatusBlock.Content>
         <StatusBlock.Title>{CANCELLED_TITLE}</StatusBlock.Title>
         <StatusBlock.Body>{CANCELLED_BODY}</StatusBlock.Body>

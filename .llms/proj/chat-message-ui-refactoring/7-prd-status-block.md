@@ -122,6 +122,6 @@ Shallow modules (composition only):
 
 - Core message PRD: `.llms/proj/chat-message-ui-refactoring/5-prd-message-ui.md` (status placeholder section should include `StatusBlock.Content`).
 - Requirements: `.llms/proj/chat-message-ui-refactoring/1-ui-requirements.md`.
-- Example mapping pattern (reference only): `apps/web/src/components/chat/chat-messages/chat-message-error.tsx`.
+- Example mapping pattern (reference only): `.llms/proj/chat-message-ui-refactoring/7-error-maping-type-legacy-saved.tsx`.
 - Error metadata schema: `packages/backend/convex/schema.ts` (ChatErrorMetadata).
 - ARIA guidance: MDN `alert` and `status` roles.

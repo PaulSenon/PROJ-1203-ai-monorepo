@@ -102,3 +102,9 @@ Leaving simple placeholder for more complex sub-components that will be addresse
 ----
 
 # 7-prd-status-block.md
+
+## T1: L2 live-region semantics in StatusBlock.Content (PRD accessibility)
+  - Decisions: move role/aria-live ownership to L2 Content using kind context; remove ARIA props from L3 status roots; keep iteration scoped to core abstraction boundary
+  - Files: apps/web/src/components/ui-custom/feedback/status-block.tsx, apps/web/src/components/chat/message/_parts/status.tsx
+  - Entropy: removed duplicated/misplaced ARIA wiring in L3
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; next blockers: raw error.message leak, cancelled>error precedence, PRD copy mismatch
