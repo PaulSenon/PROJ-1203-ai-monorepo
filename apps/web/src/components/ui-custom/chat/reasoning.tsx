@@ -2,13 +2,21 @@
 
 import { BrainIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useIntersectionObserver } from "@/hooks/utils/use-intersection-observer";
 import { cn } from "@/lib/utils";
 
 export type ReasoningRootProps = {
@@ -40,13 +48,13 @@ function ReasoningRoot({
   disabled = false,
   children,
 }: ReasoningRootProps) {
-  const [open, setOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const isDisabled = Boolean(disabled);
-  const isOpen = !isDisabled && open;
+  const isOpen = !isDisabled && isExpanded;
 
   useEffect(() => {
     if (isDisabled) {
-      setOpen(false);
+      setIsExpanded(false);
     }
   }, [isDisabled]);
 
@@ -55,7 +63,7 @@ function ReasoningRoot({
       return;
     }
 
-    setOpen(nextOpen);
+    setIsExpanded(nextOpen);
   };
 
   const contextValue = useMemo(
@@ -141,7 +149,6 @@ export type ReasoningPreviewProps = {
 
 const DEFAULT_PREVIEW_LINES = 2;
 const PREVIEW_LINE_HEIGHT_REM = 1.25;
-const APPROX_PREVIEW_CHARS_PER_LINE = 72;
 
 function ReasoningPreview({
   className,
@@ -150,18 +157,38 @@ function ReasoningPreview({
 }: ReasoningPreviewProps) {
   const { isOpen, isStreaming, disabled } = useReasoningContext();
   const text = children ?? "";
+
+  const hasText = text.trim().length > 0;
+  const isCollapsed = !isOpen;
+  const isEnabled = !disabled;
+  const shouldRenderPreview =
+    isEnabled && isCollapsed && isStreaming && hasText;
+
+  const supportsIntersectionObserver =
+    typeof IntersectionObserver !== "undefined";
+  const [previewViewport, setPreviewViewport] = useState<HTMLDivElement | null>(
+    null
+  );
+  // T6 invariant: one-way latch for this reasoning block lifecycle.
+  const [hasDetectedOverflow, setHasDetectedOverflow] = useState(false);
+
   const flooredLines = Math.floor(lines);
   const normalizedLines =
     Number.isFinite(lines) && flooredLines >= 1
       ? flooredLines
       : DEFAULT_PREVIEW_LINES;
-  const showTopFade = shouldShowPreviewFade(text, normalizedLines);
-  const previewStyle = {
+
+  const observerReady =
+    supportsIntersectionObserver && previewViewport !== null;
+  const shouldObserveOverflowSentinel =
+    shouldRenderPreview && observerReady && !hasDetectedOverflow;
+  const showTopFade = hasDetectedOverflow;
+  const previewStyle: ReasoningPreviewStyle = {
     "--reasoning-preview-lines": normalizedLines,
     "--reasoning-preview-line-height": `${PREVIEW_LINE_HEIGHT_REM}rem`,
-  } satisfies ReasoningPreviewStyle;
+  };
 
-  if (disabled || isOpen || !isStreaming || text.trim().length === 0) {
+  if (!shouldRenderPreview) {
     return null;
   }
 
@@ -173,16 +200,59 @@ function ReasoningPreview({
         "leading-(--reasoning-preview-line-height)",
         "h-[calc(var(--reasoning-preview-lines)*var(--reasoning-preview-line-height))]",
         "min-h-[calc(var(--reasoning-preview-lines)*var(--reasoning-preview-line-height))]",
-        showTopFade &&
-          "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-4 before:bg-linear-to-b before:from-background before:to-transparent",
         className
       )}
+      ref={setPreviewViewport}
       style={previewStyle}
     >
+      {showTopFade ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-linear-to-b from-background to-transparent"
+        />
+      ) : null}
       <div className="absolute inset-x-0 bottom-0 min-h-[calc(var(--reasoning-preview-lines)*var(--reasoning-preview-line-height))] whitespace-pre-wrap">
+        {shouldObserveOverflowSentinel ? (
+          <ReasoningOverflowSentinel
+            onOverflow={() => setHasDetectedOverflow(true)}
+            root={previewViewport}
+          />
+        ) : null}
         {text}
       </div>
     </div>
+  );
+}
+
+type ReasoningOverflowSentinelProps = {
+  root: HTMLDivElement | null;
+  onOverflow: () => void;
+};
+
+function ReasoningOverflowSentinel({
+  root,
+  onOverflow,
+}: ReasoningOverflowSentinelProps) {
+  const handleChange = useCallback(
+    (entry: IntersectionObserverEntry) => {
+      if (!entry.isIntersecting) {
+        onOverflow();
+      }
+    },
+    [onOverflow]
+  );
+  const { ref } = useIntersectionObserver<HTMLDivElement>({
+    root,
+    disabled: root === null,
+    onChange: handleChange,
+  });
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-0"
+      ref={ref}
+    />
   );
 }
 
@@ -195,7 +265,7 @@ function ReasoningContent({
 }: ReasoningContentProps) {
   const { isOpen, disabled } = useReasoningContext();
 
-  if (disabled || !isOpen || isEmptyChildren(children)) {
+  if (disabled || !isOpen || isVisuallyEmptyChildren(children)) {
     return null;
   }
 
@@ -208,7 +278,7 @@ function ReasoningContent({
   );
 }
 
-function isEmptyChildren(children: ReactNode) {
+function isVisuallyEmptyChildren(children: ReactNode) {
   if (children == null || typeof children === "boolean") {
     return true;
   }
@@ -218,18 +288,6 @@ function isEmptyChildren(children: ReactNode) {
   }
 
   return false;
-}
-
-function shouldShowPreviewFade(text: string, lines: number) {
-  const normalizedText = text.trim();
-  if (normalizedText.length === 0) {
-    return false;
-  }
-
-  return (
-    normalizedText.includes("\n") ||
-    normalizedText.length > lines * APPROX_PREVIEW_CHARS_PER_LINE
-  );
 }
 
 export const Reasoning = {
