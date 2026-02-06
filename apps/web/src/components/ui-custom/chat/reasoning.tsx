@@ -3,6 +3,7 @@
 import { BrainIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { Shimmer } from "@/components/ai-elements/shimmer";
 import {
   Collapsible,
   CollapsibleContent,
@@ -78,18 +79,23 @@ function ReasoningRoot({
 }
 
 export type ReasoningTriggerProps = {
-  label: ReactNode;
+  label?: ReactNode;
   className?: string;
   disabled?: boolean;
 };
+
+const DEFAULT_REASONING_LABEL = "Thought for a few seconds";
+const STREAMING_REASONING_LABEL = "Reasoning...";
+const STREAMING_REASONING_SR_LABEL = "Reasoning in progress";
 
 function ReasoningTrigger({
   label,
   className,
   disabled = false,
 }: ReasoningTriggerProps) {
-  const { disabled: rootDisabled } = useReasoningContext();
+  const { disabled: rootDisabled, isStreaming } = useReasoningContext();
   const isDisabled = rootDisabled || disabled;
+  const resolvedLabel = label ?? DEFAULT_REASONING_LABEL;
 
   return (
     <CollapsibleTrigger
@@ -103,7 +109,18 @@ function ReasoningTrigger({
       type="button"
     >
       <BrainIcon aria-hidden="true" className="size-4 shrink-0" />
-      <span className="truncate">{label}</span>
+      {isStreaming ? (
+        <>
+          <span aria-hidden="true" className="truncate">
+            <Shimmer as="span" duration={1}>
+              {STREAMING_REASONING_LABEL}
+            </Shimmer>
+          </span>
+          <span className="sr-only">{STREAMING_REASONING_SR_LABEL}</span>
+        </>
+      ) : (
+        <span className="truncate">{resolvedLabel}</span>
+      )}
       <ChevronRightIcon
         aria-hidden="true"
         className="ml-auto size-4 shrink-0 transition-transform group-data-disabled:invisible group-data-[state=open]:rotate-90"
@@ -118,6 +135,7 @@ export type ReasoningPreviewProps = ComponentProps<"div"> & {
 
 const DEFAULT_PREVIEW_LINES = 2;
 const PREVIEW_LINE_HEIGHT_REM = 1.25;
+const APPROX_PREVIEW_CHARS_PER_LINE = 72;
 
 function ReasoningPreview({
   className,
@@ -131,6 +149,7 @@ function ReasoningPreview({
     Number.isFinite(lines) && flooredLines >= 1
       ? flooredLines
       : DEFAULT_PREVIEW_LINES;
+  const showTopFade = shouldShowPreviewFade(children, normalizedLines);
   const previewStyle = {
     "--reasoning-preview-lines": normalizedLines,
     "--reasoning-preview-line-height": `${PREVIEW_LINE_HEIGHT_REM}rem`,
@@ -147,7 +166,8 @@ function ReasoningPreview({
         "leading-(--reasoning-preview-line-height)",
         "h-[calc(var(--reasoning-preview-lines)*var(--reasoning-preview-line-height))]",
         "min-h-[calc(var(--reasoning-preview-lines)*var(--reasoning-preview-line-height))]",
-        "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-4 before:bg-linear-to-b before:from-background before:to-transparent",
+        showTopFade &&
+          "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-4 before:bg-linear-to-b before:from-background before:to-transparent",
         className
       )}
       style={previewStyle}
@@ -193,6 +213,48 @@ function isEmptyChildren(children: ReactNode) {
   }
 
   return false;
+}
+
+function shouldShowPreviewFade(children: ReactNode, lines: number) {
+  if (children == null || typeof children === "boolean") {
+    return false;
+  }
+
+  if (typeof children === "string" || typeof children === "number") {
+    const text = String(children).trim();
+    if (text.length === 0) {
+      return false;
+    }
+
+    return (
+      text.includes("\n") || text.length > lines * APPROX_PREVIEW_CHARS_PER_LINE
+    );
+  }
+
+  const text = getPlainText(children).trim();
+  if (text.length === 0) {
+    return false;
+  }
+
+  return (
+    text.includes("\n") || text.length > lines * APPROX_PREVIEW_CHARS_PER_LINE
+  );
+}
+
+function getPlainText(children: ReactNode): string {
+  if (children == null || typeof children === "boolean") {
+    return "";
+  }
+
+  if (typeof children === "string" || typeof children === "number") {
+    return String(children);
+  }
+
+  if (Array.isArray(children)) {
+    return children.map(getPlainText).join("");
+  }
+
+  return "";
 }
 
 export const Reasoning = {

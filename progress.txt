@@ -136,3 +136,17 @@ Leaving simple placeholder for more complex sub-components that will be addresse
   - Feedback loops: external sub-agent review requested by user + post-change quick sub-agent sanity pass (contract still passes)
   - Entropy: reduced local code branches in Reasoning.Preview sizing path
   - Notes: remaining T4 work unchanged (overflow-only fade heuristic + SR live-status policy)
+
+## T4 followup: overflow-only fade heuristic (8-prd T4)
+  - Decisions: top fade now conditional (not always on); simple overflow hint uses newline-or-length heuristic only, no DOM measurement; keep CSS preview contract unchanged (fixed viewport + bottom anchored content)
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx
+  - Feedback loops: sub-agent review run (arch/perf/a11y/security) + quick sanity review after fix; typecheck/tests/LSP not run (AGENTS no dev cmds)
+  - Entropy: removed unconditional preview fade visual noise for short/underflow reasoning
+  - Notes: next highest-pri item is SR live-status policy for reasoning trigger wording/announcement behavior
+
+## T4 followup: SR wording + aria ownership moved to L2 (8-prd T4)
+  - Decisions: moved streaming shimmer + SR-only label into L2 Reasoning.Trigger; L3 no longer composes aria handling or shimmer label; Trigger now default non-streaming label internally
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx, apps/web/src/components/chat/message/_parts/reasoning-part.tsx
+  - Feedback loops: sub-agent review run (architecture/perf/a11y) after change; typecheck/tests/LSP not run (AGENTS no dev cmds)
+  - Entropy: removed L3 headerLabel branch + Shimmer import, thinner adapter
+  - Notes: optional followup doc tweak: clarify Trigger `label` applies non-streaming state only
