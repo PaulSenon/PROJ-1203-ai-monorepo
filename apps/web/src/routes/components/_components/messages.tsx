@@ -19,6 +19,11 @@ export const Route = createFileRoute("/components/_components/messages")({
 type DemoRole = "assistant" | "user";
 
 type ReasoningState = "streaming" | "done";
+type ReasoningPreset =
+  | "empty"
+  | "streaming-underflow"
+  | "streaming-overflow"
+  | "done-collapsed";
 
 type DemoTextPart = {
   id: string;
@@ -41,6 +46,15 @@ const SAMPLE_TEXT_2 =
   "This is the second chunk. Ordering should be preserved across parts.";
 const SAMPLE_REASONING_1 =
   "First, verify the order of the parts.\nThen, confirm reasoning collapses after streaming.\nFinally, ensure the toggle preserves state.";
+const STREAMING_UNDERFLOW_REASONING = "First reasoning line.";
+const STREAMING_OVERFLOW_REASONING = [
+  "Line 1: gather context",
+  "Line 2: check constraints",
+  "Line 3: rank options",
+  "Line 4: verify assumptions",
+  "Line 5: choose path",
+  "Line 6: validate output",
+].join("\n");
 const LONG_MARKDOWN = [
   "```ts",
   "const config = {",
@@ -123,6 +137,7 @@ function PartEditor({
         </div>
         <div className="flex items-center gap-2">
           <Button
+            aria-label={`Move part ${index + 1} up`}
             disabled={index === 0}
             onClick={() => onMove(index, index - 1)}
             size="sm"
@@ -132,6 +147,7 @@ function PartEditor({
             Up
           </Button>
           <Button
+            aria-label={`Move part ${index + 1} down`}
             disabled={index === total - 1}
             onClick={() => onMove(index, index + 1)}
             size="sm"
@@ -141,6 +157,7 @@ function PartEditor({
             Down
           </Button>
           <Button
+            aria-label={`Remove part ${index + 1}`}
             onClick={() => onRemove(part.id)}
             size="sm"
             type="button"
@@ -340,6 +357,39 @@ function RouteComponent() {
     });
   };
 
+  const applyReasoningPreset = (preset: ReasoningPreset) => {
+    const isStreamingPreset =
+      preset === "streaming-underflow" || preset === "streaming-overflow";
+
+    setRole("assistant");
+    setShowEmpty(false);
+    setShowCancelled(false);
+    setShowError(false);
+    setIsThreadStreaming(isStreamingPreset);
+    setStreamCursor(0);
+
+    if (preset === "empty") {
+      setParts([createReasoningPart("", "streaming")]);
+      return;
+    }
+
+    if (preset === "streaming-underflow") {
+      setParts([
+        createReasoningPart(STREAMING_UNDERFLOW_REASONING, "streaming"),
+      ]);
+      return;
+    }
+
+    if (preset === "streaming-overflow") {
+      setParts([
+        createReasoningPart(STREAMING_OVERFLOW_REASONING, "streaming"),
+      ]);
+      return;
+    }
+
+    setParts([createReasoningPart(SAMPLE_REASONING_1, "done")]);
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
       <Card>
@@ -426,7 +476,7 @@ function RouteComponent() {
 
             <div className="flex flex-col gap-2">
               <span className="text-muted-foreground text-xs uppercase tracking-wide">
-                Footer
+                Message Meta
               </span>
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -482,6 +532,50 @@ function RouteComponent() {
                   Reset
                 </Button>
               </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                Reasoning QA
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => applyReasoningPreset("empty")}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Empty
+                </Button>
+                <Button
+                  onClick={() => applyReasoningPreset("streaming-underflow")}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Streaming Underflow
+                </Button>
+                <Button
+                  onClick={() => applyReasoningPreset("streaming-overflow")}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Streaming Overflow
+                </Button>
+                <Button
+                  onClick={() => applyReasoningPreset("done-collapsed")}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Done Collapsed
+                </Button>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Expanded check: apply Done Collapsed then toggle reasoning
+                header in preview.
+              </p>
             </div>
 
             <div className="flex items-center justify-between">

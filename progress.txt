@@ -150,3 +150,10 @@ Leaving simple placeholder for more complex sub-components that will be addresse
   - Feedback loops: sub-agent review run (architecture/perf/a11y) after change; typecheck/tests/LSP not run (AGENTS no dev cmds)
   - Entropy: removed L3 headerLabel branch + Shimmer import, thinner adapter
   - Notes: optional followup doc tweak: clarify Trigger `label` applies non-streaming state only
+
+## T5 slice: reasoning QA presets in demo (8-prd T5)
+  - Decisions: added one-click presets for empty, streaming-underflow, streaming-overflow, done-collapsed; expanded state validated by manual toggle step note; presets normalize assistant/error/cancelled/thread flags to reduce setup noise
+  - Files: apps/web/src/routes/components/_components/messages.tsx
+  - Feedback loops: sub-agent review run (qa coverage + a11y/perf sanity) + post-fix quick sanity; typecheck/tests/LSP not run (AGENTS no dev cmds)
+  - Entropy: fixed ambiguous repeated button labels in part editor by adding contextual aria-labels; renamed demo section title Footer -> Message Meta for control clarity
+  - Notes: remaining T5 work is user manual QA run in browser against matrix and confirm pass/fail
