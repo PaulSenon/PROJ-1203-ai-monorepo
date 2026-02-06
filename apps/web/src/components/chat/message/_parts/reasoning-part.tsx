@@ -1,6 +1,5 @@
 import type { MyUIMessagePart } from "@ai-monorepo/ai/types/uiMessage";
 import { useDeferredValue } from "react";
-import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Reasoning } from "@/components/ui-custom/chat/reasoning";
 import { SmoothMarkdown } from "@/components/ui-custom/markdown/smooth-markdown";
 import { cn } from "@/lib/utils";
@@ -21,13 +20,6 @@ export function ReasoningPart({ part }: ReasoningPartProps) {
   const text = part.text ?? "";
   const deferredText = useDeferredValue(text);
   const hasText = NON_WHITESPACE_PATTERN.test(text);
-  const headerLabel = isStreaming ? (
-    <Shimmer as="span" duration={1}>
-      Reasoning...
-    </Shimmer>
-  ) : (
-    "Thought for a few seconds"
-  );
 
   return (
     <Reasoning.Root
@@ -35,7 +27,7 @@ export function ReasoningPart({ part }: ReasoningPartProps) {
       disabled={!hasText}
       isStreaming={isStreaming}
     >
-      <Reasoning.Trigger label={headerLabel} />
+      <Reasoning.Trigger />
       <Reasoning.Preview lines={PREVIEW_LINES}>{text}</Reasoning.Preview>
       <Reasoning.Content>
         {hasText ? (
