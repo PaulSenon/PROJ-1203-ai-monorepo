@@ -51,19 +51,43 @@
 
   "agent": {
     "plan": {
-      "model": "openai/gpt-5.2-codex",
+      "model": "openai/gpt-5.3-codex",
       "reasoningEffort": "xhigh"
     },
     "build": {
-      "model": "openai/gpt-5.2-codex",
+      "model": "openai/gpt-5.3-codex",
       "reasoningEffort": "high"
     },
-    "quick": {
-      "description": "For any simple tasks and question that already have clear context and need simple execution or deduction.",
+    "quick-question": {
+      "description": "For any simple research tasks and question that already have clear context and need simple execution or deduction.",
       "prompt": "You are a helpful assistant that can help with simple tasks and questions. You can use skills and tools. You must always use prior context to answer and request for more information if needed. Your answer must be a self-sufficient recap of the takeaways you found during your research.",
       "mode": "subagent",
       "model": "openai/gpt-5.3-codex",
       "reasoningEffort": "medium",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": true
+      }
+    },
+    "code-reviewer-a": {
+      "description": "For code review by reviewer A (claude agent) (preferred)",
+      "prompt": "You are a critical code reviewer expert. You will track for what user asked you, using the most suitable skill available if any, to give detailed feedback. If no specific instruction you will want to deeply review the user changes with all the needed skill and knowledge and documentation.",
+      "mode": "subagent",
+      "model": "opencode/claude-opus-4-6",
+      "reasoningEffort": "high",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": true
+      }
+    },
+    "code-reviewer-b": {
+      "description": "For code review by reviewer B (claude agent) (if second review needed)",
+      "prompt": "You are a critical code reviewer expert. You will track for what user asked you, using the most suitable skill available if any, to give detailed feedback. If no specific instruction you will want to deeply review the user changes with all the needed skill and knowledge and documentation.",
+      "mode": "subagent",
+      "model": "openai/gpt-5.3-codex",
+      "reasoningEffort": "high",
       "tools": {
         "write": false,
         "edit": false,
@@ -75,7 +99,7 @@
 
   "command": {
     "quick": {
-      "agent": "quick",
+      "agent": "quick-question",
       "subtask": true,
       "template": "Answer briefly: {{input}}"
     }

@@ -193,3 +193,52 @@ Leaving simple placeholder for more complex sub-components that will be addresse
   - Feedback loops: sub-agent repo scan confirmed reusable IO hooks exist and no reusable RO hook; external MDN/web.dev observer behavior already validated in prior step
   - Entropy: removed pending/ambiguous overflow strategy state from PRD
   - Notes: next implementation should execute T6 in L2 reasoning only, preserving current L3 adapter boundaries
+
+## T6: overflow fade IO one-way latch implemented (8-prd T6)
+  - Decisions: implemented sentinel-based IO latch in L2 `Reasoning.Preview` only; fade starts off, latches on first non-intersecting sentinel, observer auto-disabled after latch/hidden preview; heuristic kept only when `IntersectionObserver` unavailable; replaced pseudo-element fade with explicit decorative overlay node (`aria-hidden`, `pointer-events-none`)
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx
+  - Feedback loops: context7 checked (React effect/observer lifecycle guidance); sub-agent review run twice (arch/perf/a11y/security) -> pass
+  - Entropy: fixed one smell by making latch setter idempotent functional update to avoid redundant state updates during observer callbacks
+  - Notes: typecheck/tests/LSP not run (AGENTS no dev cmds); next highest-pri is T5 manual QA matrix run in demo
+
+## T6 followup: readability/maintainability cleanup (8-prd T6)
+  - Decisions: extracted preview overflow logic into `usePreviewOverflowDetection`; extracted preview visibility + lines normalization helpers; renamed local open state to `isExpanded`; centralized repeated preview sizing/content class strings; renamed empty-children helper to better intent
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx
+  - Feedback loops: context7 checked (React custom hook extraction guidance); sub-agent change-audit run post-refactor -> behavior unchanged + no medium+ issues
+  - Entropy: fixed one smell (high cognitive-load block in `Reasoning.Preview`) via helper/hook split without API change
+  - Notes: typecheck/tests/LSP not run (AGENTS no dev cmds)
+
+## T6 followup: simplify preview readability per feedback (8-prd T6)
+  - Decisions: removed single-use preview class constants and inlined sizing/content classes; removed standalone `normalizePreviewLines`/preview-visibility helpers; kept preview visibility logic inline and explicit; preserved T6 latch hook
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx
+  - Feedback loops: none (no behavior change; prior QA ok)
+  - Entropy: reduced indirection in preview rendering path
+  - Notes: typecheck/tests/LSP not run (AGENTS no dev cmds)
+
+## T6 followup: remove unreadable overflow hook abstraction (8-prd T6)
+  - Decisions: removed `usePreviewOverflowDetection` helper and moved latch wiring inline in `Reasoning.Preview`; kept exact rule: preview renders only when `!disabled && !isOpen && isStreaming && hasText`; IO observer armed only while preview rendered and unlatch; gradient hidden by default then shown after first non-intersecting sentinel
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx
+  - Feedback loops: none (targeted readability edit only)
+  - Entropy: fixed one smell (over-abstracted hook obscuring core preview flow)
+  - Notes: typecheck/tests/LSP not run (AGENTS no dev cmds)
+
+## T6 followup: external readability audit + boolean clarity pass (8-prd T6)
+  - Decisions: asked claude reviewer for alternate readability angle; split preview gate into named booleans (`hasText`, `isCollapsed`, `isEnabled`); kept observer gate explicit and removed single-use `latchOpen` alias
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx
+  - Feedback loops: code-reviewer-a run before and after edit -> readability now good, no further issues
+  - Entropy: fixed one smell (dense/negated boolean expressions)
+  - Notes: typecheck/tests/LSP not run (AGENTS no dev cmds)
+
+## T6 followup: remove legacy heuristic fade path after IO migration (8-prd T6)
+  - Decisions: deleted `shouldShowPreviewFade` + related heuristic constant; fade visibility now only from IO one-way latch state (`hasDetectedOverflow`)
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx
+  - Feedback loops: none (targeted simplification)
+  - Entropy: removed dead/legacy fallback logic that conflicted with new mental model
+  - Notes: behavior change on browsers without `IntersectionObserver`: top fade will stay hidden (acceptable simplification unless we reintroduce explicit fallback policy)
+
+## T6 followup: sentinel sub-component for explicit observer unmount (8-prd T6)
+  - Decisions: kept `useIntersectionObserver` (not `useInView`) and moved observer binding into `ReasoningOverflowSentinel` child rendered only while observation is needed; once latch flips true, sentinel unmounts and observer cleanup runs via hook teardown
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx
+  - Feedback loops: none (readability + lifecycle clarity refactor)
+  - Entropy: fixed one smell (observer lifecycle hidden in dense inline logic)
+  - Notes: typecheck/tests/LSP not run (AGENTS no dev cmds)
