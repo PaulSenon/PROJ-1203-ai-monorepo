@@ -1,0 +1,43 @@
+- User rejects model A (data-first), sees over-engineering + leaky abstraction.
+- User leans model B (slot-first), accepts duplication risk if simple.
+- Wants type-level safety to avoid missing menu/mobile counterparts.
+- "More" menu should handle sub-actions; optional 2-level menu; mobile-friendly UX needed (dropdown vs drawer undecided).
+- Each action may have click-submenu OR right-click context menu, not both.
+- L2 list should be generic and reusable for actions + stats; L3 composes per message footer.
+- Per-item visibility likely via slots; wants guidance from shadcn/react patterns.
+- L2 can import L1 types (UIMessage) but not app types.
+- Sub-agent (skills): favor compound components + context, children slots; avoid boolean props; explicit L3 variants.
+- Parity suggestion: minimal item types + required children; avoid heavy config; optional dev warnings only.
+- Mobile overflow suggestion: shadcn Sheet for actions/stats instead of complex menus.
+- Minimal API idea: Action/Stat list compound with Frame/List/ActionItem/StatItem/Overflow slots.
+- User asks for B2 concept: enforce overflow per item via required prop/slot.
+- Overflow container: dropdown menu only for now; keep design open for other renderers later; not necessarily user-composable.
+- User wants L2 list to display anything, not “Action”-specific; asks why generic would be bad.
+- User proposes 2 L2 layers: base responsive 3‑state list + thin wrappers for actions and infos.
+- Decision: 3 L2 components — base responsive overflow list + ActionList + StatList wrappers.
+- Decision: overflow uses dropdown only for now; keep API open for other renderers later.
+- User rejects creating separate reasoning/status PRDs in this thread; wants only one dedicated footer PRD.
+- Confirmed responsive rules: desktop shows primary+secondary, tertiary in overflow; mobile shows primary, secondary+tertiary in overflow.
+- New dedicated footer PRD created: `10-prd-message-footer-composable-lists.md` with single-scope plan from placeholder to full composable footer.
+- PRD refined to be self-sufficient: added context snapshot, locked UX rules, file plan, explicit minimal API contract, integration contract, exhaustive demo scenarios, phased migration, tests, risks, DoD.
+- Kept scope strictly footer-only; reasoning/status remain out of scope.
+- Added explicit source-of-truth note in PRD: if tmp docs conflict, PRD #10 overrides.
+- User concern: architecture still unclear despite PRD; asks for concrete technical explanation before approving.
+- User asks for minimal exhaustive L3 example proving clean composition/customization and automatic mobile overflow behavior.
+- Clarification target: explain exact technical flow for automatic tier-based collapse and customization boundaries.
+- User remark: suggest tier-based literal narrowing (primary inline only, secondary both, tertiary overflow only).
+- User remark: performance concern about passing many component nodes/callbacks in list config.
+- User remark: StatList needs custom children style (`icon + value`), optional tooltip, and More should show all stats in detailed form.
+- Performance sub-agent feedback: risk is ReactNode/object identity churn; mitigations are useMemo/useCallback/stable ids/memo-friendly rows.
+- PRD updated with discriminated unions per tier, overflow policy split (`collapsed-only` for ActionList, `all-items` for StatList), stat `details` slot with fallback to inline, and performance guardrails.
+- PRD updated with normative minimal L3 composition example including duration breakdown details row.
+- PRD consistency fix: replaced "both inline+overflow for every item" with tier-dependent required channels.
+- User asks to settle discussion before edits; requests challenge-first workflow.
+- User decision: skip discriminated unions for now.
+- User asks impact of "StatList More shows full list" on shared L2 base design.
+- Settled: use non-union minimal item contract + wrapper runtime validation warnings.
+- Settled: ActionList More policy = collapsed-only; StatList More policy = all-items.
+- Settled: StatList supports custom inline children and custom details rows with fallback details->inline.
+- Final PRD rewritten self-sufficiently in `10-prd-message-footer-composable-lists.md` per settled decisions.
+- Naming refinement decision: L2 should avoid "stats" business naming; use `InfoList` (or label/info semantics) in L2. Keep `stats` naming only at L3 message part if desired.
+- PRD #10 updated from `StatList` to `InfoList`; PRD #5 follow-up wording updated from Action/Stat to Action/Info for L2 references.

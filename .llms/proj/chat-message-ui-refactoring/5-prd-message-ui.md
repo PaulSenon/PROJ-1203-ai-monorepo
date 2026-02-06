@@ -27,7 +27,7 @@ Rebuild message UI around ordered `UIMessage.parts` rendering. Each part renders
 15. As a user, I want message stats when available, so I can assess performance.
 16. As a developer, I want strict L2/L3 boundaries, so refactors stay safe.
 17. As a developer, I want a pure layout layer, so UI can be tested without hooks.
-18. As a developer, I want placeholder action/stat lists now, so UI can ship without full menus.
+18. As a developer, I want placeholder action/info lists now, so UI can ship without full menus.
 19. As a developer, I want legacy message code removed after migration, so maintenance improves.
 20. As a designer, I want minimal, high‑end styling, so UI feels premium.
 21. As an accessibility user, I want ARIA‑safe toggles/buttons, so UI is usable.
@@ -48,7 +48,7 @@ Deferred to separate PRDs:
 
 - Reasoning block full visuals and polish
 - Status block full variants and visuals
-- Action/Stat list L2 API
+- Action/Info list L2 API
 - Part‑level timing metadata (see pre‑PRD)
 
 ### Architecture and File Map
@@ -172,7 +172,7 @@ L3 footer content components (separate per role):
   - Actions: Copy (simple click only)
   - Stats: none
 
-No L2 Action/Stat list API in this PRD.
+No L2 Action/Info list API in this PRD.
 
 ### Message Content
 
@@ -217,7 +217,7 @@ Must be updated alongside each task:
 
 ## Out of Scope
 
-- Full procedural actions/stats system
+- Full procedural actions/infos system
 - Full status block visuals and variants
 - Full reasoning block visuals and streaming polish
 - Backend timing metadata per reasoning part
@@ -235,7 +235,7 @@ Follow‑up PRDs:
 
 - Reasoning block L2
 - Status block L2
-- Action/Stat list L2
+- Action/Info list L2
 - Reasoning timing metadata (pre‑PRD)
 
 ## Task List
