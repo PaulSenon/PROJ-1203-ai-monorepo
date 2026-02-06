@@ -157,3 +157,39 @@ Leaving simple placeholder for more complex sub-components that will be addresse
   - Feedback loops: sub-agent review run (qa coverage + a11y/perf sanity) + post-fix quick sanity; typecheck/tests/LSP not run (AGENTS no dev cmds)
   - Entropy: fixed ambiguous repeated button labels in part editor by adding contextual aria-labels; renamed demo section title Footer -> Message Meta for control clarity
   - Notes: remaining T5 work is user manual QA run in browser against matrix and confirm pass/fail
+
+## T4 followup: preview API hardening + dead path removal (8-prd T4)
+  - Decisions: narrowed `Reasoning.Preview` API to contract-only (`lines`, `children`, `className`); removed generic div-prop passthrough to prevent aria-hidden focusable leaks/policy bypass; made preview text-only and removed unused ReactNode plain-text extraction path
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx
+  - Feedback loops: context7 checked (React TS children typing guidance); sub-agent review run pre/post fix (arch/perf/a11y/typesafety) -> pass after patch; typecheck/tests/LSP not run (AGENTS no dev cmds)
+  - Entropy: fixed one code smell (over-broad preview prop surface + dead conversion logic)
+  - Notes: likely remaining work is T5 manual QA execution in browser only
+
+## User QA report + T3 visual fix (8-prd T3/T4)
+  - QA by user: underflow/done/keyboard/transition pass; overflow fade trigger acceptable but approximate by spec; empty-state interaction correct but asked no dimmed style + default pointer feel
+  - Decisions: removed disabled visual treatment from Reasoning.Trigger (`cursor-not-allowed` + opacity), kept real disabled semantics only (non-interactive, non-focusable)
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx
+  - Feedback loops: quick sub-agent a11y sanity run -> pass (disabled semantics intact); typecheck/tests/LSP not run (AGENTS no dev cmds)
+  - Entropy: one smell fixed (visual disabled affordance conflicting with product behavior intent)
+  - Notes: next candidate iteration is demo UX improvements (preview lines control, sticky preview panel, per-part chunk append, preview surface bg alignment)
+
+## T5 followup: demo final-review UX upgrades (8-prd T5)
+  - Decisions: added live preview-lines slider (1-6) wired to L3 reasoning part; preview card now sticky on lg + preview surface uses `bg-background` to match app fade context; added per-part append-chunk action (text + reasoning, reasoning auto-switches to streaming)
+  - Files: apps/web/src/routes/components/_components/messages.tsx, apps/web/src/components/chat/message/message.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/_parts/content.tsx, apps/web/src/components/chat/message/_parts/reasoning-part.tsx
+  - Feedback loops: sub-agent review run (arch/types/a11y/perf) -> found 2 blockers; fixed (removed side-effectful nested state updater via ref cursor map, added `aria-pressed` on toggle-like buttons); quick re-review pass; typecheck/tests/LSP not run (AGENTS no dev cmds)
+  - Entropy: removed old global stream append controls in favor of per-part append simulation
+  - Notes: user can now run final QA in stable preview conditions
+
+## PRD clarification draft: overflow fade trigger decision matrix (8-prd T4)
+  - Decisions: added explicit pending decision section with options A/B/C/D (heuristic, one-way RO latch, continuous RO, IO sentinel candidate), plus rule clarification that bounded observer is allowed only after explicit user validation
+  - Files: .llms/proj/chat-message-ui-refactoring/8-prd-reasoning-block.md
+  - Feedback loops: external docs checked (MDN ResizeObserver + web.dev ResizeObserver perf notes + MDN IntersectionObserver) and sub-agent strategy review run
+  - Entropy: removed ambiguity around blanket “no JS measurement” wording by scoping allowed observer path behind explicit decision
+  - Notes: waiting user explicit selection before implementation change to overflow detection strategy
+
+## PRD lock: choose IO one-way latch for overflow fade (8-prd T6 spec)
+  - Decisions: locked Option D as final; documented why (better overflow truth + existing IO infra), rejected A/B/C explicitly, added full T6 task with implementation/acceptance details, and added hook references to avoid context loss after conversation reset
+  - Files: .llms/proj/chat-message-ui-refactoring/8-prd-reasoning-block.md
+  - Feedback loops: sub-agent repo scan confirmed reusable IO hooks exist and no reusable RO hook; external MDN/web.dev observer behavior already validated in prior step
+  - Entropy: removed pending/ambiguous overflow strategy state from PRD
+  - Notes: next implementation should execute T6 in L2 reasoning only, preserving current L3 adapter boundaries

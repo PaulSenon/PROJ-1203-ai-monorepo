@@ -1,6 +1,6 @@
 import type { LiveStatus, MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ChatMessage } from "@/components/chat/message/message";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,11 +70,19 @@ const LONG_MARKDOWN = [
   "| alpha | beta | gamma | delta | epsilon | zeta |",
   "| supercalifragilisticexpialidocious | very-long-value-with-no-breaks | 1234567890 | 1234567890 | 1234567890 | 1234567890 |",
 ].join("\n");
-const STREAM_CHUNKS = [
+const TEXT_APPEND_CHUNKS = [
   " Streaming chunk one.",
   " Then chunk two arrives with more content.",
   " Finally chunk three closes the stream.",
 ];
+const REASONING_APPEND_CHUNKS = [
+  "\nLine 7: check edge-cases",
+  "\nLine 8: refine candidate",
+  "\nLine 9: emit final reasoning",
+];
+const MIN_PREVIEW_LINES = 1;
+const MAX_PREVIEW_LINES = 6;
+const DEFAULT_PREVIEW_LINES = 2;
 
 let partCounter = 0;
 
@@ -108,6 +116,7 @@ type PartEditorProps = {
   index: number;
   total: number;
   onChange: (id: string, text: string) => void;
+  onAppendChunk: (id: string) => void;
   onStateChange: (id: string, state: ReasoningState) => void;
   onMove: (from: number, to: number) => void;
   onRemove: (id: string) => void;
@@ -118,6 +127,7 @@ function PartEditor({
   index,
   total,
   onChange,
+  onAppendChunk,
   onStateChange,
   onMove,
   onRemove,
@@ -174,6 +184,7 @@ function PartEditor({
           </span>
           <div className="flex items-center gap-2">
             <Button
+              aria-pressed={part.state === "streaming"}
               onClick={() => onStateChange(part.id, "streaming")}
               size="sm"
               type="button"
@@ -182,6 +193,7 @@ function PartEditor({
               Streaming
             </Button>
             <Button
+              aria-pressed={part.state === "done"}
               onClick={() => onStateChange(part.id, "done")}
               size="sm"
               type="button"
@@ -192,6 +204,17 @@ function PartEditor({
           </div>
         </div>
       ) : null}
+      <div className="flex justify-end">
+        <Button
+          aria-label={`Append chunk to part ${index + 1}`}
+          onClick={() => onAppendChunk(part.id)}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          Append Chunk
+        </Button>
+      </div>
       <textarea
         aria-label={`Part ${index + 1} ${part.type} text`}
         autoComplete="off"
@@ -212,7 +235,10 @@ function RouteComponent() {
   const [showError, setShowError] = useState(false);
   const [isThreadStreaming, setIsThreadStreaming] = useState(false);
   const [isMobilePreview, setIsMobilePreview] = useState(false);
-  const [streamCursor, setStreamCursor] = useState(0);
+  const [reasoningPreviewLines, setReasoningPreviewLines] = useState(
+    DEFAULT_PREVIEW_LINES
+  );
+  const chunkCursorByPartIdRef = useRef<Record<string, number>>({});
   const isAssistant = role === "assistant";
   const showEmptyMessage = isAssistant && showEmpty;
 
@@ -312,35 +338,46 @@ function RouteComponent() {
   };
 
   const removePart = (id: string) => {
+    delete chunkCursorByPartIdRef.current[id];
     setParts((prev) => prev.filter((part) => part.id !== id));
   };
 
   const resetParts = () => {
     setParts(createInitialParts());
-    setStreamCursor(0);
+    chunkCursorByPartIdRef.current = {};
   };
 
-  const appendStreamChunk = () => {
-    const chunk = STREAM_CHUNKS[streamCursor];
-    if (!chunk) return;
+  const appendChunkToPart = (id: string) => {
+    const cursor = chunkCursorByPartIdRef.current[id] ?? 0;
 
-    setParts((prev) => {
-      const index = prev.findIndex((part) => part.type === "text");
-      if (index === -1) return prev;
+    setParts((partsPrev) =>
+      partsPrev.map((part) => {
+        if (part.id !== id) {
+          return part;
+        }
 
-      const next = [...prev];
-      const part = next[index];
-      if (part?.type !== "text") return prev;
+        const chunkSet =
+          part.type === "reasoning"
+            ? REASONING_APPEND_CHUNKS
+            : TEXT_APPEND_CHUNKS;
+        const chunk = chunkSet[cursor % chunkSet.length] ?? "";
 
-      next[index] = { ...part, text: `${part.text}${chunk}` };
-      return next;
-    });
+        if (part.type === "reasoning") {
+          return {
+            ...part,
+            state: "streaming",
+            text: `${part.text}${chunk}`,
+          };
+        }
 
-    setStreamCursor((value) => Math.min(value + 1, STREAM_CHUNKS.length));
-  };
+        return {
+          ...part,
+          text: `${part.text}${chunk}`,
+        };
+      })
+    );
 
-  const resetStream = () => {
-    setStreamCursor(0);
+    chunkCursorByPartIdRef.current[id] = cursor + 1;
   };
 
   const insertLongContent = () => {
@@ -366,7 +403,7 @@ function RouteComponent() {
     setShowCancelled(false);
     setShowError(false);
     setIsThreadStreaming(isStreamingPreset);
-    setStreamCursor(0);
+    chunkCursorByPartIdRef.current = {};
 
     if (preset === "empty") {
       setParts([createReasoningPart("", "streaming")]);
@@ -416,6 +453,7 @@ function RouteComponent() {
               </span>
               <div className="flex flex-wrap gap-2">
                 <Button
+                  aria-pressed={role === "assistant"}
                   onClick={() => setRole("assistant")}
                   size="sm"
                   type="button"
@@ -424,6 +462,7 @@ function RouteComponent() {
                   Assistant
                 </Button>
                 <Button
+                  aria-pressed={role === "user"}
                   onClick={() => setRole("user")}
                   size="sm"
                   type="button"
@@ -578,28 +617,25 @@ function RouteComponent() {
               </p>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2">
               <span className="text-muted-foreground text-xs uppercase tracking-wide">
-                Streaming
+                Reasoning Preview Lines
               </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  disabled={streamCursor >= STREAM_CHUNKS.length}
-                  onClick={appendStreamChunk}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  Append Chunk
-                </Button>
-                <Button
-                  onClick={resetStream}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  Reset Stream
-                </Button>
+              <div className="flex items-center gap-3">
+                <input
+                  aria-label="Reasoning preview lines"
+                  className="w-full"
+                  max={MAX_PREVIEW_LINES}
+                  min={MIN_PREVIEW_LINES}
+                  onChange={(event) =>
+                    setReasoningPreviewLines(Number(event.target.value))
+                  }
+                  type="range"
+                  value={reasoningPreviewLines}
+                />
+                <span className="w-5 text-right text-sm tabular-nums">
+                  {reasoningPreviewLines}
+                </span>
               </div>
             </div>
 
@@ -625,6 +661,7 @@ function RouteComponent() {
                 <PartEditor
                   index={index}
                   key={part.id}
+                  onAppendChunk={appendChunkToPart}
                   onChange={updatePart}
                   onMove={movePart}
                   onRemove={removePart}
@@ -637,7 +674,7 @@ function RouteComponent() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="lg:sticky lg:top-6 lg:self-start">
           <CardHeader>
             <CardTitle className="text-base">Preview</CardTitle>
             <CardDescription>
@@ -646,9 +683,15 @@ function RouteComponent() {
           </CardHeader>
           <CardContent>
             <div
-              className={cn("w-full", isMobilePreview && "mx-auto max-w-sm")}
+              className={cn(
+                "w-full rounded-lg bg-background p-4",
+                isMobilePreview && "mx-auto max-w-sm"
+              )}
             >
-              <ChatMessage message={message} />
+              <ChatMessage
+                message={message}
+                reasoningPreviewLines={reasoningPreviewLines}
+              />
             </div>
           </CardContent>
         </Card>

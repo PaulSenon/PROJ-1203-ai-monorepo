@@ -8,14 +8,18 @@ type ReasoningPartType = Extract<MyUIMessagePart, { type: "reasoning" }>;
 
 export type ReasoningPartProps = {
   part: ReasoningPartType;
+  previewLines?: number;
 };
 
-const PREVIEW_LINES = 2;
+const DEFAULT_PREVIEW_LINES = 2;
 const NON_WHITESPACE_PATTERN = /\S/;
 const MARKDOWN_OVERFLOW_GUARDS =
   "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto";
 
-export function ReasoningPart({ part }: ReasoningPartProps) {
+export function ReasoningPart({
+  part,
+  previewLines = DEFAULT_PREVIEW_LINES,
+}: ReasoningPartProps) {
   const isStreaming = part.state === "streaming";
   const text = part.text ?? "";
   const deferredText = useDeferredValue(text);
@@ -28,7 +32,7 @@ export function ReasoningPart({ part }: ReasoningPartProps) {
       isStreaming={isStreaming}
     >
       <Reasoning.Trigger />
-      <Reasoning.Preview lines={PREVIEW_LINES}>{text}</Reasoning.Preview>
+      <Reasoning.Preview lines={previewLines}>{text}</Reasoning.Preview>
       <Reasoning.Content>
         {hasText ? (
           <SmoothMarkdown
