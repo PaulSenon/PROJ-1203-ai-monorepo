@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentProps, CSSProperties } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
   Collapsible,
@@ -14,6 +14,7 @@ export type ReasoningRootProps = ComponentProps<typeof Collapsible> & {
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  disabled?: boolean;
 };
 
 function ReasoningRoot({
@@ -22,6 +23,7 @@ function ReasoningRoot({
   open,
   defaultOpen = false,
   onOpenChange,
+  disabled,
   children,
   ...props
 }: ReasoningRootProps) {
@@ -40,6 +42,7 @@ function ReasoningRoot({
     <Collapsible
       className={cn("not-prose", className)}
       data-streaming={isStreaming ? "true" : "false"}
+      disabled={disabled}
       onOpenChange={handleOpenChange}
       open={isOpen}
       {...props}
@@ -55,8 +58,9 @@ function ReasoningTrigger({ className, ...props }: ReasoningTriggerProps) {
   return (
     <CollapsibleTrigger
       className={cn(
-        "flex min-h-6 w-full items-center gap-2 text-muted-foreground text-sm",
+        "group flex min-h-6 w-full items-center gap-2 text-muted-foreground text-sm",
         "rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "data-disabled:cursor-not-allowed data-disabled:opacity-60",
         className
       )}
       type="button"
@@ -91,6 +95,10 @@ function ReasoningPreview({
     [lines]
   );
 
+  if (isEmptyChildren(children)) {
+    return null;
+  }
+
   return (
     <div
       className={cn(
@@ -114,6 +122,10 @@ function ReasoningContent({
   children,
   ...props
 }: ReasoningContentProps) {
+  if (isEmptyChildren(children)) {
+    return null;
+  }
+
   return (
     <CollapsibleContent className={cn("mt-2", className)} {...props}>
       <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
@@ -121,6 +133,18 @@ function ReasoningContent({
       </div>
     </CollapsibleContent>
   );
+}
+
+function isEmptyChildren(children: ReactNode) {
+  if (children == null || typeof children === "boolean") {
+    return true;
+  }
+
+  if (typeof children === "string") {
+    return children.trim().length === 0;
+  }
+
+  return false;
 }
 
 export const Reasoning = {

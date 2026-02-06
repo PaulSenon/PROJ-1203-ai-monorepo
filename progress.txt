@@ -1,22 +1,21 @@
-# T1.1 scaffold L3 message + parts (PRD T1)
-  - Decisions: new L3 ChatMessage entry/variants; add Message.Thinking (output aria-live) in L2; demo refactor preview
-  - Files: apps/web/src/components/chat/message/message.tsx, apps/web/src/components/chat/message/message-user.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/_parts/content.tsx, apps/web/src/components/chat/message/_parts/text-part.tsx, apps/web/src/components/ui-custom/chat/message.tsx, apps/web/src/routes/components/_components/messages.tsx
-  - Entropy: rename assistantErrorEmtpy -> assistantErrorEmpty
-  - Notes: typecheck/tests not run
+# 5-prd-message-ui.md
 
-# T1 complete: rewrite L2 Message + demo (PRD T1)
+Implementing L2 and L3 structure of message component refactoring.
+Leaving simple placeholder for more complex sub-components that will be addressed in followup prds.
+
+## T1 complete: rewrite L2 Message + demo (PRD T1)
   - Decisions: L2 Message rebuilt from scratch (no memo wrappers); demo rebuilt to text-only parts builder; Message.Content handles variant
   - Files: apps/web/src/components/ui-custom/chat/message.tsx, apps/web/src/components/chat/message/message-user.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/_parts/content.tsx, apps/web/src/routes/components/_components/messages.tsx
   - Entropy: part key now prefers part.id before index
   - Notes: typecheck/tests not run
 
-# T2: reasoning part block + demo controls (PRD T2)
+## T2: reasoning part block + demo controls (PRD T2)
   - Decisions: L2 Reasoning compound; L2 SmoothMarkdown in ui-custom/markdown; L3 ReasoningPart keeps open state, preview only while streaming
   - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx, apps/web/src/components/ui-custom/markdown/smooth-markdown.tsx, apps/web/src/components/chat/message/_parts/reasoning-part.tsx, apps/web/src/components/chat/message/_parts/content.tsx, apps/web/src/routes/components/_components/messages.tsx
   - Entropy: demo empty-message now assistant-only effect
   - Notes: typecheck/tests not run
 
-# T3: SmoothMarkdown in text + overflow guards + demo streaming (PRD T3)
+## T3: SmoothMarkdown in text + overflow guards + demo streaming (PRD T3)
   - Decisions: use L2 SmoothMarkdown for text+reasoning; no startStreaming usage; demo streaming via chunk append; insert long markdown for overflow
   - Files: apps/web/src/components/chat/message/_parts/text-part.tsx, apps/web/src/components/chat/message/_parts/reasoning-part.tsx, apps/web/src/routes/components/_components/messages.tsx
   - Entropy: remove unused Message import in text-part
@@ -27,61 +26,80 @@
   - Entropy: align placeholder condition with rendered UI
   - Notes: typecheck/tests not run
 
-# T4: status placeholder + demo toggles (PRD T4)
+## T4: status placeholder + demo toggles (PRD T4)
   - Decisions: add L2 StatusBlock slots; L3 StatusPart uses cancelled > error mapping; aria-live polite for status updates
   - Files: apps/web/src/components/ui-custom/feedback/status-block.tsx, apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/routes/components/_components/messages.tsx
   - Entropy: remove derived showStatus flag in demo
   - Notes: typecheck/tests not run
 
-# T4 followup: status priority + metadata-only props (PRD T4)
+## T4 followup: status priority + metadata-only props (PRD T4)
   - Decisions: error wins over cancelled; StatusPart now takes metadata only; getErrorContent normalizes title/body
   - Files: apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/message-assistant.tsx, .llms/proj/chat-message-ui-refactoring/5-prd-message-ui.md
   - Entropy: remove TODO/NOTE comments in status part
   - Notes: typecheck/tests not run
 
-# T4 followup: hide thinking for status-only (PRD T4)
+## T4 followup: hide thinking for status-only (PRD T4)
   - Decisions: Message.Thinking hidden when error/cancelled status present
   - Files: apps/web/src/components/chat/message/message-assistant.tsx, .llms/proj/chat-message-ui-refactoring/5-prd-message-ui.md
   - Entropy: none
   - Notes: typecheck/tests not run
 
-# T4 followup: thinking visibility helper (PRD T4)
+## T4 followup: thinking visibility helper (PRD T4)
   - Decisions: consolidate placeholder visibility into shouldShowThinking helper
   - Files: apps/web/src/components/chat/message/message-assistant.tsx
   - Entropy: none
   - Notes: typecheck/tests not run
 
-# T5: footer placeholder + demo controls (PRD T5)
+## T5: footer placeholder + demo controls (PRD T5)
   - Decisions: L3 MessageFooter inside Message.Root; Copy/Retry actions (Retry placeholder); stats from metadata (modelId/outputTokens/tps); desktop hover + mobile always; isLastMessage gates footer; demo adds thread streaming/last message/mobile preview + sample stats metadata
   - Files: apps/web/src/components/chat/message/_parts/footer.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/message.tsx, apps/web/src/routes/components/_components/messages.tsx
   - Entropy: reset demo partCounter in createInitialParts
   - Notes: typecheck/tests not run
 
-# T5 spec fix: footer container + role footers (PRD T5)
+## T5 spec fix: footer container + role footers (PRD T5)
   - Decisions: L2 Message.Footer container; footer on all messages; L3 assistant/user footer placeholders; remove last-message control in PRD; add explicit DOD
   - Files: .llms/proj/chat-message-ui-refactoring/5-prd-message-ui.md, AGENTS.md
   - Entropy: none
   - Notes: typecheck/tests not run
 
-# T5 fix: L2 footer container + role footers (PRD T5)
+## T5 fix: L2 footer container + role footers (PRD T5)
   - Decisions: move visibility/footprint to L2 Message.Footer; L3 assistant/user footer content split; footer always rendered for both roles; remove last-message demo control
   - Files: apps/web/src/components/ui-custom/chat/message.tsx, apps/web/src/components/chat/message/_parts/get-copy-text.ts, apps/web/src/components/chat/message/_parts/footer-assistant.tsx, apps/web/src/components/chat/message/_parts/footer-user.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/message-user.tsx, apps/web/src/components/chat/message/message.tsx, apps/web/src/routes/components/_components/messages.tsx
   - Entropy: remove footer TODOs + delete old footer file
   - Notes: typecheck/tests not run
 
-# T5 QA fix: user footer align + overflow guard
+## T5 QA fix: user footer align + overflow guard
   - Decisions: user Message.Root now w-fit max-w; L2 MessageRoot/Content add min-w-0; user content max-w-full to prevent nested max-w shrink; aim align footer with bubble + allow overflow scroll
   - Files: apps/web/src/components/ui-custom/chat/message.tsx, apps/web/src/components/chat/message/message-user.tsx
   - Entropy: none
   - Notes: typecheck/tests not run
 
-# T5 Manual user edits
+## T5 Manual user edits
   - deleted footer-assistant and footer-user for one single footer part. 
   - moved action handler implementation to message L3 composition (message-user and message-assistant) will probably come from business hook at some point, of a L3 contextualized action hook for message to avoid prop drilling.
   - mocked the copy action implementation (because wasn't)
 
-# T6: cleanup legacy message components (PRD T6)
+## T6: cleanup legacy message components (PRD T6)
   - Decisions: ChatFeed now uses new L3 ChatMessage; remove legacy chat-message stack + old ui-custom message-* helpers
   - Files: apps/web/src/components/chat/chat-feed.tsx, apps/web/src/components/chat/chat-message.tsx, apps/web/src/components/chat/chat-message-status.tsx, apps/web/src/components/chat/chat-messages/chat-message.tsx, apps/web/src/components/chat/chat-messages/chat-message-error.tsx, apps/web/src/components/chat/chat-messages/chat-message-parts/chat-message-part-reasoning.tsx, apps/web/src/components/chat/chat-messages/chat-message-parts/chat-message-part-text.tsx, apps/web/src/components/ui-custom/chat/message-content.tsx, apps/web/src/components/ui-custom/chat/message-footer.tsx, apps/web/src/components/ui-custom/chat/message-infos.tsx, apps/web/src/components/ui-custom/chat/message-info.tsx, apps/web/src/components/ui-custom/chat/message-status.tsx, apps/web/src/components/ui-custom/chat/message-actions.tsx, apps/web/src/components/ui-custom/chat/message-action.tsx
   - Entropy: remove unused legacy message components
   - Notes: typecheck/tests not run
+
+## T7: disable toggle for empty reasoning (PRD T7)
+  - Decisions: empty reasoning renders header only; no toggle/preview/content; keep chevron space via invisible icon
+  - Files: apps/web/src/components/chat/message/_parts/reasoning-part.tsx
+  - Entropy: remove interactive toggle when no text
+  - Notes: typecheck/tests not run; sub-agent review ok
+
+## T7 followup: L2 reasoning disabled + empty guards + deferred content (PRD T7)
+  - Decisions: L2 ReasoningRoot disabled prop + Trigger group styling; Preview/Content return null on empty children; L3 always renders Trigger + uses disabled + chevron invisible; useDeferredValue for markdown content
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx, apps/web/src/components/chat/message/_parts/reasoning-part.tsx
+  - Entropy: reduce L3 branching for preview/content
+  - Notes: typecheck/tests not run
+
+# WARNING: user interruption
+  - user noticed a big fundamental flaw in reasoning L2 base implemented from the prd. The basic reasoning L2 isn't properly handling internal states like it is in ai-elements/reasoning.tsx reference we are suppose to extend.
+  - e.g. the toggle state and toggle shouldn't be exposed outside as nowhere we asked for outside control (only component trigger does this.)
+  - the L3 reasoning par of message L3 is currently unreadable with too many internal state (that should belong to L2) management, and too many derived states that are either inefficient or unreadable for latter maintainance.
+  - T7 added task to initial prd has revealed this flaw. To implement this T7 feature, it will require deeper rewrite of the reasoning components (including L2), because the next prd is supposed to finalizing reasoning implementation, user choosed to stop trying to make T7 better for now and end the 5-prd-message-ui.md implementation here.
+  - User will now start rewriting the already existing prd for reasoning implementation to make sure to address all the design flaw first then implement all the previously planned specs (unchanged)

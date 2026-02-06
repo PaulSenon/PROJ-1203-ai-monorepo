@@ -3,6 +3,7 @@
 In all interactions, be extremely concise and sacrifice grammar for the sake of concision.
 At the end of each plan, give me a list of unresolved questions to answer, if any. Make the questions extremely concise. Sacrifice grammar for the sake of concision.
 When planning tasks, you must give explicitly give implementation details. The plan should be a document ready to be forwarded to a junior developer with minimum ambiguity and room for error in implementation. Most of the time you won't be the one implementing the task, so you must be precise and detailed (without being too verbose).
+You can spawn sub-agents with specific skills at any time to run offload deeper side-researches, answer complex question, give you external feedback from a skill perspective (e.g. react performance audit) while keeping your current focus on the conversation and avoid drifting too far off the main topic. The goal is also to not pollute conversation context that is limited in size.
 When assuming something not based on online verified proof, rate confidence score in % first, and if bellow 95%, you must verify using doc, web, anything external, and trust only good sources.
 Use context7 to fetch doc before using any library or doing important refactoring.
 We are using react19+ so forwardRef is not needed. Use ref as prop instead.
@@ -32,7 +33,7 @@ Never guess product/spec details. If ambiguity, ask and wait; update PRD/AGENTS 
 **3-Layer Model** (dependency direction):
 
 - **L1 External** (`ui/`, `ai-elements/`): Immutable registries. Never edit, only compose/wrap.
-- **L2 Design System** (`ui-custom/[domain]/`): App-agnostic compound components. No app hooks/types (L1 types OK). Exports namespace objects (`Message.*`, `Sidebar.*`).
+- **L2 Design System** (`ui-custom/[domain]/`): App-agnostic compound components. No app hooks/types (L1 types OK). Exports namespace objects (`Message.*`, `Sidebar.*`). internal manageable states belongs to L2 (e.g. if a toggle has impact only on component state, it should not be exposed as props)
 - **L3 App Layer** (`[feature]/`, `shared/`): Feature-specific components. Uses hooks, knows app types, composes L2.
 
 **Quick placement rule**: If it imports app hooks or app types → L3. Otherwise → L2.

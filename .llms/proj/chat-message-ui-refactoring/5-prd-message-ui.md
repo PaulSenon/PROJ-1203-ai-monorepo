@@ -31,6 +31,7 @@ Rebuild message UI around ordered `UIMessage.parts` rendering. Each part renders
 19. As a developer, I want legacy message code removed after migration, so maintenance improves.
 20. As a designer, I want minimal, high‑end styling, so UI feels premium.
 21. As an accessibility user, I want ARIA‑safe toggles/buttons, so UI is usable.
+22. As a user, I want empty reasoning blocks to show a header without a toggle, so I do not expand empty content.
 
 ## Implementation Decisions
 
@@ -111,6 +112,11 @@ Each reasoning part renders a block. No grouping.
 - `part.state === "streaming"` -> header “Reasoning…” + toggle + preview
 - `part.state === "done"` -> header “Thought for Xs” if duration known otherwise "Thought for a few seconds".
 - When done, content collapsed by default; preview hidden.
+
+Empty reasoning:
+
+- If `part.text` is empty or whitespace, render header only; hide toggle, preview, and content.
+- Empty reasoning still counts as a reasoning block (no thinking placeholder).
 
 Layout stability:
 
@@ -240,6 +246,7 @@ Follow‑up PRDs:
 - T4: Add status placeholder mapping + demo toggles (error/cancelled)
 - T5: Add L2 Message.Footer container + L3 user/assistant footer placeholders + hover/mobile visibility + demo controls
 - T6: Cleanup legacy message components
+- T7: Disable reasoning toggle for empty reasoning text (keep header, no preview/content)
 
 ## Definition of Done
 
