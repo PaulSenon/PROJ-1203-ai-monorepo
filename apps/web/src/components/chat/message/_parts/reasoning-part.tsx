@@ -1,6 +1,6 @@
 import type { MyUIMessagePart } from "@ai-monorepo/ai/types/uiMessage";
 import { BrainIcon, ChevronRightIcon } from "lucide-react";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue } from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Reasoning } from "@/components/ui-custom/chat/reasoning";
 import { SmoothMarkdown } from "@/components/ui-custom/markdown/smooth-markdown";
@@ -17,14 +17,11 @@ const MARKDOWN_OVERFLOW_GUARDS =
   "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto";
 
 export function ReasoningPart({ part }: ReasoningPartProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const isStreaming = part.state === "streaming";
   const text = part.text ?? "";
   const deferredText = useDeferredValue(text);
   const trimmedText = text.trim();
   const hasText = trimmedText.length > 0;
-  const showPreview = hasText && isStreaming && !isOpen;
-  const showContent = hasText && isOpen;
   const headerLabel = isStreaming ? (
     <Shimmer as="span" duration={1}>
       Reasoning...
@@ -38,10 +35,8 @@ export function ReasoningPart({ part }: ReasoningPartProps) {
       className="w-full"
       disabled={!hasText}
       isStreaming={isStreaming}
-      onOpenChange={hasText ? setIsOpen : undefined}
-      open={hasText ? isOpen : false}
     >
-      <Reasoning.Trigger aria-label="Toggle reasoning">
+      <Reasoning.Trigger>
         <BrainIcon aria-hidden="true" className="size-4 shrink-0" />
         <span className="truncate">{headerLabel}</span>
         <ChevronRightIcon
@@ -49,15 +44,13 @@ export function ReasoningPart({ part }: ReasoningPartProps) {
           className={cn(
             "ml-auto size-4 shrink-0 transition-transform",
             "group-data-disabled:invisible",
-            isOpen && "rotate-90"
+            "group-data-[state=open]:rotate-90"
           )}
         />
       </Reasoning.Trigger>
-      <Reasoning.Preview lines={PREVIEW_LINES}>
-        {showPreview ? text : ""}
-      </Reasoning.Preview>
+      <Reasoning.Preview lines={PREVIEW_LINES}>{text}</Reasoning.Preview>
       <Reasoning.Content>
-        {showContent ? (
+        {hasText ? (
           <SmoothMarkdown
             className={cn(
               "text-muted-foreground text-sm",
