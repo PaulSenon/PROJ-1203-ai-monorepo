@@ -1,7 +1,7 @@
 "use client";
 
 import { BrainIcon, ChevronRightIcon } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   Collapsible,
@@ -126,18 +126,15 @@ function ReasoningPreview({
   ...props
 }: ReasoningPreviewProps) {
   const { isOpen, isStreaming, disabled } = useReasoningContext();
-
-  const previewStyle = useMemo(
-    () => ({
-      height: `${lines * PREVIEW_LINE_HEIGHT_REM}rem`,
-      minHeight: `${lines * PREVIEW_LINE_HEIGHT_REM}rem`,
-      maskImage:
-        "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)",
-      WebkitMaskImage:
-        "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)",
-    }),
-    [lines]
-  );
+  const flooredLines = Math.floor(lines);
+  const normalizedLines =
+    Number.isFinite(lines) && flooredLines >= 1
+      ? flooredLines
+      : DEFAULT_PREVIEW_LINES;
+  const previewStyle = {
+    "--reasoning-preview-lines": normalizedLines,
+    "--reasoning-preview-line-height": `${PREVIEW_LINE_HEIGHT_REM}rem`,
+  } as CSSProperties;
 
   if (disabled || isOpen || !isStreaming || isEmptyChildren(children)) {
     return null;
@@ -146,13 +143,18 @@ function ReasoningPreview({
   return (
     <div
       className={cn(
-        "relative mt-1 overflow-hidden text-muted-foreground text-xs leading-5",
+        "pointer-events-none relative mt-1 overflow-hidden text-muted-foreground text-xs",
+        "leading-(--reasoning-preview-line-height)",
+        "h-[calc(var(--reasoning-preview-lines)*var(--reasoning-preview-line-height))]",
+        "min-h-[calc(var(--reasoning-preview-lines)*var(--reasoning-preview-line-height))]",
+        "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-4 before:bg-linear-to-b before:from-background before:to-transparent",
         className
       )}
       style={previewStyle}
       {...props}
+      aria-hidden="true"
     >
-      <div className="absolute inset-x-0 bottom-0 whitespace-pre-wrap">
+      <div className="absolute inset-x-0 bottom-0 min-h-[calc(var(--reasoning-preview-lines)*var(--reasoning-preview-line-height))] whitespace-pre-wrap">
         {children}
       </div>
     </div>

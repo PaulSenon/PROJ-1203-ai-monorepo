@@ -122,3 +122,17 @@ Leaving simple placeholder for more complex sub-components that will be addresse
   - Feedback loops: sub-agent review run (architecture/a11y/perf) + quick followup; typecheck/tests not run (AGENTS no dev cmds); editor LSP warning fixed during edit
   - Entropy: replace per-render text.trim() with module-scoped non-whitespace regex test in streaming path
   - Notes: no blocker; next highest priority is T4 preview/content final behavior contract (truth table + CSS contract, remove mask-image)
+
+## T4: preview CSS contract slice (8-prd T4)
+  - Decisions: removed mask-image; preview now fixed viewport height + absolute bottom content wrapper with matching min-height; top fade moved to simple overlay gradient; preview forced aria-hidden + pointer-events-none; lines contract added (floor int, min 1, invalid -> 2)
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx, apps/web/src/components/chat/message/_parts/reasoning-part.tsx
+  - Feedback loops: context7 checked (tailwind pseudo-element/gradient docs); sub-agent review run (arch/perf/a11y) -> arch pass, perf/a11y followups noted; typecheck/tests/LSP not run (AGENTS no dev cmds)
+  - Entropy: removed empty-string fallback in reasoning content branch (use null)
+  - Notes: next T4 slice should finalize overflow-only fade heuristic + decide SR live status wording/policy
+
+## T4 followup: simplify lines normalization shape (8-prd T4)
+  - Decisions: simplified lines handling (inline finite+floor guard) and removed helper/useMemo ceremony; moved preview sizing to root-scoped CSS vars + calc reuse for line-height/height/min-height
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx
+  - Feedback loops: external sub-agent review requested by user + post-change quick sub-agent sanity pass (contract still passes)
+  - Entropy: reduced local code branches in Reasoning.Preview sizing path
+  - Notes: remaining T4 work unchanged (overflow-only fade heuristic + SR live-status policy)
