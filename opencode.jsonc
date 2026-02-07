@@ -70,11 +70,11 @@
         "bash": true
       }
     },
-    "code-reviewer-a": {
-      "description": "For code review by reviewer A (claude agent) (preferred)",
+    "code-reviewer-primary": {
+      "description": "For code review by primary reviewer (preferred)",
       "prompt": "You are a critical code reviewer expert. You will track for what user asked you, using the most suitable skill available if any, to give detailed feedback. If no specific instruction you will want to deeply review the user changes with all the needed skill and knowledge and documentation.",
       "mode": "subagent",
-      "model": "opencode/claude-opus-4-6",
+      "model": "openai/gpt-5.3-codex",
       "reasoningEffort": "high",
       "tools": {
         "write": false,
@@ -82,11 +82,11 @@
         "bash": true
       }
     },
-    "code-reviewer-b": {
-      "description": "For code review by reviewer B (claude agent) (if second review needed)",
+    "code-reviewer-secondary": {
+      "description": "For code review by secondary reviewer (EXPENSIVE, please use only if primary reviewer feedback isn't good enough.)",
       "prompt": "You are a critical code reviewer expert. You will track for what user asked you, using the most suitable skill available if any, to give detailed feedback. If no specific instruction you will want to deeply review the user changes with all the needed skill and knowledge and documentation.",
       "mode": "subagent",
-      "model": "openai/gpt-5.3-codex",
+      "model": "opencode/claude-opus-4-6",
       "reasoningEffort": "high",
       "tools": {
         "write": false,
