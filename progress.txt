@@ -108,3 +108,39 @@ Leaving simple placeholder for more complex sub-components that will be addresse
   - Files: apps/web/src/components/ui-custom/feedback/status-block.tsx, apps/web/src/components/chat/message/_parts/status.tsx
   - Entropy: removed duplicated/misplaced ARIA wiring in L3
   - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; next blockers: raw error.message leak, cancelled>error precedence, PRD copy mismatch
+
+## T2: status precedence + safe error copy mapping (PRD L3 adapter)
+  - Decisions: cancelled now wins over error; stop rendering raw error.message in UI; align copy to PRD (AI Provider Error / Unknown Error / Max output tokens exceeded); MAX_OUTPUT body now appends optional max token limit + suggested model ids
+  - Files: apps/web/src/components/chat/message/_parts/status.tsx
+  - Entropy: remove redundant `"params" in error` guard after kind narrowing
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; next: split status into status-error/status-cancelled + add actions mapping slots
+
+## T3: split L3 status into orchestrator + subparts (PRD L3 file split)
+  - Decisions: keep `status.tsx` as orchestrator only; move error mapping/render to `status-error.tsx`; move cancelled render to `status-cancelled.tsx`; keep behavior parity from T2
+  - Files: apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/_parts/status-error.tsx, apps/web/src/components/chat/message/_parts/status-cancelled.tsx
+  - Entropy: remove unused exported type from status-error
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; next: add StatusBlock.Actions + typed action descriptors mapping
+
+## T4: status actions descriptors + placeholders (PRD actions mapping)
+  - Decisions: add typed `StatusActionDescriptor` with `id/label/intent/payload`; render actions in `StatusBlock.Actions` for error + cancelled; error mapping keyed by `MessageErrorKind`; MAX_OUTPUT uses suggested model when present else fallback retry
+  - Files: apps/web/src/components/chat/message/_parts/status-actions.tsx, apps/web/src/components/chat/message/_parts/status-error.tsx, apps/web/src/components/chat/message/_parts/status-cancelled.tsx
+  - Entropy: dedupe AI_API_ERROR and UNKNOWN_ERROR actions into shared `defaultErrorActions`
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; next: wire action payloads to L3 handlers (replace console.log)
+
+## T5: inject L3 status action handlers from message composition (PRD integration)
+  - Decisions: `StatusActionList` now accepts optional `onAction`; `StatusPart` forwards `onAction` into cancelled/error subparts; assistant maps status payloads to existing retry handler (retry/retry-model) + continue placeholder
+  - Files: apps/web/src/components/chat/message/_parts/status-actions.tsx, apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/_parts/status-error.tsx, apps/web/src/components/chat/message/_parts/status-cancelled.tsx, apps/web/src/components/chat/message/message-assistant.tsx
+  - Entropy: add exhaustive payload narrowing guard in `handleStatusAction`
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; handlers still placeholders until business hook exists
+
+## T6: extract shared message actions hook (PRD integration cleanup)
+  - Decisions: create L3 `useMessageActions` hook to centralize copy/retry/status-action handlers; wire both assistant and user message components to hook; keep placeholder logging behavior but include role/messageId context
+  - Files: apps/web/src/components/chat/message/_hooks/use-message-actions.ts, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/message-user.tsx
+  - Entropy: remove duplicated inline handlers from assistant/user message components
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; real business handlers still pending
+
+## T7: status polish + QA error simulation controls (status scope)
+  - Decisions: remove local `logAction` fallback from status action list; make `onAction` required through status parts; QA page now supports error kind selection and associated inputs (raw message, max output tokens, suggested model ids)
+  - Files: apps/web/src/components/chat/message/_parts/status-actions.tsx, apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/_parts/status-error.tsx, apps/web/src/components/chat/message/_parts/status-cancelled.tsx, apps/web/src/routes/components/_components/messages.tsx
+  - Entropy: wrap StatusActionList mapped buttons in fragment instead of bare array return
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; QA note keeps cancelled>error precedence explicit
