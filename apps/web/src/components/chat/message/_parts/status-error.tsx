@@ -9,19 +9,100 @@ import {
   type StatusActionPayload,
 } from "./status-actions";
 
-const UNKNOWN_ERROR_TITLE = "Unknown Error";
-const UNKNOWN_ERROR_BODY = "Sorry for the inconvenience.";
+const supportedStatusErrorLocales = ["en", "fr"] as const;
+const defaultStatusErrorLocale = "fr" as const;
 
-const errorTitleByKind: Record<MessageErrorKind, string> = {
-  AI_API_ERROR: "AI Provider Error",
-  UNKNOWN_ERROR: UNKNOWN_ERROR_TITLE,
-  MAX_OUTPUT_TOKENS_EXCEEDED: "Max output tokens exceeded",
+type StatusErrorLocale = (typeof supportedStatusErrorLocales)[number];
+type DefaultStatusErrorLocale = typeof defaultStatusErrorLocale;
+
+type ErrorByKind<K extends MessageErrorKind> = Extract<
+  MessageError,
+  { kind: K }
+>;
+type ErrorParamsByKind<K extends MessageErrorKind> = ErrorByKind<K> extends {
+  params: infer Params;
+}
+  ? Params
+  : never;
+
+type PerLocaleMapping<T> = {
+  [L in StatusErrorLocale]?: T;
+} & {
+  [L in DefaultStatusErrorLocale]: T;
 };
 
-const errorBodyByKind: Record<MessageErrorKind, string> = {
-  AI_API_ERROR: "Please retry with another model.",
-  UNKNOWN_ERROR: UNKNOWN_ERROR_BODY,
-  MAX_OUTPUT_TOKENS_EXCEEDED: "Please retry with another model.",
+type ErrorCopy = {
+  title: string;
+  bodyLines: string[];
+};
+
+type ErrorMessageBuilderByKind = {
+  [K in MessageErrorKind]: ErrorParamsByKind<K> extends never
+    ? PerLocaleMapping<() => ErrorCopy>
+    : PerLocaleMapping<(params: ErrorParamsByKind<K>) => ErrorCopy>;
+};
+
+const errorMessageBuilderByKind: ErrorMessageBuilderByKind = {
+  AI_API_ERROR: {
+    en: () => ({
+      title: "AI Provider Error",
+      bodyLines: ["Please retry with another model."],
+    }),
+    fr: () => ({
+      title: "Erreur du fournisseur IA",
+      bodyLines: ["Veuillez reessayer avec un autre modele."],
+    }),
+  },
+  UNKNOWN_ERROR: {
+    en: () => ({
+      title: "Unknown Error",
+      bodyLines: ["Sorry for the inconvenience."],
+    }),
+    fr: () => ({
+      title: "Erreur inconnue",
+      bodyLines: ["Desole pour le desagrement."],
+    }),
+  },
+  MAX_OUTPUT_TOKENS_EXCEEDED: {
+    en: (params) => {
+      const bodyLines = ["Please retry with another model."];
+
+      if (typeof params.maxOutputTokens === "number") {
+        bodyLines.push(`Max output limit: ${params.maxOutputTokens} tokens.`);
+      }
+
+      const suggestedModelIds =
+        params.retryWithSuggestedModelIds?.filter(Boolean);
+
+      if (suggestedModelIds?.length) {
+        bodyLines.push(`Suggested models: ${suggestedModelIds.join(", ")}.`);
+      }
+
+      return {
+        title: "Max output tokens exceeded",
+        bodyLines,
+      };
+    },
+    fr: (params) => {
+      const bodyLines = ["Veuillez reessayer avec un autre modele."];
+
+      if (typeof params.maxOutputTokens === "number") {
+        bodyLines.push(`Limite de sortie: ${params.maxOutputTokens} tokens.`);
+      }
+
+      const suggestedModelIds =
+        params.retryWithSuggestedModelIds?.filter(Boolean);
+
+      if (suggestedModelIds?.length) {
+        bodyLines.push(`Modeles suggeres: ${suggestedModelIds.join(", ")}.`);
+      }
+
+      return {
+        title: "Limite de tokens de sortie depassee",
+        bodyLines,
+      };
+    },
+  },
 };
 
 const defaultErrorActions: StatusActionDescriptor[] = [
@@ -39,7 +120,7 @@ const defaultErrorActions: StatusActionDescriptor[] = [
   },
 ];
 
-const errorActionComponentMap: {
+const errorActionsByKind: {
   [K in MessageErrorKind]: (
     error: Extract<MessageError, { kind: K }>
   ) => StatusActionDescriptor[];
@@ -81,47 +162,66 @@ function getErrorActions(
   error: MessageError | undefined
 ): StatusActionDescriptor[] {
   if (!error) {
-    return errorActionComponentMap.UNKNOWN_ERROR({ kind: "UNKNOWN_ERROR" });
+    return errorActionsByKind.UNKNOWN_ERROR({ kind: "UNKNOWN_ERROR" });
   }
 
   if (error.kind === "AI_API_ERROR") {
-    return errorActionComponentMap.AI_API_ERROR(error);
+    return errorActionsByKind.AI_API_ERROR(error);
   }
 
   if (error.kind === "MAX_OUTPUT_TOKENS_EXCEEDED") {
-    return errorActionComponentMap.MAX_OUTPUT_TOKENS_EXCEEDED(error);
+    return errorActionsByKind.MAX_OUTPUT_TOKENS_EXCEEDED(error);
   }
 
-  return errorActionComponentMap.UNKNOWN_ERROR(error);
+  return errorActionsByKind.UNKNOWN_ERROR(error);
 }
 
-function getErrorContent(error: MessageError | undefined) {
-  // Keep UI copy controlled by kind mapping; do not surface raw error.message.
-  if (!error) {
-    return { title: UNKNOWN_ERROR_TITLE, body: UNKNOWN_ERROR_BODY };
+function getLocalizedErrorCopy(error: MessageError, locale: StatusErrorLocale) {
+  if (error.kind === "AI_API_ERROR") {
+    const buildCopy =
+      errorMessageBuilderByKind.AI_API_ERROR[locale] ??
+      errorMessageBuilderByKind.AI_API_ERROR[defaultStatusErrorLocale];
+    return buildCopy();
   }
-
-  const title = errorTitleByKind[error.kind] ?? UNKNOWN_ERROR_TITLE;
-  const fallbackBody = errorBodyByKind[error.kind] ?? UNKNOWN_ERROR_BODY;
 
   if (error.kind === "MAX_OUTPUT_TOKENS_EXCEEDED") {
-    const segments = [fallbackBody];
-    const maxTokens = error.params?.maxOutputTokens;
-    const suggestedModelIds =
-      error.params?.retryWithSuggestedModelIds?.filter(Boolean);
-
-    if (typeof maxTokens === "number") {
-      segments.push(`Max output limit: ${maxTokens} tokens.`);
-    }
-
-    if (suggestedModelIds?.length) {
-      segments.push(`Suggested models: ${suggestedModelIds.join(", ")}.`);
-    }
-
-    return { title, body: segments.join(" ") };
+    const buildCopy =
+      errorMessageBuilderByKind.MAX_OUTPUT_TOKENS_EXCEEDED[locale] ??
+      errorMessageBuilderByKind.MAX_OUTPUT_TOKENS_EXCEEDED[
+        defaultStatusErrorLocale
+      ];
+    return buildCopy(error.params);
   }
 
-  return { title, body: fallbackBody };
+  const buildCopy =
+    errorMessageBuilderByKind.UNKNOWN_ERROR[locale] ??
+    errorMessageBuilderByKind.UNKNOWN_ERROR[defaultStatusErrorLocale];
+  return buildCopy();
+}
+
+function getErrorContent(
+  error: MessageError | undefined,
+  locale: StatusErrorLocale
+) {
+  // POC: local i18n mapping stays in this file until app-wide i18n is ready.
+  // Keep UI copy controlled by kind mapping; do not surface raw error.message.
+  if (!error) {
+    const fallbackBuilder =
+      errorMessageBuilderByKind.UNKNOWN_ERROR[locale] ??
+      errorMessageBuilderByKind.UNKNOWN_ERROR[defaultStatusErrorLocale];
+    const fallbackCopy = fallbackBuilder();
+
+    return {
+      title: fallbackCopy.title,
+      body: fallbackCopy.bodyLines.join(" "),
+    };
+  }
+
+  const copy = getLocalizedErrorCopy(error, locale);
+  return {
+    title: copy.title,
+    body: copy.bodyLines.join(" "),
+  };
 }
 
 type ErrorStatusPartProps = {
@@ -130,7 +230,7 @@ type ErrorStatusPartProps = {
 };
 
 export function ErrorStatusPart({ error, onAction }: ErrorStatusPartProps) {
-  const { title, body } = getErrorContent(error);
+  const { title, body } = getErrorContent(error, defaultStatusErrorLocale);
   const actions = getErrorActions(error);
 
   return (
