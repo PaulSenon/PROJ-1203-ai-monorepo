@@ -1,4 +1,9 @@
-import type { LiveStatus, MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
+import type {
+  LiveStatus,
+  MessageError,
+  MessageErrorKind,
+  MyUIMessage,
+} from "@ai-monorepo/ai/types/uiMessage";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { ChatMessage } from "@/components/chat/message/message";
@@ -83,6 +88,19 @@ const REASONING_APPEND_CHUNKS = [
 const MIN_PREVIEW_LINES = 1;
 const MAX_PREVIEW_LINES = 6;
 const DEFAULT_PREVIEW_LINES = 2;
+const DEFAULT_ERROR_MESSAGE =
+  "Raw provider error message (should not render in status block).";
+const DEFAULT_ERROR_MAX_OUTPUT_TOKENS = "256";
+const DEFAULT_ERROR_SUGGESTED_MODEL_IDS = "gpt-5.2-codex,gpt-5.2-mini";
+
+const ERROR_KIND_OPTIONS: Array<{ kind: MessageErrorKind; label: string }> = [
+  { kind: "UNKNOWN_ERROR", label: "UNKNOWN_ERROR" },
+  { kind: "AI_API_ERROR", label: "AI_API_ERROR" },
+  {
+    kind: "MAX_OUTPUT_TOKENS_EXCEEDED",
+    label: "MAX_OUTPUT_TOKENS_EXCEEDED",
+  },
+];
 
 let partCounter = 0;
 
@@ -110,6 +128,73 @@ const createInitialParts = () => {
     createTextPart(SAMPLE_TEXT_2),
   ];
 };
+
+function parsePositiveInteger(value: string) {
+  const parsedValue = Number(value);
+
+  if (!Number.isFinite(parsedValue)) {
+    return undefined;
+  }
+
+  if (parsedValue <= 0) {
+    return undefined;
+  }
+
+  return Math.floor(parsedValue);
+}
+
+function parseSuggestedModelIds(value: string) {
+  const modelIds = value
+    .split(",")
+    .map((modelId) => modelId.trim())
+    .filter((modelId) => modelId.length > 0);
+
+  return modelIds.length > 0 ? modelIds : undefined;
+}
+
+type DemoErrorMetadataOptions = {
+  enabled: boolean;
+  kind: MessageErrorKind;
+  rawMessage: string;
+  maxOutputTokensInput: string;
+  suggestedModelIdsInput: string;
+};
+
+function createDemoErrorMetadata({
+  enabled,
+  kind,
+  rawMessage,
+  maxOutputTokensInput,
+  suggestedModelIdsInput,
+}: DemoErrorMetadataOptions): MessageError | undefined {
+  if (!enabled) {
+    return undefined;
+  }
+
+  const message = rawMessage.trim() || undefined;
+
+  if (kind === "AI_API_ERROR") {
+    return { kind: "AI_API_ERROR", message };
+  }
+
+  if (kind === "MAX_OUTPUT_TOKENS_EXCEEDED") {
+    return {
+      kind: "MAX_OUTPUT_TOKENS_EXCEEDED",
+      message,
+      params: {
+        maxOutputTokens: parsePositiveInteger(maxOutputTokensInput),
+        retryWithSuggestedModelIds: parseSuggestedModelIds(
+          suggestedModelIdsInput
+        ),
+      },
+    };
+  }
+
+  return {
+    kind: "UNKNOWN_ERROR",
+    message,
+  };
+}
 
 type PartEditorProps = {
   part: DemoPart;
@@ -233,6 +318,13 @@ function RouteComponent() {
   const [showEmpty, setShowEmpty] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [errorKind, setErrorKind] = useState<MessageErrorKind>("UNKNOWN_ERROR");
+  const [rawErrorMessage, setRawErrorMessage] = useState(DEFAULT_ERROR_MESSAGE);
+  const [errorMaxOutputTokensInput, setErrorMaxOutputTokensInput] = useState(
+    DEFAULT_ERROR_MAX_OUTPUT_TOKENS
+  );
+  const [errorSuggestedModelIdsInput, setErrorSuggestedModelIdsInput] =
+    useState(DEFAULT_ERROR_SUGGESTED_MODEL_IDS);
   const [isThreadStreaming, setIsThreadStreaming] = useState(false);
   const [isMobilePreview, setIsMobilePreview] = useState(false);
   const [reasoningPreviewLines, setReasoningPreviewLines] = useState(
@@ -245,12 +337,13 @@ function RouteComponent() {
   const message = useMemo<MyUIMessage>(() => {
     const now = Date.now();
     const nowSeconds = Math.round(now / 1000);
-    const errorMetadata = showError
-      ? ({
-          kind: "UNKNOWN_ERROR",
-          message: "Something went wrong while generating the response.",
-        } as const)
-      : undefined;
+    const errorMetadata = createDemoErrorMetadata({
+      enabled: showError,
+      kind: errorKind,
+      rawMessage: rawErrorMessage,
+      maxOutputTokensInput: errorMaxOutputTokensInput,
+      suggestedModelIdsInput: errorSuggestedModelIdsInput,
+    });
     let liveStatus: LiveStatus;
     if (showCancelled) {
       liveStatus = "cancelled";
@@ -300,6 +393,10 @@ function RouteComponent() {
     showEmptyMessage,
     showCancelled,
     showError,
+    errorKind,
+    rawErrorMessage,
+    errorMaxOutputTokensInput,
+    errorSuggestedModelIdsInput,
     isThreadStreaming,
     isAssistant,
   ]);
@@ -511,6 +608,81 @@ function RouteComponent() {
                 />
                 Error
               </label>
+              {showError ? (
+                <div className="ml-6 flex flex-col gap-3 border-border/60 border-l pl-3">
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                      Error Kind
+                    </span>
+                    <select
+                      className="rounded-md border border-border/70 bg-background px-2 py-1.5 text-sm"
+                      disabled={!isAssistant}
+                      onChange={(event) =>
+                        setErrorKind(event.target.value as MessageErrorKind)
+                      }
+                      value={errorKind}
+                    >
+                      {ERROR_KIND_OPTIONS.map((option) => (
+                        <option key={option.kind} value={option.kind}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                      Raw Error Message
+                    </span>
+                    <input
+                      className="rounded-md border border-border/70 bg-background px-2 py-1.5 text-sm"
+                      disabled={!isAssistant}
+                      onChange={(event) =>
+                        setRawErrorMessage(event.target.value)
+                      }
+                      type="text"
+                      value={rawErrorMessage}
+                    />
+                  </label>
+                  {errorKind === "MAX_OUTPUT_TOKENS_EXCEEDED" ? (
+                    <>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                          Max Output Tokens
+                        </span>
+                        <input
+                          className="rounded-md border border-border/70 bg-background px-2 py-1.5 text-sm"
+                          disabled={!isAssistant}
+                          min={1}
+                          onChange={(event) =>
+                            setErrorMaxOutputTokensInput(event.target.value)
+                          }
+                          type="number"
+                          value={errorMaxOutputTokensInput}
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+                          Suggested Model IDs
+                        </span>
+                        <input
+                          className="rounded-md border border-border/70 bg-background px-2 py-1.5 text-sm"
+                          disabled={!isAssistant}
+                          onChange={(event) =>
+                            setErrorSuggestedModelIdsInput(event.target.value)
+                          }
+                          placeholder="model-a,model-b"
+                          type="text"
+                          value={errorSuggestedModelIdsInput}
+                        />
+                      </label>
+                    </>
+                  ) : null}
+                  <p className="text-muted-foreground text-xs">
+                    Cancelled takes precedence when both status flags are
+                    enabled.
+                  </p>
+                </div>
+              ) : null}
             </div>
 
             <div className="flex flex-col gap-2">

@@ -1,87 +1,19 @@
-import type {
-  MessageError,
-  MessageErrorKind,
-  MyUIMessageMetadata,
-} from "@ai-monorepo/ai/types/uiMessage";
-import { StatusBlock } from "@/components/ui-custom/feedback/status-block";
+import type { MyUIMessageMetadata } from "@ai-monorepo/ai/types/uiMessage";
+import type { StatusActionPayload } from "./status-actions";
+import { CancelledStatusPart } from "./status-cancelled";
+import { ErrorStatusPart } from "./status-error";
 
 export type StatusPartProps = {
   metadata?: MyUIMessageMetadata;
+  onAction: (payload: StatusActionPayload) => void;
 };
 
-const CANCELLED_TITLE = "Cancelled";
-const CANCELLED_BODY = "Response cancelled.";
-const DEFAULT_ERROR_TITLE = "Error";
-const DEFAULT_ERROR_BODY = "Something went wrong.";
-
-const errorTitleByKind: Record<MessageErrorKind, string> = {
-  AI_API_ERROR: "Provider error",
-  UNKNOWN_ERROR: "Error",
-  MAX_OUTPUT_TOKENS_EXCEEDED: "Response limit reached",
-};
-
-const errorBodyByKind: Record<MessageErrorKind, string> = {
-  AI_API_ERROR: "The provider returned an error.",
-  UNKNOWN_ERROR: DEFAULT_ERROR_BODY,
-  MAX_OUTPUT_TOKENS_EXCEEDED: "Max output tokens exceeded.",
-};
-
-function getErrorContent(error: MessageError | undefined) {
-  if (!error) {
-    return { title: DEFAULT_ERROR_TITLE, body: DEFAULT_ERROR_BODY };
-  }
-
-  const title = errorTitleByKind[error.kind] ?? DEFAULT_ERROR_TITLE;
-  const fallbackBody = errorBodyByKind[error.kind] ?? DEFAULT_ERROR_BODY;
-  const message = error.message?.trim();
-
-  if (message) {
-    return { title, body: message };
-  }
-
-  if (error.kind === "MAX_OUTPUT_TOKENS_EXCEEDED" && "params" in error) {
-    const maxTokens = error.params?.maxOutputTokens;
-    if (maxTokens) {
-      return { title, body: `Max output tokens exceeded (${maxTokens}).` };
-    }
-  }
-
-  return { title, body: fallbackBody };
-}
-
-type ErrorStatusPartProps = {
-  error?: MessageError;
-};
-
-function ErrorStatusPart({ error }: ErrorStatusPartProps) {
-  const { title, body } = getErrorContent(error);
-
-  return (
-    <StatusBlock.Root className="w-full" kind="error">
-      <StatusBlock.Content>
-        <StatusBlock.Title>{title}</StatusBlock.Title>
-        <StatusBlock.Body>{body}</StatusBlock.Body>
-      </StatusBlock.Content>
-    </StatusBlock.Root>
-  );
-}
-
-function CancelledStatusPart() {
-  return (
-    <StatusBlock.Root className="w-full" kind="warning">
-      <StatusBlock.Content>
-        <StatusBlock.Title>{CANCELLED_TITLE}</StatusBlock.Title>
-        <StatusBlock.Body>{CANCELLED_BODY}</StatusBlock.Body>
-      </StatusBlock.Content>
-    </StatusBlock.Root>
-  );
-}
-
-export function StatusPart({ metadata }: StatusPartProps) {
-  const isError = metadata?.liveStatus === "error" || Boolean(metadata?.error);
+export function StatusPart({ metadata, onAction }: StatusPartProps) {
   const isCancelled = metadata?.liveStatus === "cancelled";
+  const isError = metadata?.liveStatus === "error" || Boolean(metadata?.error);
 
-  if (isError) return <ErrorStatusPart error={metadata?.error} />;
-  if (isCancelled) return <CancelledStatusPart />;
+  if (isCancelled) return <CancelledStatusPart onAction={onAction} />;
+  if (isError)
+    return <ErrorStatusPart error={metadata?.error} onAction={onAction} />;
   return null;
 }

@@ -2,11 +2,9 @@ import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import type { ComponentProps } from "react";
 import { Message } from "@/components/ui-custom/chat/message";
 import { cn } from "@/lib/utils";
+import { useMessageActions } from "./_hooks/use-message-actions";
 import { MessageContentParts } from "./_parts/content";
-import {
-  MessageFooterAssistant,
-  type MessageFooterHandlerProps,
-} from "./_parts/footer";
+import { MessageFooterAssistant } from "./_parts/footer";
 import { StatusPart } from "./_parts/status";
 
 export type ChatMessageAssistantProps = ComponentProps<"div"> & {
@@ -56,16 +54,10 @@ export function ChatMessageAssistant({
   ...props
 }: ChatMessageAssistantProps) {
   const showThinking = shouldShowThinking(message);
-
-  const handleCopy: MessageFooterHandlerProps["onActionCopy"] = (kind) => {
-    // TODO: implement
-    console.log("handleCopy", { kind });
-  };
-
-  const handleRetry: MessageFooterHandlerProps["onActionRetry"] = (modelId) => {
-    // TODO: implement
-    console.log("handleRetry", { modelId });
-  };
+  const { handleCopy, handleRetry, handleStatusAction } = useMessageActions({
+    messageId: message.id,
+    role: "assistant",
+  });
 
   return (
     <div
@@ -79,7 +71,10 @@ export function ChatMessageAssistant({
             parts={message.parts}
             reasoningPreviewLines={reasoningPreviewLines}
           />
-          <StatusPart metadata={message.metadata} />
+          <StatusPart
+            metadata={message.metadata}
+            onAction={handleStatusAction}
+          />
         </Message.Content>
         <Message.Footer>
           <MessageFooterAssistant
