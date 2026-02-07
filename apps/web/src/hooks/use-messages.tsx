@@ -21,7 +21,7 @@ type MessageDataSource =
   | "convex-stream"
   | "http-stream";
 
-type MyUIMessageMetadataWithSource = MyUIMessageMetadata & {
+export type MyUIMessageMetadataWithSource = MyUIMessageMetadata & {
   dataSource?: MessageDataSource;
 };
 

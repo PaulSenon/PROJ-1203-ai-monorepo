@@ -23,10 +23,17 @@ export function useStreamOwnership({
   isThreadPending,
 }: StreamOwnershipOptions) {
   const [isLocalOwned, setIsLocalOwned] = useState(false);
+  const prevThreadUuid = useRef<string | "skip">(null);
   const prevKindRef = useRef<LiveStatusKind | null>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: need to clear ownership when threadUuid changes
   useEffect(() => {
+    const prevUuidSnapshot = prevThreadUuid.current;
+    prevThreadUuid.current = threadUuid;
+    // IMPORTANT ignore reset when transitioning from "skip" no an uuid
+    // otherwise we treat the placeholder uuid before we persist one in url (different)
+    // and we lose the localOwnership flag because thing we just switched to another thread.
+    if (prevUuidSnapshot === "skip") return;
+
     setIsLocalOwned(false);
     prevKindRef.current = null;
   }, [threadUuid]);
