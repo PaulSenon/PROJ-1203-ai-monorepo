@@ -1,6 +1,10 @@
-import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import type { ComponentProps } from "react";
+import type {
+  MyUIMessage,
+  MyUIMessageMetadata,
+} from "@ai-monorepo/ai/types/uiMessage";
+import { type ComponentProps, useMemo } from "react";
 import { Message } from "@/components/ui-custom/chat/message";
+import type { MyUIMessageMetadataWithSource } from "@/hooks/use-messages";
 import { cn } from "@/lib/utils";
 import { useMessageActions } from "./_hooks/use-message-actions";
 import { MessageContentParts } from "./_parts/content";
@@ -47,6 +51,22 @@ function shouldShowThinking(message: MyUIMessage) {
   return true;
 }
 
+function useMessageDatasourceDebugger(metadata?: MyUIMessageMetadata) {
+  const dataSource = (metadata as MyUIMessageMetadataWithSource | undefined)
+    ?.dataSource;
+
+  const className = useMemo(() => {
+    if (dataSource === "cache") return "border border-yellow-500 p-2";
+    if (dataSource === "convex-persisted")
+      return "border border-orange-500 p-2";
+    if (dataSource === "optimistic") return "border border-purple-500 p-2";
+    if (dataSource === "http-stream") return "border border-green-500 p-2";
+    if (dataSource === "convex-stream") return "border border-blue-500 p-2";
+  }, [dataSource]);
+
+  return className;
+}
+
 export function ChatMessageAssistant({
   message,
   reasoningPreviewLines,
@@ -59,9 +79,16 @@ export function ChatMessageAssistant({
     role: "assistant",
   });
 
+  // TODO: for debug purpose only, hide behind flag
+  const debugClass = useMessageDatasourceDebugger(message.metadata);
+
   return (
     <div
-      className={cn("flex w-full flex-col items-start gap-2", className)}
+      className={cn(
+        "flex w-full flex-col items-start gap-2",
+        debugClass,
+        className
+      )}
       {...props}
     >
       <Message.Root className="w-full max-w-full" from="assistant">
