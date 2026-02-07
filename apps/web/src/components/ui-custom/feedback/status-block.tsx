@@ -25,7 +25,7 @@ function StatusBlockRoot({
     <StatusBlockKindContext.Provider value={kind}>
       <div
         className={cn(
-          "flex w-full items-start gap-3 rounded-md border px-3 py-2 text-foreground text-sm",
+          "flex w-full flex-wrap items-start gap-x-3 gap-y-2 rounded-md border px-3 py-2.5 text-foreground text-sm",
           kindStyles[kind],
           className
         )}
@@ -71,14 +71,25 @@ function StatusBlockContent({
 export type StatusBlockTitleProps = ComponentProps<"h4">;
 
 function StatusBlockTitle({ className, ...props }: StatusBlockTitleProps) {
-  return <h4 className={cn("font-medium text-sm", className)} {...props} />;
+  return (
+    <h4
+      className={cn(
+        "font-medium text-foreground text-sm tracking-tight",
+        className
+      )}
+      {...props}
+    />
+  );
 }
 
 export type StatusBlockBodyProps = ComponentProps<"p">;
 
 function StatusBlockBody({ className, ...props }: StatusBlockBodyProps) {
   return (
-    <p className={cn("text-muted-foreground text-sm", className)} {...props} />
+    <p
+      className={cn("text-muted-foreground text-sm leading-relaxed", className)}
+      {...props}
+    />
   );
 }
 
@@ -87,7 +98,10 @@ export type StatusBlockActionsProps = ComponentProps<"div">;
 function StatusBlockActions({ className, ...props }: StatusBlockActionsProps) {
   return (
     <div
-      className={cn("mt-1 flex flex-wrap items-center gap-2", className)}
+      className={cn(
+        "mt-0.5 flex basis-full flex-wrap items-center gap-2 border-border/50 border-t pt-2 pl-0.5",
+        className
+      )}
       {...props}
     />
   );
