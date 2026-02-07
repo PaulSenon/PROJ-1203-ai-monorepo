@@ -144,3 +144,15 @@ Leaving simple placeholder for more complex sub-components that will be addresse
   - Files: apps/web/src/components/chat/message/_parts/status-actions.tsx, apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/_parts/status-error.tsx, apps/web/src/components/chat/message/_parts/status-cancelled.tsx, apps/web/src/routes/components/_components/messages.tsx
   - Entropy: wrap StatusActionList mapped buttons in fragment instead of bare array return
   - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; QA note keeps cancelled>error precedence explicit
+
+## T8: status-error local i18n POC interface (status scope)
+  - Decisions: move i18n POC concept into `status-error.tsx` only; add typed per-kind/per-locale copy factory map with required `en` default and optional `fr`; keep locale selection internal to file (no cross-file locale plumbing)
+  - Files: apps/web/src/components/chat/message/_parts/status-error.tsx, apps/web/src/components/chat/message/_parts/status.tsx
+  - Entropy: remove temporary locale prop plumbing from `StatusPart`
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; behavior preserved (no raw error.message render, cancelled precedence unchanged)
+
+## T9: i18n POC naming + typing alignment (status-error)
+  - Decisions: rename i18n mapping types to clearer names (`PerLocaleMapping`, `ErrorMessageBuilderByKind`); keep default locale mandatory and other locales optional with typed helper; align builder signatures to params-based shape from legacy concept
+  - Files: apps/web/src/components/chat/message/_parts/status-error.tsx
+  - Entropy: remove confusing `statusErrorLocale` alias; use `defaultStatusErrorLocale` directly
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent validation pass
