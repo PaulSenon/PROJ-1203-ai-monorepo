@@ -7,8 +7,9 @@ import { Message } from "@/components/ui-custom/chat/message";
 import type { MyUIMessageMetadataWithSource } from "@/hooks/use-messages";
 import { cn } from "@/lib/utils";
 import { useMessageActions } from "./_hooks/use-message-actions";
+import { useMessageRawTextReader } from "./_hooks/use-message-raw-text-reader";
 import { MessageContentParts } from "./_parts/content";
-import { MessageFooterAssistant } from "./_parts/footer";
+import { MessageFooterAssistant } from "./_parts/footer/footer";
 import { StatusPart } from "./_parts/status/status";
 
 export type ChatMessageAssistantProps = ComponentProps<"div"> & {
@@ -56,12 +57,12 @@ function useMessageDatasourceDebugger(metadata?: MyUIMessageMetadata) {
     ?.dataSource;
 
   const className = useMemo(() => {
-    if (dataSource === "cache") return "border border-yellow-500 p-2";
+    if (dataSource === "cache") return "border-l border-yellow-500 p-2";
     if (dataSource === "convex-persisted")
-      return "border border-orange-500 p-2";
-    if (dataSource === "optimistic") return "border border-purple-500 p-2";
-    if (dataSource === "http-stream") return "border border-green-500 p-2";
-    if (dataSource === "convex-stream") return "border border-blue-500 p-2";
+      return "border-l border-orange-500 p-2";
+    if (dataSource === "optimistic") return "border-l border-purple-500 p-2";
+    if (dataSource === "http-stream") return "border-l border-green-500 p-2";
+    if (dataSource === "convex-stream") return "border-l border-blue-500 p-2";
   }, [dataSource]);
 
   return className;
@@ -74,10 +75,15 @@ export function ChatMessageAssistant({
   ...props
 }: ChatMessageAssistantProps) {
   const showThinking = shouldShowThinking(message);
-  const { handleCopy, handleRetry, handleStatusAction } = useMessageActions({
+  const readRawText = useMessageRawTextReader(message.parts);
+  const { handleFooterAction, handleStatusAction } = useMessageActions({
     messageId: message.id,
+    readRawText,
     role: "assistant",
   });
+  const isStreaming =
+    message.metadata?.liveStatus === "pending" ||
+    message.metadata?.liveStatus === "streaming";
 
   // TODO: for debug purpose only, hide behind flag
   const debugClass = useMessageDatasourceDebugger(message.metadata);
@@ -86,13 +92,13 @@ export function ChatMessageAssistant({
     <div
       className={cn(
         "flex w-full flex-col items-start gap-2",
-        debugClass,
+
         className
       )}
       {...props}
     >
       <Message.Root className="w-full max-w-full" from="assistant">
-        <Message.Content variant="assistant">
+        <Message.Content className={cn(debugClass)} variant="assistant">
           {showThinking ? <Message.Thinking /> : null}
           <MessageContentParts
             parts={message.parts}
@@ -105,9 +111,9 @@ export function ChatMessageAssistant({
         </Message.Content>
         <Message.Footer>
           <MessageFooterAssistant
-            metadata={message.metadata}
-            onActionCopy={handleCopy}
-            onActionRetry={handleRetry}
+            isStreaming={isStreaming}
+            modelId={message.metadata?.modelId}
+            onAction={handleFooterAction}
           />
         </Message.Footer>
       </Message.Root>

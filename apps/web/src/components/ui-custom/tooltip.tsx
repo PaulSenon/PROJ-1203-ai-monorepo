@@ -38,7 +38,7 @@ export function Tooltip({
 }: {
   children: React.ReactNode;
   tooltip?: string;
-  isMobile: boolean;
+  isMobile?: boolean;
   asChild?: boolean;
 }) {
   if (isMobile) {

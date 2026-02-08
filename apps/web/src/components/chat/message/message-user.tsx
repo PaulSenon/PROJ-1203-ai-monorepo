@@ -3,8 +3,9 @@ import type { ComponentProps } from "react";
 import { Message } from "@/components/ui-custom/chat/message";
 import { cn } from "@/lib/utils";
 import { useMessageActions } from "./_hooks/use-message-actions";
+import { useMessageRawTextReader } from "./_hooks/use-message-raw-text-reader";
 import { MessageContentParts } from "./_parts/content";
-import { MessageFooterUser } from "./_parts/footer";
+import { MessageFooterUser } from "./_parts/footer/footer";
 
 export type ChatMessageUserProps = ComponentProps<"div"> & {
   message: MyUIMessage;
@@ -15,8 +16,10 @@ export function ChatMessageUser({
   className,
   ...props
 }: ChatMessageUserProps) {
-  const { handleCopy, handleRetry } = useMessageActions({
+  const readRawText = useMessageRawTextReader(message.parts);
+  const { handleFooterAction } = useMessageActions({
     messageId: message.id,
+    readRawText,
     role: "user",
   });
 
@@ -31,8 +34,9 @@ export function ChatMessageUser({
         </Message.Content>
         <Message.Footer>
           <MessageFooterUser
-            onActionCopy={handleCopy}
-            onActionRetry={handleRetry}
+            createdAt={message.metadata?.createdAt}
+            onAction={handleFooterAction}
+            readEditInitialText={readRawText}
           />
         </Message.Footer>
       </Message.Root>

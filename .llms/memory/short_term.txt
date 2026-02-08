@@ -1,0 +1,5 @@
+message footer MVP refactor completed under apps/web/src/components/chat/message/_parts/footer/
+footer actions now use shared ui-custom primitives: IconActionButton and CopyActionButton
+copy action now animates copy->check on successful copy and uses app custom tooltip wrapper
+message footer action contract uses single dispatcher payload MessageFooterActionPayload
+use-message-actions copy path returns success boolean so UI animation only confirms on success

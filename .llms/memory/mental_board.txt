@@ -1,0 +1,27 @@
+[GOAL] Ship chat MVP (strict scope, no feature creep)
+
+[MVP_MUST]
+- anonymous account
+- basic bot protection
+- finish message/conversation UI to target spec
+- fix input + draft lifecycle
+- fix sidebar live updates
+- close core TODOs impacting MVP behavior
+- high INP/perf on key interactions (mobile + desktop)
+- native-feel drawer on iOS/Android (if vaul insufficient, replace)
+- smooth loading strategy (no cascading skeletons/loaders)
+- perfect initial conversation anchor scroll on open (not forced bottom)
+
+[MVP_LATER]
+- sidebar list virtualization
+- conversation message virtualization
+- edit feature dropped
+
+[ACTIVE_TRACK]
+- now: stabilize chat surface + UX correctness first (input/draft/sidebar/scroll/loading)
+
+[OPEN_DECISIONS]
+- bot protection vendor: Turnstile?
+- scroll anchor definition: last read vs last user msg?
+- drawer replacement lib choice?
+- exact "done" metrics per MVP must?
