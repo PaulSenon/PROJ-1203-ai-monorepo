@@ -1,0 +1,22 @@
+----
+[id] ui-primitives-button-tooltip-unification
+[status] pending
+[captured_at] 2026-02-08
+[context] While finishing chat message footer MVP, we introduced shared primitives (`IconActionButton`, `CopyActionButton`) and noticed button/tooltip design APIs are still duplicated across sidebar, code-block, ai-elements message actions, and other L2/L3 components.
+[why_deferred] Current goal is finishing chat MVP behavior/quality. Full primitive unification is cross-cutting refactor and would digress scope now.
+[rough_spec]
+- Define canonical L2 wrappers around shadcn L1 `Button` and `Tooltip` with app design defaults + API tweaks.
+- Make icon/action usage rely on these wrappers (single visual behavior baseline).
+- Ensure copy interaction pattern (copy -> check animation) comes from one shared primitive, not repeated logic.
+- Migrate existing usages progressively by domain (chat, sidebar, ai-elements wrappers), not big-bang.
+[decisions]
+- Footer now uses `IconActionButton` and `CopyActionButton` under `ui-custom/primitives/`.
+- App custom tooltip wrapper (`ui-custom/tooltip.tsx`) should be the tooltip style baseline.
+- This item is not a follow-up for current MVP closure; park until MVP-critical flows are done.
+[open_questions]
+- Should canonical button wrappers live in `ui-custom/primitives/` or domain folders too?
+- Keep `ai-elements/MessageAction` usages or fully replace with app wrappers?
+- Migration strategy: codemod + lint rule, or manual incremental conversion?
+- Which variants/sizes are truly canonical vs legacy support?
+[next_trigger] Start after chat MVP validation passes and no P0/P1 UX regressions remain.
+----

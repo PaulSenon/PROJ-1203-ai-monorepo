@@ -1,0 +1,1 @@
+core_facts scope is durable project-level truths only; no per-task logs/changelogs.
