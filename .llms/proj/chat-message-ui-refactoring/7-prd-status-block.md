@@ -33,60 +33,44 @@ Deliver a reusable L2 `StatusBlock.*` compound component and a L3 message status
 ## Implementation Decisions
 
 - **Layering**: L2 is app-agnostic and exports `StatusBlock.*` as a namespace compound. L3 (message feature) adapts app status to L2 and injects actions. L2 may import L1 types; L2 must not import app types.
-
 - **L2 API (final)**:
-
   - `StatusBlock.Root`: container, accepts `kind` (`info|warning|error|debug`) and `className`.
   - `StatusBlock.Icon`: icon slot.
   - `StatusBlock.Content`: text wrapper containing Title + Body; sets live-region semantics based on `kind`.
   - `StatusBlock.Title`: title slot.
   - `StatusBlock.Body`: description slot (supports multiple lines).
   - `StatusBlock.Actions`: actions container slot (renders any children).
-
 - **Accessibility** (MDN guidance):
-
   - Live region applied to `StatusBlock.Content`, not the root.
   - `kind=error` uses `role="alert"` on Content (assertive). Other kinds use `role="status"` (polite).
   - Actions are outside the live region to avoid interactive elements inside `role="alert"`.
-
 - **Visual baseline**: compact callout with subtle border + muted background; icon + text in a row; actions aligned below or inline depending on width. No heavy panels.
-
 - **L3 Message Status Adapter**:
-
   - Input: message live status + `ChatErrorMetadata` (from app message metadata).
   - Output: derived status data with `kind`, `title`, `descriptionLines`, and `actions` descriptors.
   - Precedence: cancelled over error; render after content and before footer.
   - `ChatErrorMetadata.message` is not rendered in UI (reserved for logs) to avoid leaking raw errors.
-
 - **L3 file split** (message feature):
-
   - `_parts/status.tsx` orchestrates selection + renders one of the two below.
   - `_parts/status-cancelled.tsx` renders static cancelled UI (text + action slots).
   - `_parts/status-error.tsx` renders procedural error UI (mapping + actions).
-
 - **Error copy mapping** (typed, exhaustive):
-
   - `AI_API_ERROR`: title “AI Provider Error”; body: “Please retry with another model.”
   - `UNKNOWN_ERROR`: title “Unknown Error”; body: “Sorry for the inconvenience.”
   - `MAX_OUTPUT_TOKENS_EXCEEDED`: title “Max output tokens exceeded”; body includes optional max token limit and suggested model ids when present.
   - Local i18n map exists in L3 with default `en`; no global i18n integration yet.
-
 - **Action descriptors** (external components):
-
   - L3 produces a typed list of action descriptors; each descriptor has `id`, `label`, `intent`, and `payload`.
   - L3 uses `actionComponentMap` keyed by error kind and full error data to map error → component + props.
   - Each action component receives derived props from error metadata (example: `{ label, modelId }`).
   - For now, placeholder components render simple buttons and log derived props on click.
-
 - **Action mapping per kind** (final behavior with graceful fallback):
-
   - Cancelled: “Continue”, “Retry with another model”.
   - AI_API_ERROR: “Retry”, “Retry with another model”.
   - UNKNOWN_ERROR: “Retry”, “Retry with another model”.
   - MAX_OUTPUT_TOKENS_EXCEEDED: “Retry with suggested model” (if provided), “Retry with different model” filtered by model capability (if model catalog provided); otherwise fall back to “Retry”.
   - If model catalog or suggested ids are unavailable, do not block rendering; degrade to generic retry action.
   - If error kind is unrecognized, treat as UNKNOWN_ERROR.
-
 - **Typesafety**: L3 error mapping must be exhaustive over `ChatErrorMetadata["kind"]` using discriminated-union utilities (pattern from `chat-message-error.tsx`).
 
 ## Modules and Interfaces
@@ -125,3 +109,4 @@ Shallow modules (composition only):
 - Example mapping pattern (reference only): `.llms/proj/chat-message-ui-refactoring/7-error-maping-type-legacy-saved.tsx`.
 - Error metadata schema: `packages/backend/convex/schema.ts` (ChatErrorMetadata).
 - ARIA guidance: MDN `alert` and `status` roles.
+

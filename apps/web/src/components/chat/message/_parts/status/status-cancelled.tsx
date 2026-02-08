@@ -3,7 +3,7 @@ import {
   type StatusActionDescriptor,
   StatusActionList,
   type StatusActionPayload,
-} from "./status-actions";
+} from "./_parts/status-actions";
 
 const CANCELLED_TITLE = "Cancelled";
 const CANCELLED_BODY = "Response cancelled.";

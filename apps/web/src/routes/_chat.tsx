@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { ChatSidebar } from "@/components/chat/chat-sidebar";
+import { ChatSidebar } from "@/components/chat/sidebar/sidebar";
 import { ScrollToBottomProvider } from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
 import { ChatDraftProvider } from "@/hooks/use-chat-draft";
 import { ChatInputProvider } from "@/hooks/use-chat-input";

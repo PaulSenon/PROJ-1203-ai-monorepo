@@ -1,0 +1,158 @@
+# 5-prd-message-ui.md
+
+Implementing L2 and L3 structure of message component refactoring.
+Leaving simple placeholder for more complex sub-components that will be addressed in followup prds.
+
+## T1 complete: rewrite L2 Message + demo (PRD T1)
+  - Decisions: L2 Message rebuilt from scratch (no memo wrappers); demo rebuilt to text-only parts builder; Message.Content handles variant
+  - Files: apps/web/src/components/ui-custom/chat/message.tsx, apps/web/src/components/chat/message/message-user.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/_parts/content.tsx, apps/web/src/routes/components/_components/messages.tsx
+  - Entropy: part key now prefers part.id before index
+  - Notes: typecheck/tests not run
+
+## T2: reasoning part block + demo controls (PRD T2)
+  - Decisions: L2 Reasoning compound; L2 SmoothMarkdown in ui-custom/markdown; L3 ReasoningPart keeps open state, preview only while streaming
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx, apps/web/src/components/ui-custom/markdown/smooth-markdown.tsx, apps/web/src/components/chat/message/_parts/reasoning-part.tsx, apps/web/src/components/chat/message/_parts/content.tsx, apps/web/src/routes/components/_components/messages.tsx
+  - Entropy: demo empty-message now assistant-only effect
+  - Notes: typecheck/tests not run
+
+## T3: SmoothMarkdown in text + overflow guards + demo streaming (PRD T3)
+  - Decisions: use L2 SmoothMarkdown for text+reasoning; no startStreaming usage; demo streaming via chunk append; insert long markdown for overflow
+  - Files: apps/web/src/components/chat/message/_parts/text-part.tsx, apps/web/src/components/chat/message/_parts/reasoning-part.tsx, apps/web/src/routes/components/_components/messages.tsx
+  - Entropy: remove unused Message import in text-part
+  - Notes: typecheck/tests not run
+  - QA fix: hide Message.Thinking when reasoning block renders (PRD T2/T3)
+  - Decisions: treat any reasoning part as content to align with ReasoningPart render
+  - Files: apps/web/src/components/chat/message/message-assistant.tsx
+  - Entropy: align placeholder condition with rendered UI
+  - Notes: typecheck/tests not run
+
+## T4: status placeholder + demo toggles (PRD T4)
+  - Decisions: add L2 StatusBlock slots; L3 StatusPart uses cancelled > error mapping; aria-live polite for status updates
+  - Files: apps/web/src/components/ui-custom/feedback/status-block.tsx, apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/routes/components/_components/messages.tsx
+  - Entropy: remove derived showStatus flag in demo
+  - Notes: typecheck/tests not run
+
+## T4 followup: status priority + metadata-only props (PRD T4)
+  - Decisions: error wins over cancelled; StatusPart now takes metadata only; getErrorContent normalizes title/body
+  - Files: apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/message-assistant.tsx, .llms/proj/chat-message-ui-refactoring/5-prd-message-ui.md
+  - Entropy: remove TODO/NOTE comments in status part
+  - Notes: typecheck/tests not run
+
+## T4 followup: hide thinking for status-only (PRD T4)
+  - Decisions: Message.Thinking hidden when error/cancelled status present
+  - Files: apps/web/src/components/chat/message/message-assistant.tsx, .llms/proj/chat-message-ui-refactoring/5-prd-message-ui.md
+  - Entropy: none
+  - Notes: typecheck/tests not run
+
+## T4 followup: thinking visibility helper (PRD T4)
+  - Decisions: consolidate placeholder visibility into shouldShowThinking helper
+  - Files: apps/web/src/components/chat/message/message-assistant.tsx
+  - Entropy: none
+  - Notes: typecheck/tests not run
+
+## T5: footer placeholder + demo controls (PRD T5)
+  - Decisions: L3 MessageFooter inside Message.Root; Copy/Retry actions (Retry placeholder); stats from metadata (modelId/outputTokens/tps); desktop hover + mobile always; isLastMessage gates footer; demo adds thread streaming/last message/mobile preview + sample stats metadata
+  - Files: apps/web/src/components/chat/message/_parts/footer.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/message.tsx, apps/web/src/routes/components/_components/messages.tsx
+  - Entropy: reset demo partCounter in createInitialParts
+  - Notes: typecheck/tests not run
+
+## T5 spec fix: footer container + role footers (PRD T5)
+  - Decisions: L2 Message.Footer container; footer on all messages; L3 assistant/user footer placeholders; remove last-message control in PRD; add explicit DOD
+  - Files: .llms/proj/chat-message-ui-refactoring/5-prd-message-ui.md, AGENTS.md
+  - Entropy: none
+  - Notes: typecheck/tests not run
+
+## T5 fix: L2 footer container + role footers (PRD T5)
+  - Decisions: move visibility/footprint to L2 Message.Footer; L3 assistant/user footer content split; footer always rendered for both roles; remove last-message demo control
+  - Files: apps/web/src/components/ui-custom/chat/message.tsx, apps/web/src/components/chat/message/_parts/get-copy-text.ts, apps/web/src/components/chat/message/_parts/footer-assistant.tsx, apps/web/src/components/chat/message/_parts/footer-user.tsx, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/message-user.tsx, apps/web/src/components/chat/message/message.tsx, apps/web/src/routes/components/_components/messages.tsx
+  - Entropy: remove footer TODOs + delete old footer file
+  - Notes: typecheck/tests not run
+
+## T5 QA fix: user footer align + overflow guard
+  - Decisions: user Message.Root now w-fit max-w; L2 MessageRoot/Content add min-w-0; user content max-w-full to prevent nested max-w shrink; aim align footer with bubble + allow overflow scroll
+  - Files: apps/web/src/components/ui-custom/chat/message.tsx, apps/web/src/components/chat/message/message-user.tsx
+  - Entropy: none
+  - Notes: typecheck/tests not run
+
+## T5 Manual user edits
+  - deleted footer-assistant and footer-user for one single footer part. 
+  - moved action handler implementation to message L3 composition (message-user and message-assistant) will probably come from business hook at some point, of a L3 contextualized action hook for message to avoid prop drilling.
+  - mocked the copy action implementation (because wasn't)
+
+## T6: cleanup legacy message components (PRD T6)
+  - Decisions: ChatFeed now uses new L3 ChatMessage; remove legacy chat-message stack + old ui-custom message-* helpers
+  - Files: apps/web/src/components/chat/chat-feed.tsx, apps/web/src/components/chat/chat-message.tsx, apps/web/src/components/chat/chat-message-status.tsx, apps/web/src/components/chat/chat-messages/chat-message.tsx, apps/web/src/components/chat/chat-messages/chat-message-error.tsx, apps/web/src/components/chat/chat-messages/chat-message-parts/chat-message-part-reasoning.tsx, apps/web/src/components/chat/chat-messages/chat-message-parts/chat-message-part-text.tsx, apps/web/src/components/ui-custom/chat/message-content.tsx, apps/web/src/components/ui-custom/chat/message-footer.tsx, apps/web/src/components/ui-custom/chat/message-infos.tsx, apps/web/src/components/ui-custom/chat/message-info.tsx, apps/web/src/components/ui-custom/chat/message-status.tsx, apps/web/src/components/ui-custom/chat/message-actions.tsx, apps/web/src/components/ui-custom/chat/message-action.tsx
+  - Entropy: remove unused legacy message components
+  - Notes: typecheck/tests not run
+
+## T7: disable toggle for empty reasoning (PRD T7)
+  - Decisions: empty reasoning renders header only; no toggle/preview/content; keep chevron space via invisible icon
+  - Files: apps/web/src/components/chat/message/_parts/reasoning-part.tsx
+  - Entropy: remove interactive toggle when no text
+  - Notes: typecheck/tests not run; sub-agent review ok
+
+## T7 followup: L2 reasoning disabled + empty guards + deferred content (PRD T7)
+  - Decisions: L2 ReasoningRoot disabled prop + Trigger group styling; Preview/Content return null on empty children; L3 always renders Trigger + uses disabled + chevron invisible; useDeferredValue for markdown content
+  - Files: apps/web/src/components/ui-custom/chat/reasoning.tsx, apps/web/src/components/chat/message/_parts/reasoning-part.tsx
+  - Entropy: reduce L3 branching for preview/content
+  - Notes: typecheck/tests not run
+
+> 5-prd-message-ui.md DONE
+
+----
+
+# 7-prd-status-block.md
+
+## T1: L2 live-region semantics in StatusBlock.Content (PRD accessibility)
+  - Decisions: move role/aria-live ownership to L2 Content using kind context; remove ARIA props from L3 status roots; keep iteration scoped to core abstraction boundary
+  - Files: apps/web/src/components/ui-custom/feedback/status-block.tsx, apps/web/src/components/chat/message/_parts/status.tsx
+  - Entropy: removed duplicated/misplaced ARIA wiring in L3
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; next blockers: raw error.message leak, cancelled>error precedence, PRD copy mismatch
+
+## T2: status precedence + safe error copy mapping (PRD L3 adapter)
+  - Decisions: cancelled now wins over error; stop rendering raw error.message in UI; align copy to PRD (AI Provider Error / Unknown Error / Max output tokens exceeded); MAX_OUTPUT body now appends optional max token limit + suggested model ids
+  - Files: apps/web/src/components/chat/message/_parts/status.tsx
+  - Entropy: remove redundant `"params" in error` guard after kind narrowing
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; next: split status into status-error/status-cancelled + add actions mapping slots
+
+## T3: split L3 status into orchestrator + subparts (PRD L3 file split)
+  - Decisions: keep `status.tsx` as orchestrator only; move error mapping/render to `status-error.tsx`; move cancelled render to `status-cancelled.tsx`; keep behavior parity from T2
+  - Files: apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/_parts/status-error.tsx, apps/web/src/components/chat/message/_parts/status-cancelled.tsx
+  - Entropy: remove unused exported type from status-error
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; next: add StatusBlock.Actions + typed action descriptors mapping
+
+## T4: status actions descriptors + placeholders (PRD actions mapping)
+  - Decisions: add typed `StatusActionDescriptor` with `id/label/intent/payload`; render actions in `StatusBlock.Actions` for error + cancelled; error mapping keyed by `MessageErrorKind`; MAX_OUTPUT uses suggested model when present else fallback retry
+  - Files: apps/web/src/components/chat/message/_parts/status-actions.tsx, apps/web/src/components/chat/message/_parts/status-error.tsx, apps/web/src/components/chat/message/_parts/status-cancelled.tsx
+  - Entropy: dedupe AI_API_ERROR and UNKNOWN_ERROR actions into shared `defaultErrorActions`
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; next: wire action payloads to L3 handlers (replace console.log)
+
+## T5: inject L3 status action handlers from message composition (PRD integration)
+  - Decisions: `StatusActionList` now accepts optional `onAction`; `StatusPart` forwards `onAction` into cancelled/error subparts; assistant maps status payloads to existing retry handler (retry/retry-model) + continue placeholder
+  - Files: apps/web/src/components/chat/message/_parts/status-actions.tsx, apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/_parts/status-error.tsx, apps/web/src/components/chat/message/_parts/status-cancelled.tsx, apps/web/src/components/chat/message/message-assistant.tsx
+  - Entropy: add exhaustive payload narrowing guard in `handleStatusAction`
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; handlers still placeholders until business hook exists
+
+## T6: extract shared message actions hook (PRD integration cleanup)
+  - Decisions: create L3 `useMessageActions` hook to centralize copy/retry/status-action handlers; wire both assistant and user message components to hook; keep placeholder logging behavior but include role/messageId context
+  - Files: apps/web/src/components/chat/message/_hooks/use-message-actions.ts, apps/web/src/components/chat/message/message-assistant.tsx, apps/web/src/components/chat/message/message-user.tsx
+  - Entropy: remove duplicated inline handlers from assistant/user message components
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; real business handlers still pending
+
+## T7: status polish + QA error simulation controls (status scope)
+  - Decisions: remove local `logAction` fallback from status action list; make `onAction` required through status parts; QA page now supports error kind selection and associated inputs (raw message, max output tokens, suggested model ids)
+  - Files: apps/web/src/components/chat/message/_parts/status-actions.tsx, apps/web/src/components/chat/message/_parts/status.tsx, apps/web/src/components/chat/message/_parts/status-error.tsx, apps/web/src/components/chat/message/_parts/status-cancelled.tsx, apps/web/src/routes/components/_components/messages.tsx
+  - Entropy: wrap StatusActionList mapped buttons in fragment instead of bare array return
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; QA note keeps cancelled>error precedence explicit
+
+## T8: status-error local i18n POC interface (status scope)
+  - Decisions: move i18n POC concept into `status-error.tsx` only; add typed per-kind/per-locale copy factory map with required `en` default and optional `fr`; keep locale selection internal to file (no cross-file locale plumbing)
+  - Files: apps/web/src/components/chat/message/_parts/status-error.tsx, apps/web/src/components/chat/message/_parts/status.tsx
+  - Entropy: remove temporary locale prop plumbing from `StatusPart`
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent review done; behavior preserved (no raw error.message render, cancelled precedence unchanged)
+
+## T9: i18n POC naming + typing alignment (status-error)
+  - Decisions: rename i18n mapping types to clearer names (`PerLocaleMapping`, `ErrorMessageBuilderByKind`); keep default locale mandatory and other locales optional with typed helper; align builder signatures to params-based shape from legacy concept
+  - Files: apps/web/src/components/chat/message/_parts/status-error.tsx
+  - Entropy: remove confusing `statusErrorLocale` alias; use `defaultStatusErrorLocale` directly
+  - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent validation pass

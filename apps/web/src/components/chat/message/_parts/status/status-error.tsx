@@ -7,7 +7,7 @@ import {
   type StatusActionDescriptor,
   StatusActionList,
   type StatusActionPayload,
-} from "./status-actions";
+} from "./_parts/status-actions";
 
 const supportedStatusErrorLocales = ["en", "fr"] as const;
 const defaultStatusErrorLocale = "fr" as const;

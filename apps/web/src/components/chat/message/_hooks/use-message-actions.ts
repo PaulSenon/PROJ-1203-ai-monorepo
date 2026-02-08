@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import type { MessageFooterCopyKind } from "../_parts/footer";
-import type { StatusActionPayload } from "../_parts/status-actions";
+import type { StatusActionPayload } from "../_parts/status/_parts/status-actions";
 
 export type UseMessageActionsParams = {
   messageId: string;
