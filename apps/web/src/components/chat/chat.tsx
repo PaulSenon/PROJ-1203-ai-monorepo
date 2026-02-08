@@ -5,8 +5,8 @@ import {
   useScrollToBottomState,
 } from "../ui-custom/chat/hooks/use-scroll-to-bottom";
 import { StickyContainer } from "../ui-custom/sticky-container";
-import { ChatFeed } from "./chat-feed";
-import { ChatInput } from "./chat-input/chat-input";
+import { ChatFeed } from "./conversation/conversation";
+import { ChatInput } from "./prompt-input/prompt-input";
 
 // TODO: move
 function ScrollToBottom() {

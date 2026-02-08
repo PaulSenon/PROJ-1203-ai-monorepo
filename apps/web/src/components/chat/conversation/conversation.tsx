@@ -10,7 +10,7 @@ import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
 import {
   useScrollToBottomInit,
   useScrollToBottomState,
-} from "../ui-custom/chat/hooks/use-scroll-to-bottom";
+} from "../../ui-custom/chat/hooks/use-scroll-to-bottom";
 
 // TODO: move
 function InitialScroll() {

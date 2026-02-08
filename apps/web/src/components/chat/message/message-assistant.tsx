@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { useMessageActions } from "./_hooks/use-message-actions";
 import { MessageContentParts } from "./_parts/content";
 import { MessageFooterAssistant } from "./_parts/footer";
-import { StatusPart } from "./_parts/status";
+import { StatusPart } from "./_parts/status/status";
 
 export type ChatMessageAssistantProps = ComponentProps<"div"> & {
   message: MyUIMessage;

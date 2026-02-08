@@ -1,5 +1,5 @@
 import type { MyUIMessageMetadata } from "@ai-monorepo/ai/types/uiMessage";
-import type { StatusActionPayload } from "./status-actions";
+import type { StatusActionPayload } from "./_parts/status-actions";
 import { CancelledStatusPart } from "./status-cancelled";
 import { ErrorStatusPart } from "./status-error";
 

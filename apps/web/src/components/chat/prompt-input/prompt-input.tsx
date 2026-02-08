@@ -13,7 +13,7 @@ import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useModelSelectorState } from "@/hooks/use-user-preferences";
 import { cn } from "@/lib/utils";
-import { ChatModelSelector } from "./chat-model-selector";
+import { ChatModelSelector } from "./_parts/model-selector";
 
 export function ChatInput() {
   const isMobile = useIsMobile();
