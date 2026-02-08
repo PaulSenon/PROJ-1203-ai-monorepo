@@ -1,50 +1,31 @@
-import { useEffect } from "react";
-import { ChatMessage } from "@/components/chat/message/message";
 import { Conversation } from "@/components/ui-custom/chat/conversation";
-import { useAppLoadStatusActions } from "@/hooks/use-app-load-status";
 import {
   useActiveThreadMessages,
   useActiveThreadState,
 } from "@/hooks/use-chat-active";
 import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
-import {
-  useScrollToBottomInit,
-  useScrollToBottomState,
-} from "../../ui-custom/chat/hooks/use-scroll-to-bottom";
+import { useScrollToBottomState } from "../../ui-custom/chat/hooks/use-scroll-to-bottom";
+import { useActiveThreadUIReady } from "./_hooks/use-active-thread-ui-ready";
+import { InitialScroll } from "./_parts/initial-scroll";
+import { ConversationMessagesList } from "./_parts/messages-list";
 
-// TODO: move
-function InitialScroll() {
-  useScrollToBottomInit({
-    enabled: true,
-    target: "bottom",
-  });
-
-  return null;
-}
-
-export function ChatFeed() {
-  const appUiStatus = useAppLoadStatusActions();
+export function ChatConversation() {
   const { messages, isPending } = useActiveThreadMessages();
   const { uuid } = useActiveThreadState();
   const { bottomRef } = useScrollToBottomState();
 
-  // TODO: effect or layout effect ?
-  useEffect(() => {
-    appUiStatus.setActiveThreadUIReady(!isPending);
-  }, [isPending, appUiStatus.setActiveThreadUIReady]);
+  useActiveThreadUIReady(isPending);
 
   const initialScroll = !isPending && messages.length > 0;
 
   return (
-    <Conversation className="relative mx-auto w-full max-w-2xl flex-1 p-6">
-      <div className="flex flex-col gap-10">
-        {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
-        ))}
-      </div>
+    <Conversation.Root className="relative mx-auto w-full max-w-2xl flex-1 p-6">
+      <Conversation.List>
+        <ConversationMessagesList messages={messages} />
+      </Conversation.List>
 
       <ScrollEdgeProbe ref={bottomRef} />
       {initialScroll ? <InitialScroll key={uuid} /> : null}
-    </Conversation>
+    </Conversation.Root>
   );
 }

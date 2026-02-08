@@ -19,6 +19,7 @@
 
 [ACTIVE_TRACK]
 - now: stabilize chat surface + UX correctness first (input/draft/sidebar/scroll/loading)
+- conversation architecture pass done (L2/L3 parity w/ message); next likely prompt-input/sidebar refactor + behavior polish
 
 [OPEN_DECISIONS]
 - bot protection vendor: Turnstile?

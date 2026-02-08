@@ -3,3 +3,7 @@ footer actions now use shared ui-custom primitives: IconActionButton and CopyAct
 copy action now animates copy->check on successful copy and uses app custom tooltip wrapper
 message footer action contract uses single dispatcher payload MessageFooterActionPayload
 use-message-actions copy path returns success boolean so UI animation only confirms on success
+conversation L2/L3 structure refactor completed under apps/web/src/components/chat/conversation/ (0 behavior-delta target)
+L2 ui-custom conversation now compound API: Conversation.Root + Conversation.List (still div-based, no StickToBottom adoption)
+L3 conversation split to _parts (initial-scroll, messages-list) + _hooks (use-active-thread-ui-ready)
+chat surface import updated: ChatFeed renamed to ChatConversation

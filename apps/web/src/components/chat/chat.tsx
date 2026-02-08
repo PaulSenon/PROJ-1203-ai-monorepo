@@ -5,7 +5,7 @@ import {
   useScrollToBottomState,
 } from "../ui-custom/chat/hooks/use-scroll-to-bottom";
 import { StickyContainer } from "../ui-custom/sticky-container";
-import { ChatFeed } from "./conversation/conversation";
+import { ChatConversation } from "./conversation/conversation";
 import { ChatInput } from "./prompt-input/prompt-input";
 
 // TODO: move
@@ -40,7 +40,7 @@ function ScrollToBottom() {
 export function Chat() {
   return (
     <>
-      <ChatFeed />
+      <ChatConversation />
       <StickyContainer>
         <div className="relative mx-auto flex w-full max-w-2xl flex-col items-start justify-center gap-4 px-4 pt-2 pb-2 md:pb-4">
           <ScrollToBottom />
