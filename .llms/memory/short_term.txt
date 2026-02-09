@@ -16,3 +16,7 @@ Decision: generate shell with `createOptimisticStepStartMessage` in `use-chat-ac
 PRD path: .llms/plan/client-optimistic-assistant-shell/1-prd-complexe-solution-client-side-id.md
 PRD includes: insert-only guard for message create path, UUID immutability guard on update, invisible one auto-retry for UUID collision, persisted thread error with retry payload, global conversation error block rendered after messages
 
+2026-02-09: drafted PRD for last assistant min-height reserve behavior (no effect-late class)
+PRD path: .llms/plan/ui-last-assistant-min-height/0-prd-last-assistant-min-height.md
+Decision: assistant row gets `last:min-h-[calc(100vh-20rem)]` gated by `shouldReserveLastAssistantSpace`
+Naming finalized: `hasSubmittedInActiveThread`, `isThreadSettled`, `lastSubmittedThreadUuid`, `shouldReserveLastAssistantSpace`
