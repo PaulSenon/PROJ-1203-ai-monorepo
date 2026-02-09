@@ -22,6 +22,7 @@ services:
       - "3000:3000" # apps/server
       - "3001:3001" # apps/web
       - "8888:8888" # vite bundler analyser
+      - "4096:4096" # opencode web ui port (hard codded in makefile)
     env_file:
       - ./.env.local
     command: pnpm dev

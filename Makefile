@@ -52,6 +52,9 @@ clean-install: ## Clean everything (containers, volumes, dependencies)
 opencode:
 	$(call run_in_container_smart,app,bash -c "pnpm exec opencode upgrade && pnpm exec opencode")
 
+opencode-web:
+	$(call run_in_container_smart,app,bash -c "pnpm exec opencode upgrade && pnpm exec opencode web --port 4096 --hostname 0.0.0.0")
+
 stop: ## Stop all containers
 	$(COMPOSE) down --remove-orphans
 
