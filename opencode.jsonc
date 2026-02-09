@@ -107,13 +107,15 @@
 
   // --- Instructions ----------------------------------------------------------
   // Include instruction files for the model
-  // "instructions": [
-  //   ".cursor/rules/*.md",
-  //   ".cursor/rules/**/*.mdc",
-  //   "docs/CONTRIBUTING.md",
-  //   "docs/ARCHITECTURE.md",
-  //   ".github/CODING_STANDARDS.md"
-  // ],
+  "instructions": [
+    ".llms/memory/core_facts.txt",
+    ".llms/memory/mental_board.txt"
+    // ".cursor/rules/*.md",
+    // ".cursor/rules/**/*.mdc",
+    // "docs/CONTRIBUTING.md",
+    // "docs/ARCHITECTURE.md",
+    // ".github/CODING_STANDARDS.md"
+  ],
 
   // --- Disabled Providers ----------------------------------------------------
   // Disable specific providers even if credentials are available
