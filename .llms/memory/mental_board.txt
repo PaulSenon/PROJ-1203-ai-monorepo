@@ -16,10 +16,12 @@
 - sidebar list virtualization
 - conversation message virtualization
 - edit feature dropped
+- PRD done: client-side message UUID reliability track (client assistant IDs, invisible retry, conversation-level persisted error block)
 
 [ACTIVE_TRACK]
 - now: stabilize chat surface + UX correctness first (input/draft/sidebar/scroll/loading)
-- conversation architecture pass done (L2/L3 parity w/ message); next likely prompt-input/sidebar refactor + behavior polish
+- conversation architecture pass done (L2/L3 parity w/ message)
+- next: implement simplest optimistic assistant shell (render-derived displayMessages in use-chat-active, no data-layer ID refactor)
 
 [OPEN_DECISIONS]
 - bot protection vendor: Turnstile?

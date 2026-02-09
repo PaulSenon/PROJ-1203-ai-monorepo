@@ -1,4 +1,37 @@
 ----
+[id] client-assistant-id-complex-rollout
+[status] parked
+[captured_at] 2026-02-09
+[context] Complex assistant client-side ID rollout was fully specified but deferred to keep MVP path focused.
+[why_deferred] Must first execute the simpler path in `.llms/plan/client-optimistic-assistant-shell/0-prd-simplest-solution.md`. Only escalate to complex rollout if repeated issues show assistant client-side IDs are needed.
+[rough_spec]
+- Implement `.llms/plan/client-optimistic-assistant-shell/1-prd-complexe-solution-client-side-id.md`.
+- Include insert-only create guard, UUID immutability guard, invisible one-retry, and persisted conversation-level error block with retry payload.
+[decisions]
+- Deferred intentionally, not current MVP critical path.
+- Triggered after simplest solution ships, or earlier only on clear repeated need.
+[open_questions]
+- none
+[next_trigger] After `.llms/plan/client-optimistic-assistant-shell/0-prd-simplest-solution.md` is shipped, or if repeated friction confirms assistant client-side IDs are needed.
+----
+[id] thread-uuid-collision-recovery
+[status] parked
+[captured_at] 2026-02-09
+[context] While scoping message UUID collision handling for optimistic assistant shell, thread UUID collision/recovery was explicitly identified as related but out of current scope.
+[why_deferred] Current priority is message flow reliability and MVP chat UX. Thread-level collision handling expands protocol and persistence semantics unnecessarily for current deliverable.
+[rough_spec]
+- Define deterministic behavior when thread UUID collides on create/navigation/send.
+- Add typed error + optional auto-recovery path.
+- Ensure no data mix across threads/users and no UI route flicker.
+[decisions]
+- Not in current PRD scope.
+- Message-level UUID handling proceeds independently.
+[open_questions]
+- Should collision recover by server remap or client reroute?
+- Should existing thread be reopened or new thread forced?
+- How to preserve draft/input state across recovery?
+[next_trigger] Revisit after message UUID project ships and stabilizes in production. (and after `.llms/plan/client-optimistic-assistant-shell/1-prd-complexe-solution-client-side-id.md`)
+----
 [id] ui-primitives-button-tooltip-unification
 [status] pending
 [captured_at] 2026-02-08
