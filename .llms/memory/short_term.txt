@@ -20,3 +20,17 @@ PRD includes: insert-only guard for message create path, UUID immutability guard
 PRD path: .llms/plan/ui-last-assistant-min-height/0-prd-last-assistant-min-height.md
 Decision: assistant row gets `last:min-h-[calc(100vh-20rem)]` gated by `shouldReserveLastAssistantSpace`
 Naming finalized: `hasSubmittedInActiveThread`, `isThreadSettled`, `lastSubmittedThreadUuid`, `shouldReserveLastAssistantSpace`
+
+2026-02-10: conversation L3 split finalized into adapter + pure layout
+- `apps/web/src/components/chat/conversation/conversation.tsx` now wires hooks only (messages/isPending/uuid + uiReady effect)
+- `apps/web/src/components/chat/conversation/conversation-layout.tsx` owns presentational composition only (current props: `messages`, `isPending`, `threadUuid`)
+- initial scroll key now tied to plain thread uuid (`threadUuid`) to keep base minimal and future-safe
+
+2026-02-10: conversation demo scaffold added at `apps/web/src/routes/components/_components/conversation.tsx`
+- demo targets pure `ChatConversationLayout` only (no `use-chat-active`), wrapped with `ScrollToBottomProvider`
+- controls limited to current layout surface: messages CRUD/text edit, assistant message `liveStatus`, `isPending`, `threadUuid`, force layout remount
+- components index card added for `/components/conversation`
+
+2026-02-10: drafted standalone PRD for streamdown upgrade (message UI only)
+PRD path: .llms/plan/streamdown-upgrade/0-upgrade-streamdown.md
+Decision: streamdown-first upgrade (2.2.x + plugins) with L2-owned link modal via `linkSafety.renderModal`; no full ai-elements registry refresh in this scope

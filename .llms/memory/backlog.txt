@@ -1,4 +1,21 @@
 ----
+[id] ai-elements-full-registry-refresh
+[status] parked
+[captured_at] 2026-02-10
+[context] While planning Streamdown upgrade, we confirmed current message-ui objective can be completed without a full ai-elements registry update.
+[why_deferred] Full registry refresh has high blast radius and risks feature creep during chat MVP stabilization.
+[rough_spec]
+- Re-run ai-elements/shadcn registry updates for impacted components.
+- Diff local L1 overrides against upstream.
+- Reconcile custom local behavior (attachments, smooth text, design tokens).
+[decisions]
+- Current scope uses streamdown-first upgrade + selective handpick only if required.
+- Prompt-input/model-selector remain untouched in current PRD.
+[open_questions]
+- Which L1 components should be upgraded together to keep local API consistency?
+- Use interactive merge flow or overwrite+manual restore workflow?
+[next_trigger] Revisit after streamdown message-ui upgrade ships and stabilizes.
+----
 [id] client-assistant-id-complex-rollout
 [status] parked
 [captured_at] 2026-02-09
