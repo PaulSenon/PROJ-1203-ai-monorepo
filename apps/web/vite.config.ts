@@ -29,13 +29,7 @@ export default defineConfig({
     // }),
   ],
   server: {
-    allowedHosts: ["localhost", ".trycloudflare.com", "0.0.0.0"],
-    // proxy: {
-    //   "/api": {
-    //     target: "http://app:3000", // Resolves to the app container
-    //     changeOrigin: true,
-    //   },
-    // },
+    allowedHosts: ["localhost", ".trycloudflare.com", "0.0.0.0", "mbp"],
     host: true, // Ensure Vite listens on all interfaces
     port: 3001,
   },

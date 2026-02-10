@@ -7,3 +7,6 @@
 [submodule ".llms/git-references/convex-agent-component"]
 	path = .llms/git-references/convex-agent-component
 	url = https://github.com/get-convex/agent.git
+[submodule ".llms/git-references/streamdown"]
+	path = .llms/git-references/streamdown
+	url = https://github.com/vercel/streamdown.git
