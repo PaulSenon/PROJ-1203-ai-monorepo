@@ -10,3 +10,6 @@
 [submodule ".llms/git-references/streamdown"]
 	path = .llms/git-references/streamdown
 	url = https://github.com/vercel/streamdown.git
+[submodule ".llms/git-references/alchemy"]
+	path = .llms/git-references/alchemy
+	url = https://github.com/alchemy-run/alchemy.git

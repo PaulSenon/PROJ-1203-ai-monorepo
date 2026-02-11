@@ -22,7 +22,7 @@
 - now: stabilize chat surface + UX correctness first (input/draft/sidebar/scroll/loading)
 - conversation architecture pass done (L2/L3 parity w/ message)
 - conversation adapter/layout split + pure layout demo scaffold done (minimal props baseline)
-- PRD done: last assistant min-height reserve (render-time, assistant `last:min-h-[calc(100vh-20rem)]`)
+- PRD v2 done: last assistant min-height reserve erratum fixed (refresh-stream-settle no collapse, latch moved to conversation L3)
 - next: implement simplest optimistic assistant shell (render-derived displayMessages in use-chat-active, no data-layer ID refactor)
 
 [OPEN_DECISIONS]

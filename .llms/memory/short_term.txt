@@ -21,6 +21,10 @@ PRD path: .llms/plan/ui-last-assistant-min-height/0-prd-last-assistant-min-heigh
 Decision: assistant row gets `last:min-h-[calc(100vh-20rem)]` gated by `shouldReserveLastAssistantSpace`
 Naming finalized: `hasSubmittedInActiveThread`, `isThreadSettled`, `lastSubmittedThreadUuid`, `shouldReserveLastAssistantSpace`
 
+2026-02-11: erratum identified for v1 PRD (refresh mid-stream -> settle could collapse reserve)
+New authoritative PRD v2 path: .llms/plan/ui-last-assistant-min-height/1-prd-last-assistant-min-height-v2-erratum.md
+Migration in v2 removes hook feature-creep (`hasSubmittedInActiveThread`, `lastSubmittedThreadUuid`) and moves reserve latch to conversation L3 (layout-local, keyed by thread uuid)
+
 2026-02-10: conversation L3 split finalized into adapter + pure layout
 - `apps/web/src/components/chat/conversation/conversation.tsx` now wires hooks only (messages/isPending/uuid + uiReady effect)
 - `apps/web/src/components/chat/conversation/conversation-layout.tsx` owns presentational composition only (current props: `messages`, `isPending`, `threadUuid`)

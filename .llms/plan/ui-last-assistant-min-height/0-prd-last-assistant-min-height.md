@@ -1,5 +1,8 @@
 # PRD: Last Assistant Message Min-Height Reserve
 
+> Superseded by: `.llms/plan/ui-last-assistant-min-height/1-prd-last-assistant-min-height-v2-erratum.md`
+> Reason: v1 misses refresh-stream-settle CLS edge case.
+
 ## 1) Context
 
 Chat conversation renders ordered messages (`user` + `assistant`).
