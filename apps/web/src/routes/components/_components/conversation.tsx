@@ -74,8 +74,7 @@ function RouteComponent() {
     createInitialMessages
   );
   const [isPending, setIsPending] = useState(false);
-  const [shouldReserveLastAssistantSpace, setShouldReserveLastAssistantSpace] =
-    useState(false);
+  const [isThreadSettled, setIsThreadSettled] = useState(true);
   const [threadUuid, setThreadUuid] = useState("demo-thread-1");
   const [layoutRemountKey, setLayoutRemountKey] = useState(0);
 
@@ -93,7 +92,7 @@ function RouteComponent() {
   const resetDemo = () => {
     setMessages(createInitialMessages());
     setIsPending(false);
-    setShouldReserveLastAssistantSpace(false);
+    setIsThreadSettled(true);
     setThreadUuid("demo-thread-1");
     setLayoutRemountKey(0);
   };
@@ -170,14 +169,12 @@ function RouteComponent() {
 
             <label className="flex items-center gap-2 text-sm">
               <input
-                checked={shouldReserveLastAssistantSpace}
+                checked={isThreadSettled}
                 className="h-4 w-4 rounded border-border"
-                onChange={(event) =>
-                  setShouldReserveLastAssistantSpace(event.target.checked)
-                }
+                onChange={(event) => setIsThreadSettled(event.target.checked)}
                 type="checkbox"
               />
-              Reserve last assistant space
+              Thread isThreadSettled
             </label>
 
             <div className="flex flex-col gap-2">
@@ -319,11 +316,9 @@ function RouteComponent() {
               <ScrollToBottomProvider containerRef={previewScrollRef}>
                 <ChatConversationLayout
                   isPending={isPending}
-                  key={layoutRemountKey}
+                  isThreadSettled={isThreadSettled}
+                  key={`${threadUuid}:${layoutRemountKey}`}
                   messages={messages}
-                  shouldReserveLastAssistantSpace={
-                    shouldReserveLastAssistantSpace
-                  }
                   threadUuid={threadUuid}
                 />
               </ScrollToBottomProvider>

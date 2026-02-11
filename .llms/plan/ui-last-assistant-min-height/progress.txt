@@ -23,3 +23,19 @@
 - decisions: removed optional defaults to prevent silent false fallback if wiring regresses
 - files: `apps/web/src/components/chat/conversation/conversation-layout.tsx`, `apps/web/src/components/chat/conversation/_parts/messages-list.tsx`
 - blockers/notes: typecheck unchanged; same pre-existing out-of-scope errors (`message footer` unused var, `packages/infra/alchemy.run.ts` import extension)
+
+2026-02-11 - ui-last-assistant-min-height-v2-erratum - rollback v1 hook leakage
+- done: removed `hasSubmittedInActiveThread` + `lastSubmittedThreadUuid` from active-thread hook; kept only `isThreadSettled`
+- decisions: reserve memory moved out of `use-chat-active`; keep business hook lean per v2
+- files: `apps/web/src/hooks/use-chat-active.tsx`
+
+2026-02-11 - ui-last-assistant-min-height-v2-erratum - L3 latch migration
+- done: `conversation.tsx` now passes only `uuid` + `isThreadSettled`; layout keyed by `uuid`
+- done: `conversation-layout.tsx` now owns reserve latch with guarded render-phase sync, then derives `shouldReserveLastAssistantSpace`
+- done: `messages-list.tsx` unchanged algorithm, still assistant-only `last:min-h-[calc(100vh-20rem)]`
+- files: `apps/web/src/components/chat/conversation/conversation.tsx`, `apps/web/src/components/chat/conversation/conversation-layout.tsx`, `apps/web/src/components/chat/conversation/_parts/messages-list.tsx`
+
+2026-02-11 - ui-last-assistant-min-height-v2-erratum - demo QA controls update
+- done: removed old manual reserve toggle, added `isThreadSettled` control, wired into layout
+- done: preview key now `${threadUuid}:${layoutRemountKey}` so thread switch resets local latch in demo
+- files: `apps/web/src/routes/components/_components/conversation.tsx`

@@ -57,3 +57,8 @@ Decision: streamdown-first upgrade (2.2.x + plugins) with L2-owned link modal vi
 2026-02-11: reserve prop contract tightened
 - `shouldReserveLastAssistantSpace` now required in `ChatConversationLayout` and `ConversationMessagesList`
 - removed default fallbacks to catch future wiring drift at compile time
+
+2026-02-11: last-assistant-reserve v2 erratum applied
+- removed v1 submit-memory leak from `use-chat-active` (no `hasSubmittedInActiveThread`/`lastSubmittedThreadUuid`)
+- moved reserve memory latch into `conversation-layout` (L3 UI-local), keyed by thread uuid from adapter
+- demo page control now drives `isThreadSettled` instead of manual reserve boolean

@@ -7,18 +7,16 @@ import { ChatConversationLayout } from "./conversation-layout";
 
 export function ChatConversation() {
   const { messages, isPending } = useActiveThreadMessages();
-  const { uuid, hasSubmittedInActiveThread, isThreadSettled } =
-    useActiveThreadState();
-  const shouldReserveLastAssistantSpace =
-    hasSubmittedInActiveThread || !isThreadSettled;
+  const { uuid, isThreadSettled } = useActiveThreadState();
 
   useActiveThreadUIReady(isPending);
 
   return (
     <ChatConversationLayout
       isPending={isPending}
+      isThreadSettled={isThreadSettled}
+      key={uuid}
       messages={messages}
-      shouldReserveLastAssistantSpace={shouldReserveLastAssistantSpace}
       threadUuid={uuid}
     />
   );

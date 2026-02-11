@@ -9,6 +9,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -32,7 +33,6 @@ type ActiveThreadState = {
   messagesQueue: MyUIMessage[];
   isStreamingOptimistic: boolean;
   isWaitingForFirstToken: boolean;
-  hasSubmittedInActiveThread: boolean;
   isThreadSettled: boolean;
 };
 
@@ -73,7 +73,6 @@ type ActiveThreadStateType = Pick<
   | "isStreaming"
   | "isStreamingOptimistic"
   | "isWaitingForFirstToken"
-  | "hasSubmittedInActiveThread"
   | "isThreadSettled"
 >;
 const ActiveTheadStateContext = createContext<ActiveThreadStateType | null>(
@@ -174,10 +173,6 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   );
 
   const [messagesQueue, _setMessagesQueue] = useState<MyUIMessage[]>([]);
-  const [lastSubmittedThreadUuid, setLastSubmittedThreadUuid] = useState<
-    string | null
-  >(null);
-
   const {
     sendMessage: sdkSendMessage,
     regenerate: sdkRegenerate,
@@ -188,13 +183,13 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const hasSubmittedInActiveThread = lastSubmittedThreadUuid === chatNav.id;
   // TODO: make a single shared reducer in ai packages for this (we already have a similar implementation on api side)
   // TOTO NB: I think they miss-align on the "undefined" case though. Backend "undefined" handling change, might break things from what I vaguely remember. So if we ever need to change it, we gotta deeply analyze potential impacts.
   const isThreadSettled =
     thread?.liveStatus === "completed" ||
     thread?.liveStatus === "error" ||
-    thread?.liveStatus === "cancelled";
+    thread?.liveStatus === "cancelled" ||
+    thread?.liveStatus === undefined; // later remark linked to above todo, we should also handle undefined as settled to avoid having the last assistant min-height latching on pageload 100% of the time. Or we should also handle data loading state to only read when ready. To be defined.
 
   const __sendMessageInternal = useCallback(
     async (uiMessage: MyUIMessage) => {
@@ -263,7 +258,6 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
 
   const sendMessage = useCallback(
     (params: SendMessageParams) => {
-      setLastSubmittedThreadUuid(chatNav.id);
       const messageId = nanoid();
       const uiMessage: MyUIMessage = {
         role: "user",
@@ -287,7 +281,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       return __sendMessageInternal(uiMessage);
       // }
     },
-    [chatNav.id, __sendMessageInternal]
+    [__sendMessageInternal]
   );
 
   const cancel = useCallback(async () => {
@@ -408,7 +402,6 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         isStreaming,
         isStreamingOptimistic,
         isWaitingForFirstToken,
-        hasSubmittedInActiveThread,
         isThreadSettled,
       }) satisfies ActiveThreadStateType,
     [
@@ -420,10 +413,13 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       isStreaming,
       isStreamingOptimistic,
       isWaitingForFirstToken,
-      hasSubmittedInActiveThread,
       isThreadSettled,
     ]
   );
+
+  useEffect(() => {
+    console.log("DEBUG: use-chat-active state", state);
+  }, [state]);
 
   const messagesState = useMemo(
     () =>
