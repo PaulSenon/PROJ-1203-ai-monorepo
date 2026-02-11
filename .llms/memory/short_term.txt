@@ -34,3 +34,22 @@ Naming finalized: `hasSubmittedInActiveThread`, `isThreadSettled`, `lastSubmitte
 2026-02-10: drafted standalone PRD for streamdown upgrade (message UI only)
 PRD path: .llms/plan/streamdown-upgrade/0-upgrade-streamdown.md
 Decision: streamdown-first upgrade (2.2.x + plugins) with L2-owned link modal via `linkSafety.renderModal`; no full ai-elements registry refresh in this scope
+
+2026-02-11: ui-last-assistant-min-height PRD 7.1 implemented in active-thread hook
+- `use-chat-active` now exposes `hasSubmittedInActiveThread` + `isThreadSettled`
+- submit latch stored as `lastSubmittedThreadUuid`; set at `sendMessage` start
+- settled semantics explicit: only `completed|error|cancelled`; `undefined` considered unsettled
+
+2026-02-11: ui-last-assistant-min-height PRD 7.2/7.3 wired in conversation layer
+- `ChatConversation` derives `shouldReserveLastAssistantSpace`
+- `ChatConversationLayout` forwards reserve prop to `ConversationMessagesList`
+- assistant rows now conditionally get `last:min-h-[calc(100vh-20rem)]`
+- note: reserve activates only when last rendered row is assistant (pre-token pending with trailing user still depends on optimistic assistant shell)
+
+2026-02-11: conversation demo QA controls updated for reserve feature
+- added `shouldReserveLastAssistantSpace` checkbox in `/components/conversation` demo controls
+- preview now passes `shouldReserveLastAssistantSpace` prop into `ChatConversationLayout`
+
+2026-02-11: reserve prop contract tightened
+- `shouldReserveLastAssistantSpace` now required in `ChatConversationLayout` and `ConversationMessagesList`
+- removed default fallbacks to catch future wiring drift at compile time

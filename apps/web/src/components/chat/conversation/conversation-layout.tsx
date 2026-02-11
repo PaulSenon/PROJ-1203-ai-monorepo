@@ -9,11 +9,13 @@ export type ChatConversationLayoutProps = {
   messages: MyUIMessage[];
   isPending: boolean;
   threadUuid: string;
+  shouldReserveLastAssistantSpace: boolean;
 };
 
 export function ChatConversationLayout({
   messages,
   isPending,
+  shouldReserveLastAssistantSpace,
   threadUuid,
 }: ChatConversationLayoutProps) {
   const { bottomRef } = useScrollToBottomState();
@@ -22,7 +24,10 @@ export function ChatConversationLayout({
   return (
     <Conversation.Root className="relative mx-auto w-full max-w-2xl flex-1 p-6">
       <Conversation.List>
-        <ConversationMessagesList messages={messages} />
+        <ConversationMessagesList
+          messages={messages}
+          shouldReserveLastAssistantSpace={shouldReserveLastAssistantSpace}
+        />
       </Conversation.List>
 
       <ScrollEdgeProbe ref={bottomRef} />

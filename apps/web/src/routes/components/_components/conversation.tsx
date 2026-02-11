@@ -74,6 +74,8 @@ function RouteComponent() {
     createInitialMessages
   );
   const [isPending, setIsPending] = useState(false);
+  const [shouldReserveLastAssistantSpace, setShouldReserveLastAssistantSpace] =
+    useState(false);
   const [threadUuid, setThreadUuid] = useState("demo-thread-1");
   const [layoutRemountKey, setLayoutRemountKey] = useState(0);
 
@@ -91,6 +93,7 @@ function RouteComponent() {
   const resetDemo = () => {
     setMessages(createInitialMessages());
     setIsPending(false);
+    setShouldReserveLastAssistantSpace(false);
     setThreadUuid("demo-thread-1");
     setLayoutRemountKey(0);
   };
@@ -163,6 +166,18 @@ function RouteComponent() {
                 type="checkbox"
               />
               Conversation isPending
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                checked={shouldReserveLastAssistantSpace}
+                className="h-4 w-4 rounded border-border"
+                onChange={(event) =>
+                  setShouldReserveLastAssistantSpace(event.target.checked)
+                }
+                type="checkbox"
+              />
+              Reserve last assistant space
             </label>
 
             <div className="flex flex-col gap-2">
@@ -306,6 +321,9 @@ function RouteComponent() {
                   isPending={isPending}
                   key={layoutRemountKey}
                   messages={messages}
+                  shouldReserveLastAssistantSpace={
+                    shouldReserveLastAssistantSpace
+                  }
                   threadUuid={threadUuid}
                 />
               </ScrollToBottomProvider>

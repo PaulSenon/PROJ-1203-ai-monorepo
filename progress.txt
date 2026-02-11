@@ -75,7 +75,7 @@ Leaving simple placeholder for more complex sub-components that will be addresse
   - Notes: typecheck/tests not run
 
 ## T5 Manual user edits
-  - deleted footer-assistant and footer-user for one single footer part. 
+  - deleted footer-assistant and footer-user for one single footer part.
   - moved action handler implementation to message L3 composition (message-user and message-assistant) will probably come from business hook at some point, of a L3 contextualized action hook for message to avoid prop drilling.
   - mocked the copy action implementation (because wasn't)
 
@@ -156,3 +156,29 @@ Leaving simple placeholder for more complex sub-components that will be addresse
   - Files: apps/web/src/components/chat/message/_parts/status-error.tsx
   - Entropy: remove confusing `statusErrorLocale` alias; use `defaultStatusErrorLocale` directly
   - Notes: typecheck/tests/LSP not run (AGENTS: no dev commands); sub-agent validation pass
+
+2026-02-11 - ui-last-assistant-min-height - PRD 7.1
+- done: active-thread state contract added for reserve logic in provider
+- decisions: `undefined` liveStatus treated unsettled; settled only `completed|error|cancelled`; submit latch per thread via `lastSubmittedThreadUuid`
+- entropy: removed one debug log (`onFinish`) from chat active hook wiring
+- files: `apps/web/src/hooks/use-chat-active.tsx`
+- blockers/notes: repo has pre-existing type errors outside scope (`message footer`, `header route type`, `packages/infra/alchemy.run.ts`); next iter wire booleans into conversation + messages-list (PRD 7.2/7.3)
+
+2026-02-11 - ui-last-assistant-min-height - PRD 7.2/7.3
+- done: wired reserve boolean from conversation adapter to layout + messages list; applied assistant-only `last:min-h-[calc(100vh-20rem)]`
+- decisions: keep rule render-time only (`hasSubmittedInActiveThread || !isThreadSettled`), no effect toggles; keep layout/list prop optional default false for demo compatibility
+- entropy: removed unnecessary fragment in `ConversationMessagesList` (return mapped array directly)
+- files: `apps/web/src/components/chat/conversation/conversation.tsx`, `apps/web/src/components/chat/conversation/conversation-layout.tsx`, `apps/web/src/components/chat/conversation/_parts/messages-list.tsx`
+- blockers/notes: typecheck still fails on pre-existing out-of-scope errors (`message footer` unused var, `packages/infra/alchemy.run.ts` import extension); reserve applies once assistant row exists (last-child assistant rule), so pre-token reserve still depends on optimistic assistant-shell track; optional followup tighten prop to required after demo wiring audit
+
+2026-02-11 - ui-last-assistant-min-height - QA controls followup
+- done: added demo control for `shouldReserveLastAssistantSpace` in conversation test page and wired prop into `ChatConversationLayout`
+- decisions: reset demo now also resets reserve toggle to false
+- files: `apps/web/src/routes/components/_components/conversation.tsx`
+- blockers/notes: typecheck unchanged, still fails on pre-existing out-of-scope errors (`message footer` unused var, `packages/infra/alchemy.run.ts` import extension)
+
+2026-02-11 - ui-last-assistant-min-height - prop contract hardening
+- done: made `shouldReserveLastAssistantSpace` required in conversation layout/list prop chain
+- decisions: removed optional defaults to prevent silent false fallback if wiring regresses
+- files: `apps/web/src/components/chat/conversation/conversation-layout.tsx`, `apps/web/src/components/chat/conversation/_parts/messages-list.tsx`
+- blockers/notes: typecheck unchanged; same pre-existing out-of-scope errors (`message footer` unused var, `packages/infra/alchemy.run.ts` import extension)

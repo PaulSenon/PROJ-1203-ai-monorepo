@@ -4,7 +4,7 @@ import { ModeToggle } from "./mode-toggle";
 export default function Header() {
   const links = [
     { to: "/", label: "Home" },
-    { to: "/ai", label: "AI Chat" },
+    { to: "/chat/{-$id}", label: "AI Chat" },
   ] as const;
 
   return (

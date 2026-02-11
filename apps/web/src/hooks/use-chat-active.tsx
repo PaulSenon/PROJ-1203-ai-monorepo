@@ -32,6 +32,8 @@ type ActiveThreadState = {
   messagesQueue: MyUIMessage[];
   isStreamingOptimistic: boolean;
   isWaitingForFirstToken: boolean;
+  hasSubmittedInActiveThread: boolean;
+  isThreadSettled: boolean;
 };
 
 type SendMessageParams = {
@@ -71,6 +73,8 @@ type ActiveThreadStateType = Pick<
   | "isStreaming"
   | "isStreamingOptimistic"
   | "isWaitingForFirstToken"
+  | "hasSubmittedInActiveThread"
+  | "isThreadSettled"
 >;
 const ActiveTheadStateContext = createContext<ActiveThreadStateType | null>(
   null
@@ -170,19 +174,27 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   );
 
   const [messagesQueue, _setMessagesQueue] = useState<MyUIMessage[]>([]);
+  const [lastSubmittedThreadUuid, setLastSubmittedThreadUuid] = useState<
+    string | null
+  >(null);
 
   const {
     sendMessage: sdkSendMessage,
     regenerate: sdkRegenerate,
     setMessages: sdkSetMessages,
   } = useChatContext({
-    onFinish: () => {
-      console.log("DEBUG123: onFinish !!!!!!");
-    },
     onError: () => {
       clearOwnership();
     },
   });
+
+  const hasSubmittedInActiveThread = lastSubmittedThreadUuid === chatNav.id;
+  // TODO: make a single shared reducer in ai packages for this (we already have a similar implementation on api side)
+  // TOTO NB: I think they miss-align on the "undefined" case though. Backend "undefined" handling change, might break things from what I vaguely remember. So if we ever need to change it, we gotta deeply analyze potential impacts.
+  const isThreadSettled =
+    thread?.liveStatus === "completed" ||
+    thread?.liveStatus === "error" ||
+    thread?.liveStatus === "cancelled";
 
   const __sendMessageInternal = useCallback(
     async (uiMessage: MyUIMessage) => {
@@ -251,6 +263,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
 
   const sendMessage = useCallback(
     (params: SendMessageParams) => {
+      setLastSubmittedThreadUuid(chatNav.id);
       const messageId = nanoid();
       const uiMessage: MyUIMessage = {
         role: "user",
@@ -274,7 +287,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       return __sendMessageInternal(uiMessage);
       // }
     },
-    [__sendMessageInternal]
+    [chatNav.id, __sendMessageInternal]
   );
 
   const cancel = useCallback(async () => {
@@ -395,6 +408,8 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         isStreaming,
         isStreamingOptimistic,
         isWaitingForFirstToken,
+        hasSubmittedInActiveThread,
+        isThreadSettled,
       }) satisfies ActiveThreadStateType,
     [
       chatNav.id,
@@ -405,6 +420,8 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       isStreaming,
       isStreamingOptimistic,
       isWaitingForFirstToken,
+      hasSubmittedInActiveThread,
+      isThreadSettled,
     ]
   );
 
