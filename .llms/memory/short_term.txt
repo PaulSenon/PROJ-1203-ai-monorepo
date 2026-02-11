@@ -62,3 +62,7 @@ Decision: streamdown-first upgrade (2.2.x + plugins) with L2-owned link modal vi
 - removed v1 submit-memory leak from `use-chat-active` (no `hasSubmittedInActiveThread`/`lastSubmittedThreadUuid`)
 - moved reserve memory latch into `conversation-layout` (L3 UI-local), keyed by thread uuid from adapter
 - demo page control now drives `isThreadSettled` instead of manual reserve boolean
+
+2026-02-11: drafted standalone PRD for env boundary/type-safety refactor
+PRD path: .llms/plan/typesafe-env-refactoring/0-prd-env-refactoring.md
+Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` + `InferEnvInput`), infra keeps pre-deploy env validation, infra bindings checked with app-exported contracts, no app->infra imports
