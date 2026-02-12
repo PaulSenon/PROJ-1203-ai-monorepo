@@ -1,28 +1,22 @@
 {
-  "name": "@ai-monorepo/api",
+  "name": "@ai-monorepo/api-service",
   "exports": {
     "./*": {
       "default": "./src/*.ts"
-    },
-    "./contracts": {
-      "default": "./src/contracts/*.ts"
-    },
-    "./libs": {
-      "default": "./src/libs/*.ts"
-    },
-    "./router": {
-      "default": "./src/routers/*.ts"
     }
   },
   "type": "module",
-  "scripts": {},
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
   "devDependencies": {
-    "typescript": "catalog:",
     "@ai-monorepo/config": "workspace:*",
-    "dotenv": "catalog:"
+    "@cloudflare/workers-types": "catalog:",
+    "typescript": "catalog:"
   },
   "dependencies": {
     "@ai-monorepo/ai": "workspace:^",
+    "@ai-monorepo/api-contract": "workspace:^",
     "@ai-monorepo/convex": "workspace:^",
     "@ai-sdk/anthropic": "catalog:ai",
     "@ai-sdk/google": "catalog:ai",

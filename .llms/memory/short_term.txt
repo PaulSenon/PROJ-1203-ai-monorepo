@@ -77,3 +77,10 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - deleted `packages/env/env.d.ts` (infra-owned Cloudflare augmentation removed from env package)
 - removed stale `@ai-monorepo/infra` devDependency from `packages/env/package.json`
 - checks: `packages/env` pass, `apps/server` pass, `packages/infra` pass; `apps/web` still fails unrelated footer unused local
+
+2026-02-12: oRPC API contract-first refactor completed
+- split `@ai-monorepo/api` into two packages: `@ai-monorepo/api-contract` (pure contracts) and `@ai-monorepo/api-service` (implementations)
+- config injection pattern: no env access in packages, config passed via request context in `handler.handle({ context: { config, request } })`
+- middlewares refactored to use `context.config.clerk.*` and `context.config.convex.*` instead of direct env imports
+- added demo routes: `/rpc/demo/public/ping` and `/rpc/demo/private/ping` showcasing public/protected procedures
+- fixed route structure: chat procedure now available at `/rpc/chat` (was `/rpc/chat/chat`)

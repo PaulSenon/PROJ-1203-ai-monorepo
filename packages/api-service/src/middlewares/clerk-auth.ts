@@ -1,18 +1,17 @@
-import { env } from "@ai-monorepo/env/server";
 import { createClerkClient } from "@clerk/backend";
 import { ORPCError } from "@orpc/client";
 import { os } from "@orpc/server";
-import type { ClerkAuthContext, RequestContext } from "../orpc.context";
-
-const client = createClerkClient({
-  jwtKey: env.PUBLIC_CLERK_JWT_KEY,
-  publishableKey: env.PUBLIC_CLERK_PUBLISHABLE_KEY,
-  secretKey: env.CLERK_SECRET_KEY,
-});
+import type { ClerkAuthContext, ServiceContext } from "../config.js";
 
 export const clerkAuthMiddleware = os
-  .$context<RequestContext>()
+  .$context<ServiceContext>()
   .middleware(async ({ context, next }) => {
+    const client = createClerkClient({
+      jwtKey: context.config.clerk.jwtKey,
+      publishableKey: context.config.clerk.publishableKey,
+      secretKey: context.config.clerk.secretKey,
+    });
+
     const authReqState = await client.authenticateRequest(context.request);
     const auth = authReqState.toAuth();
     if (!auth?.userId) {

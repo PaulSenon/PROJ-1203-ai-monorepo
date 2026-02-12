@@ -19,3 +19,9 @@
 [submodule ".llms/git-references/opencode"]
 	path = .llms/git-references/opencode
 	url = https://github.com/anomalyco/opencode.git
+[submodule ".llms/git-references/orpc"]
+	path = .llms/git-references/orpc
+	url = https://github.com/middleapi/orpc.git
+[submodule ".llms/git-references/orpc-monorepo-example"]
+	path = .llms/git-references/orpc-monorepo-example
+	url = https://github.com/middleapi/orpc-multiservice-monorepo-playground.git

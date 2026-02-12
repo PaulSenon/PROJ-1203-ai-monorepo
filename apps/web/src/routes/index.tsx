@@ -149,8 +149,12 @@ function DebugThrottledState() {
 
 function HomeComponent() {
   const auth = useAuth();
-  const publicCheck = useQuery(orpc.public.greeting.queryOptions());
-  const protectedCheck = useQuery(orpc.private.greeting.queryOptions());
+  const publicCheck = useQuery(
+    orpc.demo.public.ping.queryOptions({ input: { message: "ping public" } })
+  );
+  const protectedCheck = useQuery(
+    orpc.demo.private.ping.queryOptions({ input: { message: "ping private" } })
+  );
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-2">
@@ -173,7 +177,7 @@ function HomeComponent() {
               {publicCheck.isLoading
                 ? "Checking..."
                 : publicCheck.data
-                  ? publicCheck.data.text
+                  ? publicCheck.data.message
                   : "Disconnected"}
             </span>
           </div>
@@ -185,7 +189,7 @@ function HomeComponent() {
               {protectedCheck.isLoading
                 ? "Checking..."
                 : protectedCheck.data
-                  ? protectedCheck.data.text
+                  ? protectedCheck.data.message
                   : "Disconnected"}
             </span>
           </div>
