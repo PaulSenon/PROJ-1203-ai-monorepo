@@ -8,7 +8,8 @@
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server"
   },
   "dependencies": {
-    "@ai-monorepo/api": "workspace:*",
+    "@ai-monorepo/api-contract": "workspace:*",
+    "@ai-monorepo/api-service": "workspace:*",
     "@ai-monorepo/env": "workspace:*",
     "@clerk/backend": "catalog:clerk",
     "@hono/clerk-auth": "catalog:clerk",
@@ -22,12 +23,12 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "typescript": "catalog:",
     "@ai-monorepo/config": "workspace:*",
-    "tsdown": "catalog:",
-    "alchemy": "catalog:",
-    "wrangler": "^4.54.0",
+    "@cloudflare/workers-types": "catalog:",
     "@types/node": "catalog:",
-    "@cloudflare/workers-types": "catalog:"
+    "alchemy": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "wrangler": "^4.54.0"
   }
 }

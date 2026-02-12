@@ -3,18 +3,18 @@ packages:
   - packages/*
 
 catalog:
-  "@cloudflare/workers-types": ^4.20251213.0
+  "@cloudflare/workers-types": ^4.20260131.0
+  "@dotenvx/dotenvx": ^1.51.0
   "@types/node": ^22.13.14
-  ai: ^6.0.3
+  ai: ^6.0.68
   alchemy: ^0.82.1
+  cross-env: ^10.1.0
   dotenv: ^17.2.2
   hono: ^4.8.2
   nanoid: 5.1.6
   tsdown: ^0.16.5
   typescript: ^5
   zod: ^4.3.6
-  cross-env: ^10.1.0
-  "@dotenvx/dotenvx": "^1.51.0"
 
 catalogs:
   ai:
@@ -38,13 +38,13 @@ catalogs:
   env:
     "@t3-oss/env-core": ^0.13.10
   orpc:
-    "@orpc/server": ^1.12.2
-    "@orpc/openapi": ^1.12.2
-    "@orpc/zod": ^1.12.2
-    "@orpc/client": ^1.12.2
-    "@orpc/contract": ^1.12.2
-    "@orpc/openapi-client": ^1.12.2
-    "@orpc/tanstack-query": ^1.12.2
+    "@orpc/client": ^1.13.5
+    "@orpc/contract": ^1.13.5
+    "@orpc/openapi": ^1.13.5
+    "@orpc/openapi-client": ^1.13.5
+    "@orpc/server": ^1.13.5
+    "@orpc/tanstack-query": ^1.13.5
+    "@orpc/zod": ^1.13.5
   schema:
     "@standard-schema/spec": ^1.0.0
 

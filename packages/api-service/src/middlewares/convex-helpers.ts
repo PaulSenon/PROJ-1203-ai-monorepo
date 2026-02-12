@@ -1,4 +1,3 @@
-import { env } from "@ai-monorepo/env/server";
 import { ORPCError } from "@orpc/client";
 import { os } from "@orpc/server";
 import {
@@ -6,20 +5,21 @@ import {
   fetchQuery as fetchConvexQuery,
 } from "convex/nextjs";
 import type { FunctionReference, OptionalRestArgs } from "convex/server";
-import type { ClerkAuthContext } from "../orpc.context";
+import type { ClerkAuthContext, ServiceContext } from "../config.js";
 
 export const convexContextMiddleware = os
-  .$context<ClerkAuthContext>()
+  .$context<ClerkAuthContext & ServiceContext>()
   .middleware(async ({ context, next }) => {
     const token = await context.auth.getToken({ template: "convex" });
     if (!token) throw new ORPCError("UNAUTHORIZED");
+
     const fetchQuery = <Query extends FunctionReference<"query">>(
       query: Query,
       ...queryArgs: OptionalRestArgs<Query>
     ) =>
       fetchConvexQuery(query, queryArgs[0], {
         token,
-        url: env.PUBLIC_CONVEX_URL,
+        url: context.config.convex.url,
       });
 
     const fetchMutation = <Mutation extends FunctionReference<"mutation">>(
@@ -28,8 +28,9 @@ export const convexContextMiddleware = os
     ) =>
       fetchConvexMutation(mutation, mutationArgs[0], {
         token,
-        url: env.PUBLIC_CONVEX_URL,
+        url: context.config.convex.url,
       });
+
     return next({
       context: {
         fetchQuery,

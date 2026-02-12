@@ -13,9 +13,9 @@
   },
   "dependencies": {
     "@ai-monorepo/ai": "workspace:^",
-    "@ai-monorepo/api": "workspace:*",
-    "@ai-monorepo/env": "workspace:*",
+    "@ai-monorepo/api-contract": "workspace:*",
     "@ai-monorepo/convex": "workspace:^",
+    "@ai-monorepo/env": "workspace:*",
     "@ai-sdk/react": "catalog:ai",
     "@clerk/clerk-react": "catalog:clerk",
     "@clerk/themes": "catalog:clerk",

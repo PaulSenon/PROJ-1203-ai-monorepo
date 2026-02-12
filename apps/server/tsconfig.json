@@ -5,12 +5,14 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"],
-      "@ai-monorepo/api/*": ["../../packages/api/src/*"]
+      "~/*": ["./src/*"]
     },
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
     "types": ["@cloudflare/workers-types"]
   },
-  "references": [{ "path": "../../packages/api" }]
+  "references": [
+    { "path": "../../packages/api-contract" },
+    { "path": "../../packages/api-service" }
+  ]
 }

@@ -5,15 +5,13 @@ import {
   createMyProviderRegistry,
   modelIdValidator,
 } from "@ai-monorepo/ai/model.registry";
-import type { LiveStatus } from "@ai-monorepo/ai/types/uiMessage";
+import type { LiveStatus, MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import {
   type MessageError,
-  type MyUIMessage,
   validateMyUIMessages,
 } from "@ai-monorepo/ai/types/uiMessage";
 import { api } from "@ai-monorepo/convex/convex/_generated/api";
-import { env } from "@ai-monorepo/env/server";
-import { implement, ORPCError, streamToEventIterator } from "@orpc/server";
+import { ORPCError, streamToEventIterator } from "@orpc/server";
 import {
   AISDKError,
   APICallError,
@@ -24,18 +22,7 @@ import {
   type ToolSet,
 } from "ai";
 import { nanoid } from "nanoid";
-import { chatRouterContract } from "../contracts/chat.contract";
-import { clerkAuthMiddleware } from "../libs/middlewares/clerk-auth";
-import { convexContextMiddleware } from "../libs/middlewares/convex-helpers";
-import type { RequestContext } from "../libs/orpc.context";
-
-const os = implement(chatRouterContract);
-export const chatProcedures = os.$context<RequestContext>();
-
-const registry = createMyProviderRegistry({
-  GOOGLE_API_KEY: env.GOOGLE_API_KEY,
-  OPENAI_API_KEY: env.OPENAI_API_KEY,
-});
+import { protectedProcedures } from "../orpc.js";
 
 function generateTitleMock(id: string) {
   return new Promise<string>((resolve) => {
@@ -140,10 +127,14 @@ function reducePartTypeToErrorMetadata(error: unknown): MessageError {
   };
 }
 
-export const chatProcedure = chatProcedures.chat
-  .use(clerkAuthMiddleware)
-  .use(convexContextMiddleware)
-  .handler(async ({ context: { fetchQuery, fetchMutation }, input }) => {
+export const chat = protectedProcedures.chat.handler(
+  async ({ context, input }) => {
+    const { fetchMutation, fetchQuery, config } = context;
+    const registry = createMyProviderRegistry({
+      GOOGLE_API_KEY: config.ai.googleApiKey,
+      OPENAI_API_KEY: config.ai.openaiApiKey,
+    });
+
     const __deferredPromises: Promise<unknown>[] = [];
 
     // 1. Get user
@@ -152,9 +143,9 @@ export const chatProcedure = chatProcedures.chat
       throw new ORPCError("UNAUTHORIZED", {
         message: "User not found",
       });
-    // TODO: tmp only allow premium to test in prod. To delete and implement under 3. below
-    // TODO: check if user has access to the model
     if (user.tier !== "premium-level-1")
+      // TODO: tmp only allow premium to test in prod. To delete and implement under 3. below
+      // TODO: check if user has access to the model
       throw new ORPCError("FORBIDDEN", {
         message: "Only premium users can test regenerate",
         data: {
@@ -180,9 +171,9 @@ export const chatProcedure = chatProcedures.chat
     // 3. Build data
     const startedAt = Date.now();
 
-    // 4. Load data
-    // only when regenerating, we need to delete all messages after the last message to keep
     if (isRegenerate) {
+      // 4. Load data
+      // only when regenerating, we need to delete all messages after the last message to keep
       const lastMessageUuid = validatedUiMessages.at(-1)?.id;
       if (!lastMessageUuid)
         throw new ORPCError("BAD_REQUEST", {
@@ -219,8 +210,8 @@ export const chatProcedure = chatProcedures.chat
       return { streamId: undefined };
     });
 
-    // 5. Generate title in background
     if (!thread.title || thread.title.trim() === "") {
+      // 5. Generate title in background
       console.log("REGENERATE TITLE", { thread });
       __deferredPromises.push(
         generateTitleMock(thread.uuid).then((title) => {
@@ -381,4 +372,5 @@ export const chatProcedure = chatProcedures.chat
     waitUntil(streamSaver());
 
     return streamToEventIterator(httpStream);
-  });
+  }
+);
