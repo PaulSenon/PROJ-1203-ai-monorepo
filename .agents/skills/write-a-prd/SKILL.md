@@ -1,7 +1,11 @@
 ---
-
-## name: write-a-prd
+name: write-a-prd
 description: Use this skill when writing a PRD for a feature.
+metadata:
+  author: matt pocock
+  version: "1.0.0"
+  argument-hint: <file-or-pattern>
+---
 
 This skill will be invoked when the user wants to create a PRD. You should go through the steps below. You may skip steps if you don't consider them necessary.
 
@@ -32,7 +36,7 @@ The solution to the problem, from the user's perspective.
 
 A LONG, numbered list of user stories. Each user story should be in the format of:
 
-1. As an , I want a , so that 
+1. As an , I want a , so that
 
 1. As a mobile bank customer, I want to see balance on my accounts, so that I can make better informed decisions about my spending
 
@@ -67,4 +71,3 @@ A description of the things that are out of scope for this PRD.
 ## Further Notes
 
 Any further notes about the feature.
-

@@ -4,19 +4,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./server": "./src/server.ts",
-    "./web": "./src/web.ts",
-    "./api": "./src/api.ts"
+    "./app-env": "./src/app-env.ts"
   },
   "dependencies": {
-    "dotenv": "catalog:",
-    "zod": "catalog:",
     "@t3-oss/env-core": "catalog:env"
   },
   "devDependencies": {
     "typescript": "catalog:",
     "@types/node": "catalog:",
-    "@ai-monorepo/config": "workspace:*",
-    "@ai-monorepo/infra": "workspace:*"
+    "@ai-monorepo/config": "workspace:*"
   }
 }

@@ -1,19 +1,16 @@
 {
-	"extends": "@ai-monorepo/config/tsconfig.base.json",
-	"compilerOptions": {
-		"composite": true,
-		"outDir": "dist",
-		"baseUrl": ".",
-		"paths": {
-			"~/*": ["./src/*"],
-			"@ai-monorepo/api/*": ["../../packages/api/src/*"],
-			"@ai-monorepo/env/*": ["../../packages/env/src/*"]
-		},
-		"jsx": "react-jsx",
-		"jsxImportSource": "hono/jsx"
-	},
-	"references": [
-		{ "path": "../../packages/api" },
-		{ "path": "../../packages/env" }
-	]
+  "extends": "@ai-monorepo/config/tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"],
+      "@ai-monorepo/api/*": ["../../packages/api/src/*"]
+    },
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "types": ["@cloudflare/workers-types"]
+  },
+  "references": [{ "path": "../../packages/api" }]
 }

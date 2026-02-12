@@ -16,3 +16,6 @@
 [submodule ".llms/git-references/t3-env"]
 	path = .llms/git-references/t3-env
 	url = https://github.com/t3-oss/t3-env.git
+[submodule ".llms/git-references/opencode"]
+	path = .llms/git-references/opencode
+	url = https://github.com/anomalyco/opencode.git

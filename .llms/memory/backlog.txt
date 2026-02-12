@@ -1,4 +1,23 @@
 ----
+[id] env-contract-v2-custom-builder
+[status] pending
+[captured_at] 2026-02-11
+[context] During env refactor, we identified limits in current `@t3-oss/env-core` wrapper for future policy needs (secret/public enforcement, build scope, richer contracts).
+[why_deferred] Current priority is finishing boundary-safe env refactor with minimal blast radius; custom env framework would expand scope significantly.
+[rough_spec]
+- Build custom `createEnv` replacement with explicit sections: `public`, `secret`, `server`, `shared`, `build`.
+- Enforce prefix policy for public keys and mandatory secret value policy at type level.
+- Preserve input vs output inference API (`InferInputContract`, `InferOutputContract`) and runtime parser ergonomics.
+- Provide infra-friendly binding contract projection with optional secret allowance mapping.
+[decisions]
+- Current implementation keeps `createContractEnv` wrapper around t3-env.
+- Secret/public enforcement remains infra-side only for now.
+[open_questions]
+- Migration path from current wrapper to custom API without breaking app env modules?
+- Should build-time contract be first-class in API, or a separate factory?
+- How to model resource bindings (R2/DO/Queue/service) alongside scalar envs elegantly?
+[next_trigger] Revisit after current env refactor is merged and stable across web/server/infra.
+----
 [id] ai-elements-full-registry-refresh
 [status] parked
 [captured_at] 2026-02-10

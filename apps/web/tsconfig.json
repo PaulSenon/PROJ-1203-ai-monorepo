@@ -2,7 +2,7 @@
   "extends": "@ai-monorepo/config/tsconfig.base.json",
   "compilerOptions": {
     "esModuleInterop": true,
-    "types": ["vite/client", "@cloudflare/workers-types"],
+    "types": ["vite/client"],
     "lib": ["ESNext", "DOM"],
     "rootDirs": ["."],
     "baseUrl": ".",
