@@ -1,10 +1,10 @@
 import type { ChatRouterContract } from "@ai-monorepo/api/contracts/chat.contract";
 import type { ExampleContract } from "@ai-monorepo/api/contracts/exampleContract";
-import { env } from "@ai-monorepo/env/web";
 import { createORPCClient, DynamicLink, ORPCError } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { ContractRouterClient } from "@orpc/contract";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { env } from "@/env";
 import { asyncSession } from "@/hooks/use-auth";
 
 /**

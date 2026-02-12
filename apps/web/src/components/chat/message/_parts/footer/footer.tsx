@@ -1,10 +1,6 @@
-import { type ComponentProps, memo, useCallback, useState } from "react";
+import { type ComponentProps, memo } from "react";
 import { cn } from "@/lib/utils";
-import {
-  CopyAction,
-  RetryAction,
-  UserFooterInlineEditor,
-} from "./_parts/footer-actions";
+import { CopyAction, RetryAction } from "./_parts/footer-actions";
 import { CreatedAtInfo, ModelInfo, SpeedInfo } from "./_parts/footer-infos";
 import type { MessageFooterActionHandler } from "./footer.types";
 
@@ -53,41 +49,41 @@ export const MessageFooterUser = memo(function _MessageFooterUser({
   onAction,
   ...props
 }: MessageFooterUserProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editSeed, setEditSeed] = useState("");
+  // const [isEditing, setIsEditing] = useState(false);
+  // const [editSeed, setEditSeed] = useState("");
 
-  const handleStartEditing = useCallback(() => {
-    setEditSeed(readEditInitialText());
-    setIsEditing(true);
-  }, [readEditInitialText]);
+  // const handleStartEditing = useCallback(() => {
+  //   setEditSeed(readEditInitialText());
+  //   setIsEditing(true);
+  // }, [readEditInitialText]);
 
-  const handleCancelEditing = useCallback(() => {
-    setIsEditing(false);
-  }, []);
+  // const handleCancelEditing = useCallback(() => {
+  //   setIsEditing(false);
+  // }, []);
 
-  const handleSaveEdit = useCallback(
-    (text: string) => {
-      onAction({ type: "edit-retry", text });
-      setIsEditing(false);
-    },
-    [onAction]
-  );
+  // const handleSaveEdit = useCallback(
+  //   (text: string) => {
+  //     onAction({ type: "edit-retry", text });
+  //     setIsEditing(false);
+  //   },
+  //   [onAction]
+  // );
 
   return (
     <div className={cn(ROOT_CLASSNAME, className)} {...props}>
-      {isEditing ? (
+      {/* {isEditing ? (
         <UserFooterInlineEditor
           className="w-full max-w-sm"
           initialText={editSeed}
           onCancel={handleCancelEditing}
           onSave={handleSaveEdit}
         />
-      ) : (
-        <div className="flex items-center gap-1">
-          <CopyAction onAction={onAction} />
-          {/* <EditAction onClick={handleStartEditing} /> */}
-        </div>
-      )}
+      ) : ( */}
+      <div className="flex items-center gap-1">
+        <CopyAction onAction={onAction} />
+        {/* <EditAction onClick={handleStartEditing} /> */}
+      </div>
+      {/* )} */}
       <div className="flex items-center gap-2 text-muted-foreground/80">
         <CreatedAtInfo createdAt={createdAt} />
       </div>

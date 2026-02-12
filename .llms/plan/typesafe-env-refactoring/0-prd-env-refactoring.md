@@ -38,7 +38,7 @@ This proves architecture inversion:
 4. Keep compile-time infra<->app contract via `bindings satisfies AppExportedContract`.
 5. Enforce no reverse dependency: apps/packages never import infra.
 6. Provide ergonomic API: `createContractEnv` + `InferEnvInput` without runtime phantom values.
-7. Cloudflare env typing stays app-owned (`env.cloudflare.d.ts` augmentation), not infra-owned.
+7. Cloudflare env typing stays app-owned from `env.ts` exports, not infra-owned.
 
 ---
 
@@ -65,8 +65,8 @@ This proves architecture inversion:
 ### 4.2 Ownership Model
 
 - Runtime contract ownership:
-  - `apps/web`: web public/browser env contract
-  - `apps/server`: server + Cloudflare runtime env contract
+- `apps/web`: `env.ts` is sole source for web public/browser env contract
+- `apps/server`: `env.ts` is sole source for server + Cloudflare runtime env contract
   - `packages/api` (if needed): API runtime contract (or server-exported subset)
 - Helper ownership:
   - `packages/env`: generic wrappers/types only (`createContractEnv`, infer helpers)
@@ -76,8 +76,8 @@ This proves architecture inversion:
 ### 4.3 Core API
 
 - `createContractEnv(definition)` returns strongly typed runtime parser/validator object.
-- `InferEnvInput<typeof contract>` extracts raw input env map type.
-- `InferEnv<typeof contract>` extracts parsed runtime env type.
+- `InferEnvInput<typeof env>` extracts raw input env map type from returned env.
+- `InferEnv<typeof env>` extracts parsed runtime env type from returned env.
 
 No required phantom runtime objects for type extraction.
 
@@ -121,8 +121,10 @@ Constraints:
 
 ### 6.2 App-owned contracts
 
-- `apps/web`: define web contract with browser-safe keys only.
-- `apps/server`: define server/worker contract (vars + bindings references).
+- No standalone `*.contract.ts` files.
+- No duplicated schema constants outside the `createContractEnv(...)` call.
+- `apps/web/src/env.ts`: define contract inline in `createContractEnv(...)` with browser-safe keys only.
+- `apps/server/src/env.ts`: define contract inline in `createContractEnv(...)` (vars + optional resource binding refs).
 - `packages/api`: do not read global process/env directly in core logic; accept minimal injected parsed subset.
 
 ### 6.3 Infra validator
@@ -138,7 +140,8 @@ Important: infra consumes app-exported types/contracts; reverse import is forbid
 
 ### 6.4 Cloudflare typing ownership
 
-- Put/keep `Env` augmentation in app, e.g. `apps/server/src/env.cloudflare.d.ts`.
+- No dedicated `env.cloudflare.d.ts` file in this refactor.
+- Export `ServerWorkerEnv` type from `apps/server/src/env.ts` and use it explicitly at runtime boundaries (handler signatures, context wiring, adapter entrypoints).
 - Infra must not declare authoritative runtime `Env` interface for app.
 - App contract stays single source for runtime typing.
 
@@ -211,8 +214,8 @@ Deliverable:
 
 ### Phase 2 - Move runtime contracts to app ownership
 
-1. Create/adjust contracts in `apps/web` and `apps/server`.
-2. Add/confirm `env.cloudflare.d.ts` in app for Cloudflare binding typing.
+1. Create/adjust `env.ts` in `apps/web` and `apps/server` (single source, inline contract).
+2. Export `ServerWorkerEnv` from `apps/server/src/env.ts` and wire explicit type usage at entry boundaries.
 3. Update app runtime parse call sites to use new contracts.
 
 Deliverable:
@@ -289,7 +292,7 @@ Rollback:
 - [ ] AC5 - Infra/app contract mismatch fails at compile-time via `satisfies`.
 - [ ] AC6 - App code has zero imports from infra package.
 - [ ] AC7 - `InferEnvInput` exposes raw input keys/types without phantom runtime value.
-- [ ] AC8 - Cloudflare binding typing resolves from app-owned augmentation only.
+- [ ] AC8 - Cloudflare binding typing resolves from app-owned `env.ts` exports only (no dedicated d.ts file).
 - [ ] AC9 - API package works with injected parsed subset; no direct ambient env dependency required.
 
 ---
@@ -297,6 +300,7 @@ Rollback:
 ## 12) Practical Notes for Implementers
 
 - Keep contracts minimal per runtime; avoid one giant shared contract.
+- Keep `createContractEnv(...)` call as the only schema declaration site in each runtime env file.
 - Prefer type-only imports where runtime import unnecessary.
 - Keep env key naming stable; avoid silent renames mid-migration.
 - Add small focused type tests around `InferEnvInput`/`InferEnv` behavior.

@@ -23,6 +23,8 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
 
-    "noImplicitThis": true
+    "noImplicitThis": true,
+
+    "types": ["@cloudflare/workers-types"]
   }
 }
