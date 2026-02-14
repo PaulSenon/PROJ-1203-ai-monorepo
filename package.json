@@ -25,11 +25,12 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@ai-monorepo/config": "workspace:*",
     "@biomejs/biome": "2.3.0",
     "@cloudflare/workers-types": "^4.20250822.0",
-    "@ai-monorepo/config": "workspace:*",
     "@types/node": "^22.13.11",
     "alchemy": "catalog:",
+    "opencode-ai": "^1.2.1",
     "tsdown": "catalog:",
     "turbo": "^2.5.4",
     "ultracite": "6.0.4"
