@@ -95,3 +95,9 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - hook uses `useLayoutEffect` to scroll only after optimistic message is committed at tail (or tail-1)
 - no `messages` array dep, only tail primitives: `tailMessageId`, `beforeTailMessageId`
 - intent-based: scrolls once per submit intent, one-shot per id via ref
+
+2026-02-14: stream-resume cross-window edge case root cause identified + fixed
+- symptom: previous stable assistant message could flip to `convex-stream` (blue debug) and temporarily lose text when another window starts a new stream
+- root cause: stale local resumed-stream state leak in `use-messages` when `resumeStreamEnabled` toggled skip->active without remount (old chunks/streamedMessage reused before first new delta)
+- confirmed not merge policy bug: merge remains layer-order + message-id dedup/replace
+- fix in `apps/web/src/hooks/use-messages.tsx`: flush stream chunks/cursor on skip, skip-aware throttler gate, clear streamed message on skip/streamId change, bind async reconstruction commit to same streamId

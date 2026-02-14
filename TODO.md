@@ -74,3 +74,6 @@ Problems:
 ```
 
 - [ ] update all deps to latest `pnpm -r update --latest` but will broke things with alchemy update and env.ts import. So first make sure all typecheck are passing. also could be nice to scaffold another better-t-stack project with updated alchemy just to see how it shapes this up in a monorepo.
+
+- [x] little edge case experienced on the new stream resume. Now a stream is no longer bound to a message, and when we submit message in a window and have another one open, the new submit will make the last previously stable assistant response to appear in blue (from resumed stream) and sometimes have text disappearing. I though this would be handled by use-messages hook that is supposed to merge the resumed message on top of existing by id, not overriding the last one. But perhaps we did this instead to simplify. But there here are a concrete edgecase if that the case. Because we should always to the match on message id even if we only receive one from convex stream query. And perhaps add it last only if no match, and replace if match . But never replace last assistant message without id check.
+      => stream-resume regression root cause identified: stale resumed-stream local state leaked across skip<->active toggle in same mount (not message merge-by-id logic) FIXED

@@ -158,6 +158,13 @@ function useStreamingUiMessageChunks(threadUuid: string | "skip") {
     result === undefined && uiMessageChunks.length === 0 && cursor === 0;
 
   useEffect(() => {
+    if (!isSkip) return;
+    streamIdRef.current = null;
+    setUiMessageChunks([]);
+    setCursor(0);
+  }, [isSkip]);
+
+  useEffect(() => {
     if (result === undefined) return;
     if (result === null) {
       streamIdRef.current = null;
@@ -222,7 +229,7 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
   const stream = useStreamingUiMessageChunks(threadUuid);
 
   const throttledMessageChunks = useFpsThrottledValue(
-    stream.isPending ? "skip" : stream.messageChunks,
+    isSkip ? "skip" : stream.messageChunks,
     {
       maxFps: 5,
     }
@@ -233,8 +240,31 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
   >(undefined);
 
   const seq = useRef(0);
+
   useEffect(() => {
-    if (throttledMessageChunks === undefined) {
+    seq.current += 1;
+    setStreamedMessage(undefined);
+  }, [isSkip, stream.streamId]);
+
+  useEffect(() => {
+    if (isSkip) {
+      seq.current += 1;
+      setStreamedMessage(undefined);
+      return;
+    }
+
+    if (
+      throttledMessageChunks === undefined ||
+      throttledMessageChunks.length === 0
+    ) {
+      seq.current += 1;
+      setStreamedMessage(undefined);
+      return;
+    }
+
+    const streamIdAtBuild = stream.streamId;
+    if (streamIdAtBuild === null) {
+      seq.current += 1;
       setStreamedMessage(undefined);
       return;
     }
@@ -244,21 +274,27 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
       const msg = await createUiMessageFromChunks<MyUIMessage>(
         throttledMessageChunks
       );
-      if (id === seq.current) setStreamedMessage(msg);
+      if (id !== seq.current) return;
+      if (stream.streamId !== streamIdAtBuild) return;
+      setStreamedMessage(msg);
     })();
-  }, [throttledMessageChunks]);
+  }, [throttledMessageChunks, isSkip, stream.streamId]);
 
   return useMemo(
     () => ({
       messages:
-        stream.isPending || streamedMessage === undefined || isSkip
+        stream.isPending ||
+        streamedMessage === undefined ||
+        isSkip ||
+        stream.streamId === null
           ? []
           : [streamedMessage],
       isPending: isSkip
         ? false
-        : stream.isPending || streamedMessage === undefined,
+        : stream.streamId !== null &&
+          (stream.isPending || streamedMessage === undefined),
     }),
-    [stream.isPending, streamedMessage, isSkip]
+    [stream.isPending, streamedMessage, isSkip, stream.streamId]
   );
 }
 
