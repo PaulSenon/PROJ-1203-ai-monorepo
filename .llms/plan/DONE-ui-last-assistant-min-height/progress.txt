@@ -39,3 +39,9 @@
 - done: removed old manual reserve toggle, added `isThreadSettled` control, wired into layout
 - done: preview key now `${threadUuid}:${layoutRemountKey}` so thread switch resets local latch in demo
 - files: `apps/web/src/routes/components/_components/conversation.tsx`
+
+2026-02-11 - ui-last-assistant-min-height-v2-erratum - readability hook extraction
+- done: extracted local hook `useShouldReserveLastAssistantSpace` in layout file; behavior unchanged
+- decisions: keep hook file-local (L3 UI concern), avoid shared-hook feature creep
+- files: `apps/web/src/components/chat/conversation/conversation-layout.tsx`
+- blockers/notes: `pnpm -F web check-types` passes

@@ -21,17 +21,9 @@ export function ChatConversationLayout({
 }: ChatConversationLayoutProps) {
   const { bottomRef } = useScrollToBottomState();
   const initialScroll = !isPending && messages.length > 0;
-  const shouldSeedReserveLatch = !isThreadSettled;
-
-  const [hasReserveLatchInThreadSession, setHasReserveLatchInThreadSession] =
-    useState<boolean>(shouldSeedReserveLatch);
-
-  if (!hasReserveLatchInThreadSession && shouldSeedReserveLatch) {
-    setHasReserveLatchInThreadSession(true);
-  }
-
-  const shouldReserveLastAssistantSpace =
-    shouldSeedReserveLatch || hasReserveLatchInThreadSession;
+  const shouldReserveLastAssistantSpace = useShouldReserveLastAssistantSpace({
+    isThreadSettled,
+  });
 
   return (
     <Conversation.Root className="relative mx-auto w-full max-w-2xl flex-1 p-6">
@@ -46,4 +38,31 @@ export function ChatConversationLayout({
       {initialScroll ? <InitialScroll key={threadUuid} /> : null}
     </Conversation.Root>
   );
+}
+
+/**
+ * Business UI rule to latch the state when we should set a "space" bellow last assistant message or not.
+ *
+ * Expected UX: when a thread is not settled, the last assistant message should have a style toggled to
+ * reserve visual space bellow. So we can scroll bottom on submit and have already the window scrolled with
+ * plenty of room for the assistant message streaming in before user needs to scroll.
+ *
+ * Important: Stable layout. We must avoid all layout shift by latching this value one way and only resetting it when
+ * thread is reloaded.
+ */
+function useShouldReserveLastAssistantSpace({
+  isThreadSettled,
+}: {
+  isThreadSettled: boolean;
+}) {
+  const shouldSeedReserveLatch = !isThreadSettled;
+
+  const [hasReserveLatchInThreadSession, setHasReserveLatchInThreadSession] =
+    useState<boolean>(shouldSeedReserveLatch);
+
+  if (!hasReserveLatchInThreadSession && shouldSeedReserveLatch) {
+    setHasReserveLatchInThreadSession(true);
+  }
+
+  return shouldSeedReserveLatch || hasReserveLatchInThreadSession;
 }
