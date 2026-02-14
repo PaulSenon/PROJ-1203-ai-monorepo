@@ -235,66 +235,61 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
     }
   );
 
-  const [streamedMessage, setStreamedMessage] = useState<
-    MyUIMessage | undefined
-  >(undefined);
+  type StreamedMessageState = {
+    streamId: Id<"threadStreams">;
+    message: MyUIMessage;
+  };
 
-  const seq = useRef(0);
+  const [streamed, setStreamed] = useState<StreamedMessageState | null>(null);
+  const canBuildMessage =
+    !isSkip &&
+    stream.streamId !== null &&
+    throttledMessageChunks !== undefined &&
+    throttledMessageChunks.length > 0;
 
   useEffect(() => {
-    seq.current += 1;
-    setStreamedMessage(undefined);
-  }, [isSkip, stream.streamId]);
-
-  useEffect(() => {
-    if (isSkip) {
-      seq.current += 1;
-      setStreamedMessage(undefined);
+    if (!canBuildMessage) {
+      setStreamed(null);
       return;
     }
 
-    if (
-      throttledMessageChunks === undefined ||
-      throttledMessageChunks.length === 0
-    ) {
-      seq.current += 1;
-      setStreamedMessage(undefined);
+    const streamIdAtStart = stream.streamId;
+    const chunks = throttledMessageChunks;
+    if (!streamIdAtStart || chunks === undefined) {
+      setStreamed(null);
       return;
     }
 
-    const streamIdAtBuild = stream.streamId;
-    if (streamIdAtBuild === null) {
-      seq.current += 1;
-      setStreamedMessage(undefined);
-      return;
-    }
+    let cancelled = false;
 
-    const id = ++seq.current;
     (async () => {
-      const msg = await createUiMessageFromChunks<MyUIMessage>(
-        throttledMessageChunks
-      );
-      if (id !== seq.current) return;
-      if (stream.streamId !== streamIdAtBuild) return;
-      setStreamedMessage(msg);
+      const message = await createUiMessageFromChunks<MyUIMessage>(chunks);
+      if (!message) return;
+      if (cancelled) return;
+      if (stream.streamId !== streamIdAtStart) return;
+      setStreamed({ streamId: streamIdAtStart, message });
     })();
-  }, [throttledMessageChunks, isSkip, stream.streamId]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canBuildMessage, stream.streamId, throttledMessageChunks]);
+
+  const activeStreamedMessage =
+    streamed?.streamId === stream.streamId ? streamed.message : undefined;
 
   return useMemo(
     () => ({
       messages:
-        stream.isPending ||
-        streamedMessage === undefined ||
-        isSkip ||
-        stream.streamId === null
+        stream.isPending || activeStreamedMessage === undefined || isSkip
           ? []
-          : [streamedMessage],
+          : [activeStreamedMessage],
       isPending: isSkip
         ? false
         : stream.streamId !== null &&
-          (stream.isPending || streamedMessage === undefined),
+          (stream.isPending || activeStreamedMessage === undefined),
     }),
-    [stream.isPending, streamedMessage, isSkip, stream.streamId]
+    [stream.isPending, activeStreamedMessage, isSkip, stream.streamId]
   );
 }
 

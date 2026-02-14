@@ -96,8 +96,12 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - no `messages` array dep, only tail primitives: `tailMessageId`, `beforeTailMessageId`
 - intent-based: scrolls once per submit intent, one-shot per id via ref
 
-2026-02-14: stream-resume cross-window edge case root cause identified + fixed
+2026-02-14: stream-resume cross-window edge case fixed in `apps/web/src/hooks/use-messages.tsx`
 - symptom: previous stable assistant message could flip to `convex-stream` (blue debug) and temporarily lose text when another window starts a new stream
-- root cause: stale local resumed-stream state leak in `use-messages` when `resumeStreamEnabled` toggled skip->active without remount (old chunks/streamedMessage reused before first new delta)
-- confirmed not merge policy bug: merge remains layer-order + message-id dedup/replace
-- fix in `apps/web/src/hooks/use-messages.tsx`: flush stream chunks/cursor on skip, skip-aware throttler gate, clear streamed message on skip/streamId change, bind async reconstruction commit to same streamId
+- root cause: stale local resumed-stream state leak when `resumeStreamEnabled` toggles skip->active without remount
+- fix approach: minimal refactor replacing `seq` race logic with stream-bound tagged state
+  - `StreamedMessageState: { streamId, message } | null` instead of raw message + seq counter
+  - `canBuildMessage` gate consolidates all skip/empty checks
+  - async reconstruction uses cancel flag + streamId equality validation before commit
+  - render guard `activeStreamedMessage` only shows message matching current `stream.streamId`
+- merge policy unchanged: remains layer-order + message-id dedup/replace (no content checks)
