@@ -34,6 +34,7 @@ type ActiveThreadState = {
   isStreamingOptimistic: boolean;
   isWaitingForFirstToken: boolean;
   isThreadSettled: boolean;
+  pendingAutoScrollMessageId: string | undefined;
 };
 
 type SendMessageParams = {
@@ -74,6 +75,7 @@ type ActiveThreadStateType = Pick<
   | "isStreamingOptimistic"
   | "isWaitingForFirstToken"
   | "isThreadSettled"
+  | "pendingAutoScrollMessageId"
 >;
 const ActiveTheadStateContext = createContext<ActiveThreadStateType | null>(
   null
@@ -122,6 +124,7 @@ type ActiveThreadStatus =
 
 export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const inputActions = useChatInputActions();
+
   const chatNav = useChatNav();
   const isSkip = chatNav.isNew;
 
@@ -166,6 +169,10 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       clearOwnership();
     },
   });
+
+  const [pendingAutoScrollMessageId, setPendingAutoScrollMessageId] = useState<
+    string | undefined
+  >();
 
   // Requests data status (pending -> stale -> fresh)
   const isDataPending = isSkip
@@ -219,6 +226,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       try {
         console.log("TOTO123: APPLIED OPTIMISTIC PATCH", uiMessage);
         patchId = applyOptimisticPatch(uiMessage);
+        setPendingAutoScrollMessageId(uiMessage.id);
         console.log("TOTO123: SDK SET SDK MESSAGES []");
         sdkSetMessages([]);
         markOwned();
@@ -413,6 +421,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         isStreamingOptimistic,
         isWaitingForFirstToken,
         isThreadSettled,
+        pendingAutoScrollMessageId,
       }) satisfies ActiveThreadStateType,
     [
       chatNav.id,
@@ -424,6 +433,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       isStreamingOptimistic,
       isWaitingForFirstToken,
       isThreadSettled,
+      pendingAutoScrollMessageId,
     ]
   );
 

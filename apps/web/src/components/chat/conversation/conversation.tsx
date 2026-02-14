@@ -1,13 +1,19 @@
 import { useActiveThreadState } from "@/hooks/use-chat-active";
 import { useActiveThreadUIReady } from "./_hooks/use-active-thread-ui-ready";
 import { useConversationDisplayMessages } from "./_hooks/use-conversation-display-messages";
+import { useScrollToBottomOnSubmit } from "./_hooks/use-scroll-to-bottom-on-submit";
 import { ChatConversationLayout } from "./conversation-layout";
 
 export function ChatConversation() {
-  const { uuid, isThreadSettled, isDataPending } = useActiveThreadState();
+  const { uuid, isThreadSettled, isDataPending, pendingAutoScrollMessageId } =
+    useActiveThreadState();
   const messages = useConversationDisplayMessages();
 
   useActiveThreadUIReady(isDataPending);
+  useScrollToBottomOnSubmit({
+    pendingAutoScrollMessageId,
+    messages,
+  });
 
   return (
     <ChatConversationLayout

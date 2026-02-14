@@ -87,3 +87,11 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - middlewares refactored to use `context.config.clerk.*` and `context.config.convex.*` instead of direct env imports
 - added demo routes: `/rpc/demo/public/ping` and `/rpc/demo/private/ping` showcasing public/protected procedures
 - fixed route structure: chat procedure now available at `/rpc/chat` (was `/rpc/chat/chat`)
+
+2026-02-14: scroll-to-bottom on message submit implemented
+- removed `requestAnimationFrame` timing hack from `use-chat-active.tsx:229`
+- added `pendingAutoScrollMessageId` state signal in `use-chat-active.tsx:37`
+- created `useScrollToBottomOnSubmit` hook in `apps/web/src/components/chat/conversation/_hooks/use-scroll-to-bottom-on-submit.ts`
+- hook uses `useLayoutEffect` to scroll only after optimistic message is committed at tail (or tail-1)
+- no `messages` array dep, only tail primitives: `tailMessageId`, `beforeTailMessageId`
+- intent-based: scrolls once per submit intent, one-shot per id via ref
