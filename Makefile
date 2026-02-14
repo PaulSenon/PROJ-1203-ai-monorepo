@@ -2,6 +2,7 @@ SHELL := /bin/bash
 COMPOSE_PROJECT_NAME = ai-monorepo
 DOCKER_COMPOSE_FILE = ./docker/docker-compose.dev.yml
 COMPOSE = docker compose --file $(DOCKER_COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME)
+OPENCODE_ATTACH_URL ?= http://localhost:4096
 
 # Smart container execution - runs in existing container or starts new one
 define run_in_container_smart
@@ -49,11 +50,11 @@ clean-install: ## Clean everything (containers, volumes, dependencies)
 	$(MAKE) pnpm-install
 	$(MAKE) convex-dev-once
 
-opencode:
-	$(call run_in_container_smart,app,pnpm exec opencode)
-
-opencode-web:
+opencode-serve:
 	$(call run_in_container_smart,app,pnpm exec opencode web --port 4096 --hostname 0.0.0.0)
+
+opencode:
+	$(call run_in_container_smart,app,pnpm exec opencode attach $(OPENCODE_ATTACH_URL))
 
 opencode-upgrade:
 	$(call run_in_container_smart,app,pnpm up -D -w opencode-ai@latest)
