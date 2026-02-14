@@ -1,5 +1,6 @@
 import { createUiMessageFromChunks } from "@ai-monorepo/ai/libs/createUiMessageFromChunks";
 import type {
+  MessageDataSource,
   MyUIMessage,
   MyUIMessageChunk,
   MyUIMessageMetadata,
@@ -13,17 +14,6 @@ import { useCvxPaginatedQueryStable } from "./queries/convex/utils/use-convex-qu
 import { useChatContext } from "./use-messages-legacy";
 import { useUserCacheEntryOnce } from "./use-user-cache";
 import { useFpsThrottledValue } from "./utils/use-fps-throttled-state";
-
-type MessageDataSource =
-  | "cache"
-  | "convex-persisted"
-  | "optimistic"
-  | "convex-stream"
-  | "http-stream";
-
-export type MyUIMessageMetadataWithSource = MyUIMessageMetadata & {
-  dataSource?: MessageDataSource;
-};
 
 // NormalizedMessages must be oldest -> newest for merge perf.
 declare const normalizedMessagesBrand: unique symbol;
@@ -128,18 +118,19 @@ function mergeMessageLayers(
 
 function withDataSource(message: MyUIMessage, dataSource?: MessageDataSource) {
   if (!dataSource) return message;
-  const currentDataSource = (
-    message.metadata as MyUIMessageMetadataWithSource | undefined
-  )?.dataSource;
+  const currentDataSource = message.metadata?.debug?.dataSource;
   if (currentDataSource === dataSource) return message;
 
   return {
     ...message,
     metadata: {
-      ...(message.metadata as MyUIMessageMetadata),
-      dataSource,
-    },
-  } as MyUIMessage;
+      ...message.metadata,
+      debug: {
+        ...message.metadata?.debug,
+        dataSource,
+      } satisfies MyUIMessageMetadata["debug"],
+    } as MyUIMessageMetadata,
+  } satisfies MyUIMessage;
 }
 
 type UseMessagesParams = {

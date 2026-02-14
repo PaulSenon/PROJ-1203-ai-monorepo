@@ -62,6 +62,20 @@ export const MyUIMessageTokenUsage = z.object({
   cachedInputTokens: z.number().optional(),
 });
 
+// This is for UI debug purpose. To indicate where the data is coming from.
+export const MessageDataSource = z.enum([
+  "cache",
+  "convex-persisted",
+  "optimistic",
+  "convex-stream",
+  "http-stream",
+]);
+export type MessageDataSource = z.infer<typeof MessageDataSource>;
+
+export const MyUIMessageDebug = z.object({
+  dataSource: MessageDataSource.optional(),
+});
+
 const metadataSchema = z.object({
   modelId: z.string().optional(),
   updatedAt: z.number(),
@@ -71,6 +85,7 @@ const metadataSchema = z.object({
   error: MessageError.optional(),
   timing: MyUIMessageTimingStats.optional(),
   usage: MyUIMessageTokenUsage.optional(),
+  debug: MyUIMessageDebug.optional(),
 });
 
 export type MyUIMessageMetadata = z.infer<typeof metadataSchema>;

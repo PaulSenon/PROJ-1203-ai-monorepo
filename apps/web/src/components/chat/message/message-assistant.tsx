@@ -4,7 +4,6 @@ import type {
 } from "@ai-monorepo/ai/types/uiMessage";
 import { type ComponentProps, useMemo } from "react";
 import { Message } from "@/components/ui-custom/chat/message";
-import type { MyUIMessageMetadataWithSource } from "@/hooks/use-messages";
 import { cn } from "@/lib/utils";
 import { useMessageActions } from "./_hooks/use-message-actions";
 import { useMessageRawTextReader } from "./_hooks/use-message-raw-text-reader";
@@ -53,8 +52,7 @@ function shouldShowThinking(message: MyUIMessage) {
 }
 
 function useMessageDatasourceDebugger(metadata?: MyUIMessageMetadata) {
-  const dataSource = (metadata as MyUIMessageMetadataWithSource | undefined)
-    ?.dataSource;
+  const dataSource = metadata?.debug?.dataSource;
 
   const className = useMemo(() => {
     if (dataSource === "cache") return "border-l border-yellow-500 p-2";

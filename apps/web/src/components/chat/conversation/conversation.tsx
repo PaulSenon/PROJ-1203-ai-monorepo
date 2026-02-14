@@ -1,19 +1,17 @@
-import {
-  useActiveThreadMessages,
-  useActiveThreadState,
-} from "@/hooks/use-chat-active";
+import { useActiveThreadState } from "@/hooks/use-chat-active";
 import { useActiveThreadUIReady } from "./_hooks/use-active-thread-ui-ready";
+import { useConversationDisplayMessages } from "./_hooks/use-conversation-display-messages";
 import { ChatConversationLayout } from "./conversation-layout";
 
 export function ChatConversation() {
-  const { messages, isPending } = useActiveThreadMessages();
-  const { uuid, isThreadSettled } = useActiveThreadState();
+  const { uuid, isThreadSettled, isDataPending } = useActiveThreadState();
+  const messages = useConversationDisplayMessages();
 
-  useActiveThreadUIReady(isPending);
+  useActiveThreadUIReady(isDataPending);
 
   return (
     <ChatConversationLayout
-      isPending={isPending}
+      isPending={isDataPending}
       isThreadSettled={isThreadSettled}
       key={uuid}
       messages={messages}

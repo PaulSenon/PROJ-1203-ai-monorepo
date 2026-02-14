@@ -16,6 +16,9 @@ export function createOptimisticStepStartMessage(
       lifecycleState: "active",
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      debug: {
+        dataSource: "optimistic",
+      },
     },
   };
 }

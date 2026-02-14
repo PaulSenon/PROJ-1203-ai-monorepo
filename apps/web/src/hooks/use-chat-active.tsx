@@ -25,10 +25,10 @@ import { getLiveStatusKind, useStreamOwnership } from "./use-stream-ownership";
 
 type ActiveThreadState = {
   uuid: string;
-  status: ActiveThreadStatus | undefined;
+  streamStatus: ActiveThreadStatus | undefined;
   messages: MyUIMessage[];
-  isPending: boolean;
-  isStale: boolean;
+  isDataPending: boolean;
+  isDataStale: boolean;
   isStreaming: boolean;
   messagesQueue: MyUIMessage[];
   isStreamingOptimistic: boolean;
@@ -59,17 +59,17 @@ type ActiveThreadActions = {
 
 type ActiveThreadMessagesType = Pick<
   ActiveThreadState,
-  "messages" | "isPending" | "isStale"
+  "messages" | "isDataPending" | "isDataStale"
 >;
 const ActiveTheadMessagesContext =
   createContext<ActiveThreadMessagesType | null>(null);
 type ActiveThreadStateType = Pick<
   ActiveThreadState,
   | "messagesQueue"
-  | "status"
+  | "streamStatus"
   | "uuid"
-  | "isPending"
-  | "isStale"
+  | "isDataPending"
+  | "isDataStale"
   | "isStreaming"
   | "isStreamingOptimistic"
   | "isWaitingForFirstToken"
@@ -127,24 +127,26 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
 
   const {
     data: thread,
-    isPending: isThreadPending,
-    isStale: isThreadStale,
+    isPending: isThreadQueryPending,
+    isStale: isThreadQueryStale,
   } = useThread(isSkip ? "skip" : chatNav.id);
 
+  // TODO start: from here to "TODO end" should move this in a separate hook/function for readability
   const { isLocalOwned, markOwned, clearOwnership } = useStreamOwnership({
     threadUuid: isSkip ? "skip" : chatNav.id,
     liveStatus: thread?.liveStatus,
-    isThreadPending,
+    isThreadQueryPending,
   });
-
+  // NB: This is normal to use thread.liveStatus here and not streamStatus aggregate
   const liveStatusKind = getLiveStatusKind(thread?.liveStatus);
   const resumeStreamEnabled =
-    !(isSkip || isThreadPending || isLocalOwned) &&
+    !(isSkip || isThreadQueryPending || isLocalOwned) &&
     liveStatusKind === "ongoing";
+  // TODO end
 
   const {
     messages,
-    isPending: isMessagesPending,
+    isPending: isMessagesQueryPending,
     isStale: isMessagesStale,
     applyOptimisticPatch,
     revertOptimisticPatch,
@@ -153,43 +155,51 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     resumeStreamEnabled,
   });
 
-  const isPending = isSkip ? false : isThreadPending || isMessagesPending;
-  const isStale = isSkip ? false : isThreadStale || isMessagesStale;
-  const isStreaming = thread?.liveStatus === "streaming";
-  const isWaitingForFirstToken =
-    thread?.liveStatus === "pending" && messages.at(-1)?.role === "user";
-  const isStreamingOptimistic = isStreaming || isWaitingForFirstToken;
-  const status: ActiveThreadStatus | undefined = useMemo(() => {
-    if (chatNav.isNew) return "new";
-    if (isThreadPending) return "pending";
-    if (thread?.liveStatus === "streaming") return "streaming";
-    if (thread?.liveStatus === "completed") return "completed";
-    if (thread?.liveStatus === "error") return "error";
-    if (thread?.liveStatus === "cancelled") return "cancelled";
-  }, [chatNav.isNew, isThreadPending, thread?.liveStatus]);
-
-  const upsertThread = useCvxMutationAuthV3(
-    ...cvx.mutationV3.threads.upsert.options()
-  );
-
   const [messagesQueue, _setMessagesQueue] = useState<MyUIMessage[]>([]);
   const {
     sendMessage: sdkSendMessage,
     regenerate: sdkRegenerate,
     setMessages: sdkSetMessages,
+    status: sdkStatus,
   } = useChatContext({
     onError: () => {
       clearOwnership();
     },
   });
 
+  // Requests data status (pending -> stale -> fresh)
+  const isDataPending = isSkip
+    ? false
+    : isThreadQueryPending || isMessagesQueryPending;
+  const isDataStale = isSkip ? false : isThreadQueryStale || isMessagesStale;
+
+  // Streaming status (!== request data)
+  const streamStatus: ActiveThreadStatus | undefined = useMemo(() => {
+    if (chatNav.isNew) return "new";
+    if (isThreadQueryPending) return undefined;
+
+    if (thread?.liveStatus === "error") return "error";
+    if (thread?.liveStatus === "cancelled") return "cancelled";
+    if (thread?.liveStatus === "completed") return "completed";
+    if (sdkStatus === "streaming" || thread?.liveStatus === "streaming")
+      return "streaming";
+    if (sdkStatus === "submitted" || thread?.liveStatus === "pending")
+      return "pending";
+  }, [chatNav.isNew, isThreadQueryPending, thread?.liveStatus, sdkStatus]);
+  const streamStatusKing = getLiveStatusKind(streamStatus); // TODO: getLiveStatusKind was supposed to be used with liveStatus type not ActiveThreadStatus. Temp hack before we unify this "status" reducer we need everywhere.
+  const isStreaming = streamStatus === "streaming";
+  const isWaitingForFirstToken =
+    streamStatusKing === "ongoing" && messages.at(-1)?.role === "user";
+  const isStreamingOptimistic = isStreaming || isWaitingForFirstToken;
+
+  const upsertThread = useCvxMutationAuthV3(
+    ...cvx.mutationV3.threads.upsert.options()
+  );
+
   // TODO: make a single shared reducer in ai packages for this (we already have a similar implementation on api side)
   // TOTO NB: I think they miss-align on the "undefined" case though. Backend "undefined" handling change, might break things from what I vaguely remember. So if we ever need to change it, we gotta deeply analyze potential impacts.
-  const isThreadSettled =
-    thread?.liveStatus === "completed" ||
-    thread?.liveStatus === "error" ||
-    thread?.liveStatus === "cancelled" ||
-    thread?.liveStatus === undefined; // later remark linked to above todo, we should also handle undefined as settled to avoid having the last assistant min-height latching on pageload 100% of the time. Or we should also handle data loading state to only read when ready. To be defined.
+  const isThreadSettled = streamStatusKing === "settled";
+  // later remark linked to above todo, we should also handle undefined as settled to avoid having the last assistant min-height latching on pageload 100% of the time. Or we should also handle data loading state to only read when ready. To be defined.
 
   const __sendMessageInternal = useCallback(
     async (uiMessage: MyUIMessage) => {
@@ -395,10 +405,10 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     () =>
       ({
         uuid: chatNav.id,
-        status,
+        streamStatus,
         messagesQueue,
-        isPending,
-        isStale,
+        isDataPending,
+        isDataStale,
         isStreaming,
         isStreamingOptimistic,
         isWaitingForFirstToken,
@@ -406,10 +416,10 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       }) satisfies ActiveThreadStateType,
     [
       chatNav.id,
-      status,
+      streamStatus,
       messagesQueue,
-      isPending,
-      isStale,
+      isDataPending,
+      isDataStale,
       isStreaming,
       isStreamingOptimistic,
       isWaitingForFirstToken,
@@ -418,17 +428,21 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    console.log("DEBUG: use-chat-active state", state);
-  }, [state]);
+    if (!import.meta.env.DEV) return;
+    console.log("DEBUG: use-chat-active state", {
+      state,
+      messages: messages.slice(-4),
+    });
+  }, [state, messages]);
 
   const messagesState = useMemo(
     () =>
       ({
         messages,
-        isPending,
-        isStale,
+        isDataPending,
+        isDataStale,
       }) satisfies ActiveThreadMessagesType,
-    [messages, isPending, isStale]
+    [messages, isDataPending, isDataStale]
   );
 
   return (

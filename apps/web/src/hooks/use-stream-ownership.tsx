@@ -1,16 +1,20 @@
 import type { MyUIMessageMetadata } from "@ai-monorepo/ai/types/uiMessage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { WithAutocomplete } from "@/lib/utils";
 
-type LiveStatus = MyUIMessageMetadata["liveStatus"] | undefined;
+type LiveStatus = MyUIMessageMetadata["liveStatus"];
 type LiveStatusKind = "ongoing" | "settled";
 
 type StreamOwnershipOptions = {
   threadUuid: string | "skip";
-  liveStatus: LiveStatus;
-  isThreadPending: boolean;
+  liveStatus?: LiveStatus;
+  isThreadQueryPending: boolean;
 };
 
-export function getLiveStatusKind(liveStatus: LiveStatus): LiveStatusKind {
+// TODO regroup all logics (api-service / use-chat-active / here)
+export function getLiveStatusKind(
+  liveStatus?: WithAutocomplete<LiveStatus>
+): LiveStatusKind {
   if (liveStatus === "pending" || liveStatus === "streaming") {
     return "ongoing";
   }
@@ -20,7 +24,7 @@ export function getLiveStatusKind(liveStatus: LiveStatus): LiveStatusKind {
 export function useStreamOwnership({
   threadUuid,
   liveStatus,
-  isThreadPending,
+  isThreadQueryPending,
 }: StreamOwnershipOptions) {
   const [isLocalOwned, setIsLocalOwned] = useState(false);
   const prevThreadUuid = useRef<string | "skip">(null);
@@ -39,14 +43,14 @@ export function useStreamOwnership({
   }, [threadUuid]);
 
   useEffect(() => {
-    if (isThreadPending) return;
+    if (isThreadQueryPending) return;
     const nextKind = getLiveStatusKind(liveStatus);
     const prevKind = prevKindRef.current;
     if (prevKind === "ongoing" && nextKind === "settled") {
       setIsLocalOwned(false);
     }
     prevKindRef.current = nextKind;
-  }, [isThreadPending, liveStatus]);
+  }, [isThreadQueryPending, liveStatus]);
 
   const markOwned = useCallback(() => setIsLocalOwned(true), []);
   const clearOwnership = useCallback(() => setIsLocalOwned(false), []);

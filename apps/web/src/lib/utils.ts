@@ -29,3 +29,21 @@ export function useMergedRefs<T>(
 ) {
   return useMemo(() => mergeRefs(...refs), [refs]);
 }
+
+/**
+ * @example
+ * ```ts
+ * type Kind = 'a-kind' | 'b-kind';
+ *
+ * // will autocomplete and strictly allow literal values
+ * function strict(kind: Kind);
+ * strict('a-kind'); // OK
+ * strict('something else'); // KO
+ *
+ * // will autocomplete but allow any string too
+ * function loose(looseKind: WithAutocomplete<Kind>);
+ * loose('a-kind'); // OK (with auto complete)
+ * loose('something else'); // OK too
+ * ```
+ */
+export type WithAutocomplete<T extends string> = T | (string & {});
