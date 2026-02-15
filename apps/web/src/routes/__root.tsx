@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "../index.css";
 import "katex/dist/katex.min.css";
+import "streamdown/styles.css";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
 export interface RouterAppContext {
