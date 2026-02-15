@@ -421,6 +421,9 @@ importers:
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      katex:
+        specifier: ^0.16.28
+        version: 0.16.28
       lucide-react:
         specifier: ^0.473.0
         version: 0.473.0(react@19.2.1)
@@ -5792,10 +5795,6 @@ packages:
 
   jszip@3.10.1:
     resolution: {integrity: sha512-xXDvecyTpGLrqFrvkrUSoxxfJI5AH7U8zxxtVclpsUtMCq4JQ290LY8AW5c7Ggnr/Y/oK+bQMbqK2qmtk3pN4g==}
-
-  katex@0.16.25:
-    resolution: {integrity: sha512-woHRUZ/iF23GBP1dkDQMh1QBad9dmr8/PAwNA54VrSOVYgI12MAcE14TqnDdQOdzyEonGzMepYnqBMYdsoAr8Q==}
-    hasBin: true
 
   katex@0.16.28:
     resolution: {integrity: sha512-YHzO7721WbmAL6Ov1uzN/l5mY5WWWhJBSW+jq4tkfZfsxmo1hu6frS0EOswvjBUnWE6NtjEs48SFn5CQESRLZg==}
@@ -13403,10 +13402,6 @@ snapshots:
       readable-stream: 2.3.8
       setimmediate: 1.0.5
 
-  katex@0.16.25:
-    dependencies:
-      commander: 8.3.0
-
   katex@0.16.28:
     dependencies:
       commander: 8.3.0
@@ -13719,7 +13714,7 @@ snapshots:
       dagre-d3-es: 7.0.13
       dayjs: 1.11.18
       dompurify: 3.3.0
-      katex: 0.16.25
+      katex: 0.16.28
       khroma: 2.1.0
       lodash-es: 4.17.21
       marked: 16.4.1
