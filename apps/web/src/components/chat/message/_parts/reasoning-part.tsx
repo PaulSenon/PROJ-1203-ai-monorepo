@@ -40,6 +40,7 @@ export function ReasoningPart({
               "text-muted-foreground text-sm",
               MARKDOWN_OVERFLOW_GUARDS
             )}
+            isStreaming={isStreaming}
           >
             {deferredText}
           </SmoothMarkdown>
