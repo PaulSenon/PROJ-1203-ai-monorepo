@@ -54,7 +54,9 @@ export function SmoothMarkdown({
             "in_app"
           );
         },
-        renderModal: (props) => <LinkSafetyModal {...props} />,
+        renderModal: (props) => (
+          <LinkSafetyModal {...props} trustedDomains={trustedDomains} />
+        ),
       }}
       mode={isStreaming ? "streaming" : "static"}
       plugins={streamdownPlugins}

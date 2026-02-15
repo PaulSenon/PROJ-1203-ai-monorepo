@@ -9,21 +9,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { resolveLinkKind } from "./link-policy";
+import { DEFAULT_TRUSTED_DOMAINS, resolveLinkKind } from "./link-policy";
 
 export type LinkSafetyModalProps = {
   url: string;
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  trustedDomains?: string[];
 };
 
-function getLinkTrustLabel(url: string) {
+function getLinkTrustLabel(url: string, trustedDomains: string[]) {
   const origin =
     typeof window === "undefined"
       ? "https://example.invalid"
       : window.location.origin;
-  const kind = resolveLinkKind(url, origin);
+  const kind = resolveLinkKind(url, origin, trustedDomains);
 
   if (kind === "external_trusted") {
     return "trusted";
@@ -37,8 +38,12 @@ export function LinkSafetyModal({
   isOpen,
   onClose,
   onConfirm,
+  trustedDomains,
 }: LinkSafetyModalProps) {
-  const trustLabel = getLinkTrustLabel(url);
+  const trustLabel = getLinkTrustLabel(
+    url,
+    trustedDomains ?? DEFAULT_TRUSTED_DOMAINS
+  );
 
   return (
     <Dialog
