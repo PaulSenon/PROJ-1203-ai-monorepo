@@ -1,7 +1,18 @@
 "use client";
 
 import { useSmoothText } from "@convex-dev/agent/react";
+import { cjk } from "@streamdown/cjk";
+import { code } from "@streamdown/code";
+import { math } from "@streamdown/math";
+import { mermaid } from "@streamdown/mermaid";
 import { Streamdown } from "streamdown";
+
+const streamdownPlugins = {
+  code,
+  mermaid,
+  math,
+  cjk,
+};
 
 export type SmoothMarkdownLinkPolicy = {
   trustedDomains?: string[];
@@ -27,7 +38,12 @@ export function SmoothMarkdown({
   });
 
   return (
-    <Streamdown className={className} isAnimating={Boolean(isStreaming)}>
+    <Streamdown
+      className={className}
+      isAnimating={Boolean(isStreaming)}
+      mode={isStreaming ? "streaming" : "static"}
+      plugins={streamdownPlugins}
+    >
       {text}
     </Streamdown>
   );
