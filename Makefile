@@ -59,10 +59,10 @@ opencode:
 	$(call run_in_container_smart,app,pnpm exec opencode attach $(OPENCODE_ATTACH_URL))
 
 ralph-once: ## Run one Ralph iteration via opencode run --attach
-	$(call run_in_container_smart,app,bash -lc "OPENCODE_ATTACH_URL='$(OPENCODE_ATTACH_URL)' RALPH_ALLOW_LOCAL_FALLBACK='$(RALPH_ALLOW_LOCAL_FALLBACK)' ./.llms/ralph/once.sh")
+	bash -lc "OPENCODE_ATTACH_URL='$(OPENCODE_ATTACH_URL)' RALPH_ALLOW_LOCAL_FALLBACK='$(RALPH_ALLOW_LOCAL_FALLBACK)' ./.llms/ralph/once.sh"
 
 ralph-afk: ## Run Ralph AFK loop (RALPH_ITERATIONS=10)
-	$(call run_in_container_smart,app,bash -lc "OPENCODE_ATTACH_URL='$(OPENCODE_ATTACH_URL)' RALPH_ALLOW_LOCAL_FALLBACK='$(RALPH_ALLOW_LOCAL_FALLBACK)' ./.llms/ralph/afk.sh $(RALPH_ITERATIONS)")
+	bash -lc "OPENCODE_ATTACH_URL='$(OPENCODE_ATTACH_URL)' RALPH_ALLOW_LOCAL_FALLBACK='$(RALPH_ALLOW_LOCAL_FALLBACK)' ./.llms/ralph/afk.sh $(RALPH_ITERATIONS)"
 
 opencode-upgrade:
 	$(call run_in_container_smart,app,pnpm up -D -w opencode-ai@latest)
