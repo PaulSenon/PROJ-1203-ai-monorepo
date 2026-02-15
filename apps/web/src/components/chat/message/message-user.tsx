@@ -30,7 +30,7 @@ export function ChatMessageUser({
     >
       <Message.Root className="w-fit max-w-[90%] sm:max-w-[80%]" from="user">
         <Message.Content variant="user">
-          <MessageContentParts parts={message.parts} />
+          <MessageContentParts isStreaming={false} parts={message.parts} />
         </Message.Content>
         <Message.Footer>
           <MessageFooterUser
