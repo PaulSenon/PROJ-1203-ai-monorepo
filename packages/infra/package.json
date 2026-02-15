@@ -8,7 +8,9 @@
     "dev": "pnpm with-dev-envs alchemy dev",
     "deploy": "pnpm with-prod-envs alchemy deploy",
     "destroy": "pnpm with-prod-envs alchemy destroy",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
   },
   "dependencies": {
     "dotenv": "catalog:",

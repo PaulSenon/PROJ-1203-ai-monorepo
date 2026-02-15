@@ -9,6 +9,8 @@
     "start": "vite",
     "dev:bare": "vite",
     "check-types": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
     "generate-pwa-assets": "pwa-assets-generator"
   },
   "dependencies": {

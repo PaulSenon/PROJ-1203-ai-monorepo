@@ -2,9 +2,8 @@
 name: write-a-prd
 description: Use this skill when writing a PRD for a feature.
 metadata:
-  author: matt pocock
-  version: "1.0.0"
-  argument-hint: <file-or-pattern>
+  author: Matt Pocock
+  version: "1.1.0"
 ---
 
 This skill will be invoked when the user wants to create a PRD. You should go through the steps below. You may skip steps if you don't consider them necessary.
@@ -20,10 +19,11 @@ A deep module (as opposed to a shallow module) is one which encapsulates a lot o
 
 Check with the user that these modules match their expectations. Check with the user which modules they want tests written for.
 
-1. Once you have a complete understanding of the problem and solution, use the template below to write the PRD. The PRD should be submitted as a GitHub issue.
+7. Once you have a complete understanding of the problem and solution, use the template below to write the PRD. The PRD should be submitted as a GitHub issue.
 
-Reminder: the prd files are supposed to be self sufficient and allow anyone without any knowledge of the project or our previous conversations to still grasp the full scope of the prd without room to go offroad.
+Reminder: the prd files are supposed to be self sufficient and allow anyone without any knowledge of the project or our previous conversations to still grasp the full scope of the prd without room to go off-road.
 
+<prd-template>
 ## Problem Statement
 
 The problem that the user is facing, from the user's perspective.
@@ -36,11 +36,21 @@ The solution to the problem, from the user's perspective.
 
 A LONG, numbered list of user stories. Each user story should be in the format of:
 
-1. As an , I want a , so that
+1. As an <actor>, I want a <feature>, so that <benefit>
 
+<user-story-example>
 1. As a mobile bank customer, I want to see balance on my accounts, so that I can make better informed decisions about my spending
+</user-story-example>
 
 This list of user stories should be extremely extensive and cover all aspects of the feature.
+
+## 'Polishing' Requirements
+
+Once the user stories are complete, we will end up with a working, but not refined, feature or application. After the work is complete, we should enter a polishing phase.
+
+This should be a list of checks that we want to make at the end of the work to polish and refine the work done for maximum user enjoyment and experience.
+
+They should not meaningfully extend the work but instead ensure harmony of all created elements and ensure any errors are properly handled and make things delightful and beautiful.
 
 ## Implementation Decisions
 
@@ -71,3 +81,5 @@ A description of the things that are out of scope for this PRD.
 ## Further Notes
 
 Any further notes about the feature.
+
+</prd-template>

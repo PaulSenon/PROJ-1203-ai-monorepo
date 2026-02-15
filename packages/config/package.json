@@ -1,5 +1,9 @@
 {
   "name": "@ai-monorepo/config",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "scripts": {
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
+  }
 }
