@@ -38,7 +38,8 @@ export function ReasoningPart({
           <SmoothMarkdown
             className={cn(
               "text-muted-foreground text-sm",
-              MARKDOWN_OVERFLOW_GUARDS
+              MARKDOWN_OVERFLOW_GUARDS,
+              isStreaming && "bg-red-500/50"
             )}
             isStreaming={isStreaming}
           >

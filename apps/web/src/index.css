@@ -274,6 +274,11 @@ html body[data-scroll-locked][style] {
   }
 }
 
+[data-streamdown="code-block"] {
+  content-visibility: visible !important;
+  contain-intrinsic-size: none !important;
+}
+
 /* :root {
   --background: oklch(0.9551 0 0);
   --foreground: oklch(0.3211 0 0);
