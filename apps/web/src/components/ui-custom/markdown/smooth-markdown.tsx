@@ -11,7 +11,7 @@ import { LinkSafetyModal } from "./link-safety-modal";
 
 const streamdownPlugins = {
   code: createCodePlugin({
-    themes: ["github-dark", "github-light"],
+    themes: ["github-light", "github-dark"],
   }),
   mermaid,
   math,
@@ -25,6 +25,7 @@ export type SmoothMarkdownLinkPolicy = {
 export type SmoothMarkdownProps = {
   children: string;
   isStreaming?: boolean;
+  consolidate?: boolean;
   startStreaming?: boolean;
   className?: string;
   linkPolicy?: SmoothMarkdownLinkPolicy;
@@ -36,6 +37,7 @@ export function SmoothMarkdown({
   isStreaming,
   linkPolicy,
   startStreaming,
+  consolidate,
 }: SmoothMarkdownProps) {
   const [text] = useSmoothText(children, {
     startStreaming: startStreaming ?? false,
@@ -77,7 +79,7 @@ export function SmoothMarkdown({
           <LinkSafetyModal {...props} trustedDomains={trustedDomains} />
         ),
       }}
-      mode={isStreaming ? "streaming" : "static"}
+      mode={consolidate ? "static" : "streaming"}
       plugins={streamdownPlugins}
       remend={{
         linkMode: "text-only",

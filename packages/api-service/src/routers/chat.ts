@@ -224,7 +224,7 @@ export const chat = protectedProcedures.chat.handler(
     }
 
     // 6. Start streaming
-    const messages = [...messagesFromBackend];
+    const messages = [...messagesFromBackend.slice(0, -1)]; // IMPORTANT remove tail optimistic assistant message
     const modelMessages = await convertToModelMessages(messages);
     const result = streamText({
       model: registry.languageModel(modelId),

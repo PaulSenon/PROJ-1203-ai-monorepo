@@ -1,4 +1,5 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
+import { memo } from "react";
 import { SmoothMarkdown } from "@/components/ui-custom/markdown/smooth-markdown";
 import { cn } from "@/lib/utils";
 
@@ -6,12 +7,16 @@ type TextPart = Extract<MyUIMessage["parts"][number], { type: "text" }>;
 
 export type TextPartProps = {
   part: TextPart;
+  consolidate?: boolean;
 };
 
 const MARKDOWN_OVERFLOW_GUARDS =
   "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto";
 
-export function TextPart({ part }: TextPartProps) {
+export const TextPart = memo(function _TextPart({
+  part,
+  consolidate,
+}: TextPartProps) {
   const text = part.text ?? "";
   if (!text.trim()) return null;
 
@@ -19,10 +24,11 @@ export function TextPart({ part }: TextPartProps) {
 
   return (
     <SmoothMarkdown
-      className={cn(MARKDOWN_OVERFLOW_GUARDS, isStreaming && "bg-red-500/50")}
+      className={cn(MARKDOWN_OVERFLOW_GUARDS)}
+      consolidate={consolidate}
       isStreaming={isStreaming}
     >
       {text}
     </SmoothMarkdown>
   );
-}
+});
