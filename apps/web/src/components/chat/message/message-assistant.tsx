@@ -99,7 +99,6 @@ export function ChatMessageAssistant({
         <Message.Content className={cn(debugClass)} variant="assistant">
           {showThinking ? <Message.Thinking /> : null}
           <MessageContentParts
-            isStreaming={isStreaming}
             parts={message.parts}
             reasoningPreviewLines={reasoningPreviewLines}
           />
