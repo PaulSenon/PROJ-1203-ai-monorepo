@@ -6,14 +6,18 @@ type Delta<T extends UIMessageChunk> = {
   chunks: T[];
 };
 type DeltaSaverOptions = {
-  chunking?: RegExp;
+  maxBufferedChars: number;
+  maxBufferedMs: number;
   throttleMs: number;
   compress: boolean;
 };
 const DEFAULT_DELTA_SAVER_OPTIONS = {
-  // This chunks by sentences / clauses. Punctuation followed by whitespace.
-  chunking: /[\p{P}\s]/u,
-  throttleMs: 500,
+  // Hard cap on buffered text-like chunk size before flush.
+  maxBufferedChars: 2000,
+  // Hard cap on buffer time before flush.
+  maxBufferedMs: 900,
+  // Minimum delay between emitted deltas.
+  throttleMs: 120,
   compress: true,
 } satisfies DeltaSaverOptions;
 
@@ -34,6 +38,9 @@ type DeltaSaverArgs<T extends UIMessageChunk> = {
  */
 export class DeltaStreamChunker<T extends UIMessageChunk> {
   private nextChunks: T[] = [];
+  private pendingTextChars = 0;
+  private maxBufferedTimer: ReturnType<typeof setTimeout> | undefined;
+  private throttleTimer: ReturnType<typeof setTimeout> | undefined;
 
   private cursor = 0;
   private lastFlush = 0; // To force immediate first chunk flush on start
@@ -59,16 +66,31 @@ export class DeltaStreamChunker<T extends UIMessageChunk> {
     });
   }
 
-  private async addChunk(chunk: T): Promise<void> {
+  private addChunk(chunk: T): void {
     this.nextChunks.push(chunk);
-    if (!this.canFlush()) return;
-    await this.flush();
+
+    // Start max buffered timer when a new pending batch starts.
+    if (this.nextChunks.length === 1) {
+      this.armMaxBufferedTimer();
+    }
+
+    if (chunk.type === "text-delta" || chunk.type === "reasoning-delta") {
+      this.pendingTextChars += chunk.delta.length;
+
+      if (this.pendingTextChars >= this.config.maxBufferedChars) {
+        this.requestFlush();
+      }
+      return;
+    }
+
+    // Non text-like chunks should be emitted as soon as possible.
+    this.requestFlush();
   }
 
   async consumeStream(stream: AsyncIterableStream<T>) {
     try {
       for await (const chunk of stream) {
-        await this.addChunk(chunk);
+        this.addChunk(chunk);
       }
     } catch (error) {
       await this.fail(new Error("Error consuming stream", { cause: error }));
@@ -81,6 +103,7 @@ export class DeltaStreamChunker<T extends UIMessageChunk> {
     if (this.abortController.signal.aborted) return;
 
     this.isFinished = true; // prevent abort & fail
+    this.clearTimers();
     await this.flush();
     await this.handleFinish?.({ reason: "finish" });
   }
@@ -89,7 +112,10 @@ export class DeltaStreamChunker<T extends UIMessageChunk> {
     if (this.isFinished) return;
     if (this.abortController.signal.aborted) return;
 
-    this.abortController.abort(); // prevent finish & abort
+    this.isFinished = true; // prevent finish & abort
+    this.clearTimers();
+    await this.flush();
+    this.abortController.abort();
     await this.ongoingFlush;
     await this.handleError?.(error);
     await this.handleFinish?.({ reason: "error" });
@@ -97,11 +123,57 @@ export class DeltaStreamChunker<T extends UIMessageChunk> {
 
   async abort(): Promise<void> {
     if (this.isFinished) return;
-    if (this.abortController.signal.aborted) return;
 
-    this.abortController.abort(); // prevent finish & fail
+    this.isFinished = true; // prevent finish & fail
+    this.clearTimers();
+    await this.flush();
+    this.abortController.abort();
     await this.ongoingFlush;
     await this.handleFinish?.({ reason: "abort" });
+  }
+
+  private clearTimers() {
+    if (this.maxBufferedTimer) {
+      clearTimeout(this.maxBufferedTimer);
+      this.maxBufferedTimer = undefined;
+    }
+
+    if (this.throttleTimer) {
+      clearTimeout(this.throttleTimer);
+      this.throttleTimer = undefined;
+    }
+  }
+
+  private armMaxBufferedTimer() {
+    if (this.maxBufferedTimer) {
+      clearTimeout(this.maxBufferedTimer);
+      this.maxBufferedTimer = undefined;
+    }
+
+    this.maxBufferedTimer = setTimeout(() => {
+      this.maxBufferedTimer = undefined;
+      this.requestFlush();
+    }, this.config.maxBufferedMs);
+  }
+
+  private requestFlush() {
+    if (this.abortController.signal.aborted) return;
+    if (this.nextChunks.length === 0) return;
+
+    const timeSinceLastFlush = Date.now() - this.lastFlush;
+    const remainingThrottle = this.config.throttleMs - timeSinceLastFlush;
+
+    if (remainingThrottle > 0) {
+      if (this.throttleTimer) return;
+
+      this.throttleTimer = setTimeout(() => {
+        this.throttleTimer = undefined;
+        this.flush().catch(() => undefined);
+      }, remainingThrottle);
+      return;
+    }
+
+    this.flush().catch(() => undefined);
   }
 
   private async flush(): Promise<void> {
@@ -130,6 +202,11 @@ export class DeltaStreamChunker<T extends UIMessageChunk> {
       ? this.compressChunks(this.nextChunks)
       : this.nextChunks;
     this.nextChunks = [];
+    this.pendingTextChars = 0;
+    if (this.maxBufferedTimer) {
+      clearTimeout(this.maxBufferedTimer);
+      this.maxBufferedTimer = undefined;
+    }
     return { start, end, chunks };
   }
 
@@ -158,29 +235,6 @@ export class DeltaStreamChunker<T extends UIMessageChunk> {
 
     // if not changed, we remove all metadata chunks in delta
     return compressed.filter((chunk) => chunk.type !== "message-metadata");
-  }
-
-  private canFlush(): boolean {
-    if (this.abortController.signal.aborted) return false;
-
-    const hasNoPendingChunks = this.nextChunks.length === 0;
-    if (hasNoPendingChunks) return false;
-
-    const timeSinceLastFlush = Date.now() - this.lastFlush;
-    const isThrottled = timeSinceLastFlush < this.config.throttleMs;
-    if (isThrottled) return false;
-
-    const lastCompressedChunk = compressUIMessageChunks(this.nextChunks).at(-1);
-    const isTextDelta =
-      lastCompressedChunk?.type === "text-delta" ||
-      lastCompressedChunk?.type === "reasoning-delta";
-    if (!isTextDelta) return true; // always flush non-text-like chunks
-
-    if (!this.config.chunking) return true;
-    const isChunkMatching = this.config.chunking.test(
-      lastCompressedChunk.delta
-    );
-    return isChunkMatching; // flush if chunk matches chunking regex
   }
 }
 

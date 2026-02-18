@@ -14,6 +14,7 @@ import { StatusPart } from "./_parts/status/status";
 export type ChatMessageAssistantProps = ComponentProps<"div"> & {
   message: MyUIMessage;
   reasoningPreviewLines?: number;
+  consolidate?: boolean;
 };
 
 function shouldShowThinking(message: MyUIMessage) {
@@ -70,6 +71,7 @@ export function ChatMessageAssistant({
   message,
   reasoningPreviewLines,
   className,
+  consolidate,
   ...props
 }: ChatMessageAssistantProps) {
   const showThinking = shouldShowThinking(message);
@@ -99,6 +101,7 @@ export function ChatMessageAssistant({
         <Message.Content className={cn(debugClass)} variant="assistant">
           {showThinking ? <Message.Thinking /> : null}
           <MessageContentParts
+            consolidate={consolidate}
             parts={message.parts}
             reasoningPreviewLines={reasoningPreviewLines}
           />

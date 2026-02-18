@@ -5,6 +5,7 @@ import { TextPart } from "./text-part";
 export type MessageContentPartsProps = {
   parts: MyUIMessagePart[];
   reasoningPreviewLines?: number;
+  consolidate?: boolean;
 };
 
 function getPartKey(part: MyUIMessagePart, index: number) {
@@ -18,6 +19,7 @@ function getPartKey(part: MyUIMessagePart, index: number) {
 export function MessageContentParts({
   parts,
   reasoningPreviewLines,
+  consolidate,
 }: MessageContentPartsProps) {
   return (
     <>
@@ -25,12 +27,13 @@ export function MessageContentParts({
         const key = getPartKey(part, index);
 
         if (part.type === "text") {
-          return <TextPart key={key} part={part} />;
+          return <TextPart consolidate={consolidate} key={key} part={part} />;
         }
 
         if (part.type === "reasoning") {
           return (
             <ReasoningPart
+              consolidate={consolidate}
               key={key}
               part={part}
               previewLines={reasoningPreviewLines}

@@ -1,4 +1,24 @@
 ----
+[id] streamdown-code-worker-wasm-phase2
+[status] parked
+[captured_at] 2026-02-18
+[context] While scoping custom Streamdown worker highlighter for Vite CSR, we decided to ship JS-engine worker first and defer WASM engine rollout.
+[why_deferred] Current goal is lowest-risk main-thread offload with stable CSP posture. WASM adds policy/runtime/asset complexity and is not required for phase-1 objective.
+[rough_spec]
+- Use PRD `.llms/plan/wasm-worker-highlighter/0-prd-wasm-worker.md` as canonical design.
+- Keep phase 1 = JS engine in worker + scheduling/coalescing/stale guards + fallback.
+- Add optional phase 2 engine mode: Oniguruma WASM in worker behind explicit config flag.
+- Add CSP profile extension for WASM mode and browser/runtime validation matrix.
+[decisions]
+- App-local implementation only (no npm package work).
+- Keep Streamdown plugin contract unchanged.
+- WASM mode explicitly postponed.
+[open_questions]
+- Which exact CSP directives are required in target deploy environments for WASM mode?
+- Should WASM mode be disabled by default even after implementation lands?
+- What measurable win threshold (latency/fidelity) justifies enabling WASM mode?
+[next_trigger] Revisit after JS-worker phase is shipped and perf/security baselines are validated against production-like traffic.
+----
 [id] env-contract-v2-custom-builder
 [status] pending
 [captured_at] 2026-02-11
