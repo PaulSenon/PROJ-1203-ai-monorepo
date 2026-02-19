@@ -3,7 +3,7 @@
 import { useSmoothText } from "@convex-dev/agent/react";
 import { cjk } from "@streamdown/cjk";
 import { createCodePlugin } from "@streamdown/code";
-import { math } from "@streamdown/math";
+import { createMathPlugin } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import { Streamdown } from "streamdown";
 import { DEFAULT_TRUSTED_DOMAINS, resolveLinkKind } from "./link-policy";
@@ -14,7 +14,9 @@ const streamdownPlugins = {
     themes: ["github-light", "github-dark"],
   }),
   mermaid,
-  math,
+  math: createMathPlugin({
+    singleDollarTextMath: true,
+  }),
   cjk,
 };
 

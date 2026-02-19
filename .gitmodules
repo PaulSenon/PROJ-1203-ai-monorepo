@@ -25,3 +25,6 @@
 [submodule ".llms/git-references/orpc-monorepo-example"]
 	path = .llms/git-references/orpc-monorepo-example
 	url = https://github.com/middleapi/orpc-multiservice-monorepo-playground.git
+[submodule ".llms/git-references/legendlist"]
+	path = .llms/git-references/legendlist
+	url = https://github.com/LegendApp/legend-list.git
