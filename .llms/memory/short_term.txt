@@ -105,3 +105,12 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
   - async reconstruction uses cancel flag + streamId equality validation before commit
   - render guard `activeStreamedMessage` only shows message matching current `stream.streamId`
 - merge policy unchanged: remains layer-order + message-id dedup/replace (no content checks)
+
+2026-02-18: `.llms/ralph/prd.md` refreshed to include new SmoothMarkdown dual-flag contract
+- added explicit distinction: `isStreaming` (part state) vs `consolidate` (message/context state)
+- expanded demo scope: text-part `streaming|done` controls + message-level `consolidate` toggle + combined QA matrix
+
+2026-02-18: delta stream chunker simplified to threshold guards (no delimiter regex)
+- `packages/ai/src/libs/deltaStreamChunker.ts` now flushes by `maxBufferedChars` + `maxBufferedMs` with `throttleMs` ceiling
+- addChunk is non-blocking (no await flush) to avoid ingest delay; finish/abort/error now flush pending before final callbacks
+- defaults set for ~500-900ms target window in 50-1000 tok/s assumption with 1tok=4chars (`2000 chars`, `900ms`, `120ms throttle`)
