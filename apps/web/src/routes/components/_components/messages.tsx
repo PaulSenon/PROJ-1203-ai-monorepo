@@ -23,7 +23,7 @@ export const Route = createFileRoute("/components/_components/messages")({
 
 type DemoRole = "assistant" | "user";
 
-type ReasoningState = "streaming" | "done";
+type DemoPartState = "streaming" | "done";
 type ReasoningPreset =
   | "empty"
   | "streaming-underflow"
@@ -34,13 +34,14 @@ type DemoTextPart = {
   id: string;
   type: "text";
   text: string;
+  state: DemoPartState;
 };
 
 type DemoReasoningPart = {
   id: string;
   type: "reasoning";
   text: string;
-  state: ReasoningState;
+  state: DemoPartState;
 };
 
 type DemoPart = DemoTextPart | DemoReasoningPart;
@@ -104,15 +105,19 @@ const ERROR_KIND_OPTIONS: Array<{ kind: MessageErrorKind; label: string }> = [
 
 let partCounter = 0;
 
-const createTextPart = (text: string): DemoTextPart => ({
+const createTextPart = (
+  text: string,
+  state: DemoPartState = "done"
+): DemoTextPart => ({
   id: `part-${partCounter++}`,
   type: "text",
   text,
+  state,
 });
 
 const createReasoningPart = (
   text: string,
-  state: ReasoningState
+  state: DemoPartState
 ): DemoReasoningPart => ({
   id: `part-${partCounter++}`,
   type: "reasoning",
@@ -202,7 +207,7 @@ type PartEditorProps = {
   total: number;
   onChange: (id: string, text: string) => void;
   onAppendChunk: (id: string) => void;
-  onStateChange: (id: string, state: ReasoningState) => void;
+  onStateChange: (id: string, state: DemoPartState) => void;
   onMove: (from: number, to: number) => void;
   onRemove: (id: string) => void;
 };
@@ -217,8 +222,6 @@ function PartEditor({
   onMove,
   onRemove,
 }: PartEditorProps) {
-  const isReasoning = part.type === "reasoning";
-
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-background p-3">
       <div className="flex items-start justify-between gap-2">
@@ -262,33 +265,31 @@ function PartEditor({
           </Button>
         </div>
       </div>
-      {isReasoning ? (
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground text-xs uppercase tracking-wide">
-            State
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              aria-pressed={part.state === "streaming"}
-              onClick={() => onStateChange(part.id, "streaming")}
-              size="sm"
-              type="button"
-              variant={part.state === "streaming" ? "default" : "outline"}
-            >
-              Streaming
-            </Button>
-            <Button
-              aria-pressed={part.state === "done"}
-              onClick={() => onStateChange(part.id, "done")}
-              size="sm"
-              type="button"
-              variant={part.state === "done" ? "default" : "outline"}
-            >
-              Done
-            </Button>
-          </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+          State
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            aria-pressed={part.state === "streaming"}
+            onClick={() => onStateChange(part.id, "streaming")}
+            size="sm"
+            type="button"
+            variant={part.state === "streaming" ? "default" : "outline"}
+          >
+            Streaming
+          </Button>
+          <Button
+            aria-pressed={part.state === "done"}
+            onClick={() => onStateChange(part.id, "done")}
+            size="sm"
+            type="button"
+            variant={part.state === "done" ? "default" : "outline"}
+          >
+            Done
+          </Button>
         </div>
-      ) : null}
+      </div>
       <div className="flex justify-end">
         <Button
           aria-label={`Append chunk to part ${index + 1}`}
@@ -383,7 +384,7 @@ function RouteComponent() {
         ? []
         : parts.map((part) =>
             part.type === "text"
-              ? { type: "text", text: part.text }
+              ? { type: "text", text: part.text, state: part.state }
               : { type: "reasoning", text: part.text, state: part.state }
           ),
     };
@@ -418,11 +419,9 @@ function RouteComponent() {
     );
   };
 
-  const updateReasoningState = (id: string, state: ReasoningState) => {
+  const updatePartState = (id: string, state: DemoPartState) => {
     setParts((prev) =>
-      prev.map((part) =>
-        part.id === id && part.type === "reasoning" ? { ...part, state } : part
-      )
+      prev.map((part) => (part.id === id ? { ...part, state } : part))
     );
   };
 
@@ -469,6 +468,7 @@ function RouteComponent() {
 
         return {
           ...part,
+          state: "streaming",
           text: `${part.text}${chunk}`,
         };
       })
@@ -837,7 +837,7 @@ function RouteComponent() {
                   onChange={updatePart}
                   onMove={movePart}
                   onRemove={removePart}
-                  onStateChange={updateReasoningState}
+                  onStateChange={updatePartState}
                   part={part}
                   total={parts.length}
                 />
