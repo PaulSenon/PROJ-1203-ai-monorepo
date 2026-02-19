@@ -327,6 +327,7 @@ function RouteComponent() {
   const [errorSuggestedModelIdsInput, setErrorSuggestedModelIdsInput] =
     useState(DEFAULT_ERROR_SUGGESTED_MODEL_IDS);
   const [isThreadStreaming, setIsThreadStreaming] = useState(false);
+  const [consolidate, setConsolidate] = useState(false);
   const [isMobilePreview, setIsMobilePreview] = useState(false);
   const [reasoningPreviewLines, setReasoningPreviewLines] = useState(
     DEFAULT_PREVIEW_LINES
@@ -703,6 +704,16 @@ function RouteComponent() {
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input
+                  checked={consolidate}
+                  className="h-4 w-4 rounded border-border"
+                  name="message-consolidate"
+                  onChange={(event) => setConsolidate(event.target.checked)}
+                  type="checkbox"
+                />
+                Consolidate markdown
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
                   checked={isMobilePreview}
                   className="h-4 w-4 rounded border-border"
                   name="preview-mobile"
@@ -861,6 +872,7 @@ function RouteComponent() {
               )}
             >
               <ChatMessage
+                consolidate={consolidate}
                 message={message}
                 reasoningPreviewLines={reasoningPreviewLines}
               />
