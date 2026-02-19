@@ -286,6 +286,12 @@ html body[data-scroll-locked][style] {
   overscroll-behavior-x: contain;
 }
 
+[data-streamdown="code-block"] *,
+[data-streamdown="table-wrapper"] *,
+[data-streamdown="mermaid-block"] * {
+  overscroll-behavior-x: contain;
+}
+
 /* :root {
   --background: oklch(0.9551 0 0);
   --foreground: oklch(0.3211 0 0);
