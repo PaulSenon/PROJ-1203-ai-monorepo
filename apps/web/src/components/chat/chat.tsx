@@ -42,7 +42,7 @@ export function Chat() {
     <>
       <ChatConversation />
       <StickyContainer>
-        <div className="relative mx-auto flex w-full max-w-2xl flex-col items-start justify-center gap-4 px-4 pt-2 pb-2 md:pb-4">
+        <div className="relative mx-auto flex w-full max-w-3xl flex-col items-start justify-center gap-4 px-4 pt-2 pb-2 md:pb-4">
           <ScrollToBottom />
           <div className="w-full">
             <ChatInput />

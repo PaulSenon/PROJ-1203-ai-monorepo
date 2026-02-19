@@ -26,7 +26,7 @@ export function ChatConversationLayout({
   });
 
   return (
-    <Conversation.Root className="relative mx-auto w-full max-w-2xl flex-1 p-6">
+    <Conversation.Root className="relative mx-auto w-full max-w-3xl flex-1 p-6">
       <Conversation.List>
         <ConversationMessagesList
           messages={messages}
