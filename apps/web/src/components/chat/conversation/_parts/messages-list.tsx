@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const CONVERSATION_VIRTUAL_OVERSCAN = 8;
 const CONVERSATION_VIRTUAL_ESTIMATE_SIZE = 420;
+const CONVERSATION_VIRTUAL_USE_FLUSH_SYNC = false;
 
 export type ConversationMessagesListProps = {
   messages: MyUIMessage[];
@@ -26,6 +27,7 @@ export function ConversationMessagesList({
     getItemKey: (index) => messages[index]?.id ?? index,
     overscan: CONVERSATION_VIRTUAL_OVERSCAN,
     scrollMargin,
+    useFlushSync: CONVERSATION_VIRTUAL_USE_FLUSH_SYNC,
   });
 
   const virtualRows = virtualizer.getVirtualItems();

@@ -50,6 +50,7 @@ const SIDEBAR_STYLE = {
 } as React.CSSProperties;
 
 const SIDEBAR_VIRTUAL_OVERSCAN = 8;
+const SIDEBAR_VIRTUAL_USE_FLUSH_SYNC = false;
 const SIDEBAR_LOAD_MORE_BEFORE_END = 6;
 const SIDEBAR_THREAD_ROW_GAP = 6;
 const SIDEBAR_THREAD_ROW_HEIGHT = {
@@ -154,6 +155,7 @@ const SidebarThreads = React.memo(
       getItemKey: (index) => threads[index]?.uuid ?? index,
       getScrollElement: () => scrollContainerRef.current,
       overscan: SIDEBAR_VIRTUAL_OVERSCAN,
+      useFlushSync: SIDEBAR_VIRTUAL_USE_FLUSH_SYNC,
     });
 
     const virtualRows = virtualizer.getVirtualItems();
