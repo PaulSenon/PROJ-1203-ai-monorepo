@@ -4,6 +4,10 @@ export function InitialScroll() {
   useScrollToBottomInit({
     enabled: true,
     skipIfVisible: false,
+    settle: {
+      maxFrames: 24,
+      stableVisibleFrames: 2,
+    },
     target: "bottom",
   });
 
