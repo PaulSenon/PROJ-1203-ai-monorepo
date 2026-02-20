@@ -13,6 +13,15 @@ function ScrollToBottom() {
   const { scrollToBottom } = useScrollToBottomActions();
   const { isAtBottom } = useScrollToBottomState();
 
+  const scrollToBottomAfterSettle = () => {
+    scrollToBottom("instant");
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        scrollToBottom("instant");
+      });
+    });
+  };
+
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-full w-full">
       <AnimatePresence mode="sync">
@@ -28,7 +37,7 @@ function ScrollToBottom() {
           >
             <ScrollToBottomButton
               className="pointer-events-auto mx-auto"
-              onClick={() => scrollToBottom("instant")}
+              onClick={scrollToBottomAfterSettle}
             />
           </motion.div>
         )}
