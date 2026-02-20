@@ -1,6 +1,6 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import { ChatMessage } from "@/components/chat/message/message";
 import { cn } from "@/lib/utils";
 
@@ -20,11 +20,21 @@ export function ConversationMessagesList({
 }: ConversationMessagesListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const scrollMargin = listRef.current?.offsetTop ?? 0;
+  const getMessageItemKey = useCallback(
+    (index: number) => {
+      const message = messages[index];
+      if (!message) {
+        throw new Error("Conversation virtualizer key invariant violated");
+      }
+      return message.id;
+    },
+    [messages]
+  );
 
   const virtualizer = useWindowVirtualizer({
     count: messages.length,
     estimateSize: () => CONVERSATION_VIRTUAL_ESTIMATE_SIZE,
-    getItemKey: (index) => messages[index]?.id ?? index,
+    getItemKey: getMessageItemKey,
     overscan: CONVERSATION_VIRTUAL_OVERSCAN,
     scrollMargin,
     useFlushSync: CONVERSATION_VIRTUAL_USE_FLUSH_SYNC,

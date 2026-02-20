@@ -149,10 +149,21 @@ const SidebarThreads = React.memo(
     scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   }) => {
     const rowSize = getSidebarThreadRowSize(isMobile);
+    const getThreadItemKey = React.useCallback(
+      (index: number) => {
+        const thread = threads[index];
+        if (!thread) {
+          throw new Error("Sidebar virtualizer key invariant violated");
+        }
+        return thread.uuid;
+      },
+      [threads]
+    );
+
     const virtualizer = useVirtualizer({
       count: threads.length,
       estimateSize: () => rowSize,
-      getItemKey: (index) => threads[index]?.uuid ?? index,
+      getItemKey: getThreadItemKey,
       getScrollElement: () => scrollContainerRef.current,
       overscan: SIDEBAR_VIRTUAL_OVERSCAN,
       useFlushSync: SIDEBAR_VIRTUAL_USE_FLUSH_SYNC,
