@@ -7,7 +7,7 @@ import {
   ShareIcon,
   XIcon,
 } from "lucide-react";
-import React, { Activity, useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo } from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import {
@@ -281,64 +281,11 @@ export const SidebarThreadItem = React.memo(
     prev.thread.liveStatus === next.thread.liveStatus &&
     prev.thread.title === next.thread.title &&
     prev.isMobile === next.isMobile &&
-    prev.prerender === next.prerender &&
     prev.style?.height === next.style?.height &&
     prev.style?.transform === next.style?.transform
 );
 
 SidebarThreadItem.displayName = "SidebarThreadItem";
-
-export function LazySidebarMenuItem({
-  children,
-  prerender = false,
-  isMobile,
-  className,
-  style,
-  ...props
-}: {
-  children: React.ReactNode;
-  prerender?: boolean;
-  isMobile: boolean;
-} & React.ComponentProps<typeof SidebarMenuItem>) {
-  const ref = useRef<HTMLLIElement>(null);
-  const [isVisible, setIsVisible] = useState(prerender);
-
-  useEffect(() => {
-    if (prerender) return;
-
-    const cb = (e: Event) => {
-      if (!(e instanceof ContentVisibilityAutoStateChangeEvent)) return;
-      if (!e.skipped) {
-        ref.current?.removeEventListener(
-          "contentvisibilityautostatechange",
-          cb
-        );
-        setIsVisible(true);
-      }
-      // setIsVisible(!e.skipped);
-    };
-    ref.current?.addEventListener("contentvisibilityautostatechange", cb);
-    return () => {
-      ref.current?.removeEventListener("contentvisibilityautostatechange", cb);
-    };
-  }, [prerender]);
-
-  return (
-    <SidebarMenuItem
-      className={cn("min-h-10 select-none md:min-h-9", className)}
-      ref={ref}
-      style={{
-        ...style,
-        contain: "layout style",
-        contentVisibility: "auto",
-        containIntrinsicBlockSize: `auto ${isMobile ? "40px" : "36px"}`,
-      }}
-      {...props}
-    >
-      <Activity mode={isVisible ? "visible" : "hidden"}>{children}</Activity>
-    </SidebarMenuItem>
-  );
-}
 
 function SidebarMenuItemLink({
   children,
@@ -410,14 +357,12 @@ export function _SidebarThreadItem({
   isActive = false,
   className,
   isMobile = false,
-  prerender = false,
   style,
 }: {
   thread: Doc<"threads">;
   isActive?: boolean;
   className?: string;
   isMobile?: boolean;
-  prerender?: boolean;
   style?: React.CSSProperties;
 }) {
   const isLoading =
@@ -475,10 +420,8 @@ export function _SidebarThreadItem({
   );
 
   return (
-    <LazySidebarMenuItem
-      className={className}
-      isMobile={isMobile}
-      prerender={prerender}
+    <SidebarMenuItem
+      className={cn("min-h-10 select-none md:min-h-9", className)}
       style={style}
     >
       <SidebarChatLinkContextMenuContent actions={menuItems}>
@@ -532,6 +475,6 @@ export function _SidebarThreadItem({
           </SidebarMenuItemLink>
         </SidebarMenuButton>
       </SidebarChatLinkContextMenuContent>
-    </LazySidebarMenuItem>
+    </SidebarMenuItem>
   );
 }

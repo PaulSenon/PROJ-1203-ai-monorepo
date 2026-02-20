@@ -210,7 +210,6 @@ const SidebarThreads = React.memo(
               isActive={thread.uuid === activeThreadId}
               isMobile={isMobile}
               key={virtualRow.key}
-              prerender={virtualRow.index < 25}
               style={{
                 height: `${virtualRow.size}px`,
                 transform: `translateY(${virtualRow.start}px)`,
