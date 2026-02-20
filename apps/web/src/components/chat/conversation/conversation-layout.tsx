@@ -11,6 +11,7 @@ export type ChatConversationLayoutProps = {
   isPending: boolean;
   isThreadSettled: boolean;
   threadUuid: string;
+  onLoadOlder?: () => void;
 };
 
 export function ChatConversationLayout({
@@ -18,6 +19,7 @@ export function ChatConversationLayout({
   isPending,
   isThreadSettled,
   threadUuid,
+  onLoadOlder,
 }: ChatConversationLayoutProps) {
   const { bottomRef } = useScrollToBottomState();
   const initialScroll = !isPending && messages.length > 0;
@@ -30,6 +32,7 @@ export function ChatConversationLayout({
       <Conversation.List>
         <ConversationMessagesList
           messages={messages}
+          onLoadOlder={onLoadOlder}
           shouldReserveLastAssistantSpace={shouldReserveLastAssistantSpace}
         />
       </Conversation.List>

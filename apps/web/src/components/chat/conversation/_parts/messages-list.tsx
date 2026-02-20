@@ -10,6 +10,7 @@ const CONVERSATION_VIRTUAL_ESTIMATE_SIZE = 360;
 export type ConversationMessagesListProps = {
   messages: MyUIMessage[];
   shouldReserveLastAssistantSpace: boolean;
+  onLoadOlder?: () => void;
 };
 
 export function ConversationMessagesList({
