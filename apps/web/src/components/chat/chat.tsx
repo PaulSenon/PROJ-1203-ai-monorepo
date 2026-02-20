@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useRef } from "react";
 import { ScrollToBottomButton } from "@/components/ui-custom/chat/scroll-to-bottom-button";
 import {
   useScrollToBottomActions,
@@ -10,16 +11,44 @@ import { ChatInput } from "./prompt-input/prompt-input";
 
 // TODO: move
 function ScrollToBottom() {
-  const { scrollToBottom } = useScrollToBottomActions();
+  const { isProbeVisible, scrollToBottom } = useScrollToBottomActions();
   const { isAtBottom } = useScrollToBottomState();
+  const settleRafIdRef = useRef<number | null>(null);
+
+  const clearSettleLoop = () => {
+    const rafId = settleRafIdRef.current;
+    if (rafId === null) return;
+    cancelAnimationFrame(rafId);
+    settleRafIdRef.current = null;
+  };
+
+  useEffect(() => clearSettleLoop, []);
 
   const scrollToBottomAfterSettle = () => {
+    clearSettleLoop();
     scrollToBottom("instant");
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+
+    let remainingFrames = 24;
+    let visibleFrames = 0;
+
+    const settle = () => {
+      if (isProbeVisible("bottom")) {
+        visibleFrames += 1;
+      } else {
+        visibleFrames = 0;
         scrollToBottom("instant");
-      });
-    });
+      }
+
+      remainingFrames -= 1;
+      if (visibleFrames >= 2 || remainingFrames <= 0) {
+        settleRafIdRef.current = null;
+        return;
+      }
+
+      settleRafIdRef.current = requestAnimationFrame(settle);
+    };
+
+    settleRafIdRef.current = requestAnimationFrame(settle);
   };
 
   return (
