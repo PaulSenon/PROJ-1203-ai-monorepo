@@ -1,4 +1,5 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { PlusIcon, SearchIcon } from "lucide-react";
 import React, { useCallback, useDeferredValue, useEffect, useRef } from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
@@ -48,6 +49,22 @@ const SIDEBAR_STYLE = {
   "--duration-base": "200ms",
   // "--ease-default": "ease-out",
 } as React.CSSProperties;
+
+const SIDEBAR_VIRTUAL_OVERSCAN = 8;
+const SIDEBAR_THREAD_ROW_GAP = 6;
+const SIDEBAR_THREAD_ROW_HEIGHT = {
+  mobile: 40,
+  desktop: 36,
+} as const;
+
+function getSidebarThreadRowSize(isMobile: boolean) {
+  return (
+    (isMobile
+      ? SIDEBAR_THREAD_ROW_HEIGHT.mobile
+      : SIDEBAR_THREAD_ROW_HEIGHT.desktop) + SIDEBAR_THREAD_ROW_GAP
+  );
+}
+
 export function Sidebar({
   className,
   activeThreadId,
@@ -108,6 +125,7 @@ export function Sidebar({
               <SidebarThreads
                 activeThreadId={activeThreadId}
                 isMobile={isMobile}
+                scrollContainerRef={scrollContainerRef}
                 threads={deferredThreads}
               />
             </SidebarGroupContent>
@@ -132,23 +150,57 @@ const SidebarThreads = React.memo(
     threads,
     activeThreadId,
     isMobile,
+    scrollContainerRef,
   }: {
     threads: Doc<"threads">[];
     activeThreadId?: string;
     isMobile: boolean;
-  }) => (
-    <SidebarMenu className="select-none gap-1.5">
-      {threads.map((thread, index) => (
-        <SidebarThreadItem
-          isActive={thread.uuid === activeThreadId}
-          isMobile={isMobile}
-          key={thread.uuid}
-          prerender={index < 25}
-          thread={thread}
-        />
-      ))}
-    </SidebarMenu>
-  )
+    scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+  }) => {
+    const rowSize = getSidebarThreadRowSize(isMobile);
+    const virtualizer = useVirtualizer({
+      count: threads.length,
+      estimateSize: () => rowSize,
+      getItemKey: (index) => threads[index]?.uuid ?? index,
+      getScrollElement: () => scrollContainerRef.current,
+      overscan: SIDEBAR_VIRTUAL_OVERSCAN,
+    });
+
+    const virtualRows = virtualizer.getVirtualItems();
+    const totalSize = Math.max(
+      0,
+      virtualizer.getTotalSize() - SIDEBAR_THREAD_ROW_GAP
+    );
+
+    return (
+      <SidebarMenu
+        className="relative select-none gap-0 overflow-hidden"
+        style={{ height: totalSize }}
+      >
+        {virtualRows.map((virtualRow) => {
+          const thread = threads[virtualRow.index];
+          if (!thread) {
+            return null;
+          }
+
+          return (
+            <SidebarThreadItem
+              className="absolute top-0 left-0 w-full"
+              isActive={thread.uuid === activeThreadId}
+              isMobile={isMobile}
+              key={virtualRow.key}
+              prerender={virtualRow.index < 25}
+              style={{
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+              thread={thread}
+            />
+          );
+        })}
+      </SidebarMenu>
+    );
+  }
 );
 SidebarThreads.displayName = "SidebarThreads";
 

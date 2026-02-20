@@ -281,7 +281,9 @@ export const SidebarThreadItem = React.memo(
     prev.thread.liveStatus === next.thread.liveStatus &&
     prev.thread.title === next.thread.title &&
     prev.isMobile === next.isMobile &&
-    prev.prerender === next.prerender
+    prev.prerender === next.prerender &&
+    prev.style?.height === next.style?.height &&
+    prev.style?.transform === next.style?.transform
 );
 
 SidebarThreadItem.displayName = "SidebarThreadItem";
@@ -291,6 +293,7 @@ export function LazySidebarMenuItem({
   prerender = false,
   isMobile,
   className,
+  style,
   ...props
 }: {
   children: React.ReactNode;
@@ -325,6 +328,7 @@ export function LazySidebarMenuItem({
       className={cn("min-h-10 select-none md:min-h-9", className)}
       ref={ref}
       style={{
+        ...style,
         contain: "layout style",
         contentVisibility: "auto",
         containIntrinsicBlockSize: `auto ${isMobile ? "40px" : "36px"}`,
@@ -407,12 +411,14 @@ export function _SidebarThreadItem({
   className,
   isMobile = false,
   prerender = false,
+  style,
 }: {
   thread: Doc<"threads">;
   isActive?: boolean;
   className?: string;
   isMobile?: boolean;
   prerender?: boolean;
+  style?: React.CSSProperties;
 }) {
   const isLoading =
     thread.liveStatus === "pending" || thread.liveStatus === "streaming";
@@ -473,6 +479,7 @@ export function _SidebarThreadItem({
       className={className}
       isMobile={isMobile}
       prerender={prerender}
+      style={style}
     >
       <SidebarChatLinkContextMenuContent actions={menuItems}>
         <SidebarMenuButton asChild>
