@@ -30,6 +30,9 @@ export function ChatSidebar({
     history.loadMore(20);
   }, [history.loadMore]);
 
+  const canLoadMore = history.status === "CanLoadMore";
+  const isLoadingMore = history.status === "LoadingMore";
+
   const handleNewChat = useCallback(() => {
     chatNav.openNewChat();
   }, [chatNav.openNewChat]);
@@ -42,7 +45,9 @@ export function ChatSidebar({
   return (
     <Sidebar
       activeThreadId={chatNav.id}
+      canLoadMore={canLoadMore}
       className={className}
+      isLoadingMore={isLoadingMore}
       onLoadMore={handleLoadMore}
       onNewChat={handleNewChat}
       threads={memoThreads}

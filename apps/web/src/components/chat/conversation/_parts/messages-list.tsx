@@ -1,12 +1,31 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useRef } from "react";
+import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { ChatMessage } from "@/components/chat/message/message";
 import { cn } from "@/lib/utils";
 
-const CONVERSATION_VIRTUAL_OVERSCAN = 8;
-const CONVERSATION_VIRTUAL_ESTIMATE_SIZE = 420;
+const CONVERSATION_VIRTUAL_OVERSCAN = 3;
+const CONVERSATION_VIRTUAL_ESTIMATE_ASSISTANT_SIZE = 280;
+const CONVERSATION_VIRTUAL_ESTIMATE_USER_SIZE = 96;
+const CONVERSATION_VIRTUAL_ESTIMATE_OTHER_SIZE = 140;
 const CONVERSATION_VIRTUAL_USE_FLUSH_SYNC = false;
+
+function isStreamingAssistant(message: MyUIMessage | undefined) {
+  if (!message || message.role !== "assistant") return false;
+  const liveStatus = message.metadata?.liveStatus;
+  return liveStatus === "pending" || liveStatus === "streaming";
+}
+
+function estimateMessageSize(message: MyUIMessage | undefined) {
+  if (!message) return CONVERSATION_VIRTUAL_ESTIMATE_ASSISTANT_SIZE;
+  if (message.role === "assistant") {
+    return CONVERSATION_VIRTUAL_ESTIMATE_ASSISTANT_SIZE;
+  }
+  if (message.role === "user") {
+    return CONVERSATION_VIRTUAL_ESTIMATE_USER_SIZE;
+  }
+  return CONVERSATION_VIRTUAL_ESTIMATE_OTHER_SIZE;
+}
 
 export type ConversationMessagesListProps = {
   messages: MyUIMessage[];
@@ -14,12 +33,29 @@ export type ConversationMessagesListProps = {
   onLoadOlder?: () => void;
 };
 
-export function ConversationMessagesList({
+export const ConversationMessagesList = memo(function ConversationMessagesList({
   messages,
   shouldReserveLastAssistantSpace,
 }: ConversationMessagesListProps) {
   const listRef = useRef<HTMLDivElement>(null);
-  const scrollMargin = listRef.current?.offsetTop ?? 0;
+  const [scrollMargin, setScrollMargin] = useState(0);
+
+  useLayoutEffect(() => {
+    const listEl = listRef.current;
+    if (!listEl) return;
+
+    const updateScrollMargin = () => {
+      const next = listEl.offsetTop;
+      setScrollMargin((prev) => (prev === next ? prev : next));
+    };
+
+    updateScrollMargin();
+    window.addEventListener("resize", updateScrollMargin);
+
+    return () => {
+      window.removeEventListener("resize", updateScrollMargin);
+    };
+  }, []);
   const getMessageItemKey = useCallback(
     (index: number) => {
       const message = messages[index];
@@ -33,12 +69,37 @@ export function ConversationMessagesList({
 
   const virtualizer = useWindowVirtualizer({
     count: messages.length,
-    estimateSize: () => CONVERSATION_VIRTUAL_ESTIMATE_SIZE,
+    estimateSize: (index) => estimateMessageSize(messages[index]),
     getItemKey: getMessageItemKey,
     overscan: CONVERSATION_VIRTUAL_OVERSCAN,
     scrollMargin,
     useFlushSync: CONVERSATION_VIRTUAL_USE_FLUSH_SYNC,
   });
+
+  const streamingTailMessage = messages.at(-1);
+  const hasStreamingAssistantTail = isStreamingAssistant(streamingTailMessage);
+
+  useLayoutEffect(() => {
+    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (
+      item,
+      _delta,
+      instance
+    ) => {
+      const isStreamingTail =
+        hasStreamingAssistantTail && item.index === messages.length - 1;
+
+      if (isStreamingTail) {
+        return false;
+      }
+
+      const scrollOffset = instance.scrollOffset ?? 0;
+      return item.start < scrollOffset;
+    };
+
+    return () => {
+      virtualizer.shouldAdjustScrollPositionOnItemSizeChange = undefined;
+    };
+  }, [hasStreamingAssistantTail, messages.length, virtualizer]);
 
   const virtualRows = virtualizer.getVirtualItems();
 
@@ -46,7 +107,10 @@ export function ConversationMessagesList({
     <div
       className="relative w-full"
       ref={listRef}
-      style={{ height: `${virtualizer.getTotalSize()}px` }}
+      style={{
+        height: `${virtualizer.getTotalSize()}px`,
+        overflowAnchor: "none",
+      }}
     >
       {virtualRows.map((virtualRow) => {
         const message = messages[virtualRow.index];
@@ -79,9 +143,21 @@ export function ConversationMessagesList({
       })}
     </div>
   );
+}, areConversationMessagesListPropsEqual);
+
+function areConversationMessagesListPropsEqual(
+  prev: ConversationMessagesListProps,
+  next: ConversationMessagesListProps
+) {
+  return (
+    prev.messages === next.messages &&
+    prev.shouldReserveLastAssistantSpace ===
+      next.shouldReserveLastAssistantSpace &&
+    prev.onLoadOlder === next.onLoadOlder
+  );
 }
 
-function ConversationMessageItem({
+const ConversationMessageItem = memo(function ConversationMessageItem({
   message,
   isLast,
   shouldReserveLastAssistantSpace,
@@ -100,4 +176,4 @@ function ConversationMessageItem({
       message={message}
     />
   );
-}
+});

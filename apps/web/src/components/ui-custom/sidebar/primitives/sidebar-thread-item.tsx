@@ -244,7 +244,6 @@ const SidebarChatLinkContextMenuContent = React.memo(
             className
           )}
           collisionPadding={4}
-          forceMount
           hideWhenDetached
           updatePositionStrategy="optimized"
         >
@@ -422,7 +421,10 @@ export function _SidebarThreadItem({
   return (
     <SidebarMenuItem
       className={cn("min-h-10 select-none md:min-h-9", className)}
-      style={style}
+      style={{
+        contain: "layout style",
+        ...style,
+      }}
     >
       <SidebarChatLinkContextMenuContent actions={menuItems}>
         <SidebarMenuButton asChild>

@@ -1,7 +1,7 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { PlusIcon, SearchIcon } from "lucide-react";
-import React, { useDeferredValue, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,6 +71,8 @@ export function Sidebar({
   activeThreadId,
   threads,
   children,
+  canLoadMore,
+  isLoadingMore,
   onLoadMore,
   onNewChat,
 }: {
@@ -78,16 +80,23 @@ export function Sidebar({
   activeThreadId?: string;
   threads: Doc<"threads">[];
   children: React.ReactNode;
+  canLoadMore?: boolean;
+  isLoadingMore?: boolean;
   onNewChat?: () => void;
   onLoadMore?: () => void;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollContainerEl, setScrollContainerEl] =
+    useState<HTMLDivElement | null>(null);
+  const setScrollContainerNode = useCallback((node: HTMLDivElement | null) => {
+    scrollContainerRef.current = node;
+    setScrollContainerEl(node);
+  }, []);
+
   const isMobile = useIsMobile();
   // handle scroll edges intersect for UI tweaks
   const { isAtTop, isAtBottom, topRef, bottomRef } =
     useScrollEdges(scrollContainerRef);
-
-  const deferredThreads = useDeferredValue(threads, []);
 
   return (
     <SidebarProvider style={SIDEBAR_STYLE}>
@@ -102,7 +111,7 @@ export function Sidebar({
         />
         <SidebarContent
           className="gap-0 overscroll-contain p-0"
-          ref={scrollContainerRef}
+          ref={setScrollContainerNode}
         >
           <ScrollEdgeProbe ref={topRef} />
           <MySidebarHeaderSpacer />
@@ -112,10 +121,12 @@ export function Sidebar({
             <SidebarGroupContent className="px-2">
               <SidebarThreads
                 activeThreadId={activeThreadId}
+                canLoadMore={canLoadMore}
+                isLoadingMore={isLoadingMore}
                 isMobile={isMobile}
                 onLoadMore={onLoadMore}
-                scrollContainerRef={scrollContainerRef}
-                threads={deferredThreads}
+                scrollContainerEl={scrollContainerEl}
+                threads={threads}
               />
             </SidebarGroupContent>
           </SidebarGroup>
@@ -139,14 +150,18 @@ const SidebarThreads = React.memo(
     threads,
     activeThreadId,
     isMobile,
+    canLoadMore,
+    isLoadingMore,
     onLoadMore,
-    scrollContainerRef,
+    scrollContainerEl,
   }: {
     threads: Doc<"threads">[];
     activeThreadId?: string;
     isMobile: boolean;
+    canLoadMore?: boolean;
+    isLoadingMore?: boolean;
     onLoadMore?: () => void;
-    scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+    scrollContainerEl: HTMLDivElement | null;
   }) => {
     const rowSize = getSidebarThreadRowSize(isMobile);
     const getThreadItemKey = React.useCallback(
@@ -164,7 +179,7 @@ const SidebarThreads = React.memo(
       count: threads.length,
       estimateSize: () => rowSize,
       getItemKey: getThreadItemKey,
-      getScrollElement: () => scrollContainerRef.current,
+      getScrollElement: () => scrollContainerEl,
       overscan: SIDEBAR_VIRTUAL_OVERSCAN,
       useFlushSync: SIDEBAR_VIRTUAL_USE_FLUSH_SYNC,
     });
@@ -174,13 +189,19 @@ const SidebarThreads = React.memo(
       0,
       threads.length - 1 - SIDEBAR_LOAD_MORE_BEFORE_END
     );
-    const loadMoreTriggeredForCountRef = useRef<number | null>(null);
+    const lastLoadAttemptAtRef = useRef<number>(0);
+
+    useEffect(() => {
+      virtualizer.measure();
+      lastLoadAttemptAtRef.current = 0;
+    }, [scrollContainerEl, virtualizer]);
 
     useEffect(() => {
       if (!onLoadMore) return;
+      if (!canLoadMore) return;
+      if (isLoadingMore) return;
 
       if (threads.length === 0) {
-        loadMoreTriggeredForCountRef.current = null;
         return;
       }
 
@@ -193,13 +214,21 @@ const SidebarThreads = React.memo(
         return;
       }
 
-      if (loadMoreTriggeredForCountRef.current === threads.length) {
+      const now = Date.now();
+      if (now - lastLoadAttemptAtRef.current < 450) {
         return;
       }
 
-      loadMoreTriggeredForCountRef.current = threads.length;
+      lastLoadAttemptAtRef.current = now;
       onLoadMore();
-    }, [loadMoreThresholdIndex, onLoadMore, threads.length, virtualRows]);
+    }, [
+      canLoadMore,
+      isLoadingMore,
+      loadMoreThresholdIndex,
+      onLoadMore,
+      threads.length,
+      virtualRows,
+    ]);
 
     const totalSize = Math.max(
       0,

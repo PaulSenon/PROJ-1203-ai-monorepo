@@ -227,16 +227,3 @@ This is required for no-jump upward history loading with variable row heights.
 ## Unresolved Questions
 
 - none
-
-## References
-
-for reference the source code of tanstack virtual is available at .llms/git-references/tanstack-virtual for you to browse with sub-agent so answer specific usage questions. Otherwise you can browse documentation with context7.
-
-## User feedback
-
-- [ ] after commit 48902cdfca84c6bf191c2c65dd5c2fc43c4a095b looks like initial scroll to bottom is broken for conversation (is scroll to maybe the first virtual window bottom) Maybe it's normal and will be addressed later but just wanted to pinpoint.
-      => still broken after fix attempt f40a97d455e8d7860b4f6d9b61122e1074948599. Perhaps things should be fully sync for conversation ?? (don't know)
-      => also the scroll to bottom button isn't working well because last element might resize after. So we should have last element height before we render the scroll to bottom
-      => (85a46f2d08df56fc5356dfc07dced529f81aeb90) double RAF are not a solution... I want something solid and elegant... (and it's not even working btw... EDIT: it fixed the scroll to bottom button but not initial one)
-      => don't tanstack virtual offers primitive for chat-like virtualization (initial bottom, anchored bottom, reverse scroll like behavior) Might be nice to not try to fight against things and just stop, think and find a proper way of doing things.
-      => EDIT a8a0d304ea62a07f8e33c01b378e89a56a85b15b fixed everything ? but still RAF... maybe no choice ?
