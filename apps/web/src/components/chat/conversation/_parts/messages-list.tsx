@@ -5,7 +5,7 @@ import { ChatMessage } from "@/components/chat/message/message";
 import { cn } from "@/lib/utils";
 
 const CONVERSATION_VIRTUAL_OVERSCAN = 8;
-const CONVERSATION_VIRTUAL_ESTIMATE_SIZE = 360;
+const CONVERSATION_VIRTUAL_ESTIMATE_SIZE = 420;
 
 export type ConversationMessagesListProps = {
   messages: MyUIMessage[];
