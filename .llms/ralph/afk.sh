@@ -90,6 +90,11 @@ for ((i = 1; i <= ITERATIONS; i++)); do
     exit 1
   fi
 
+  if [[ "$result" == *"<promise>USER TASK REQUESTED</promise>"* ]]; then
+    echo "Ralph requested user action (after $i iterations)."
+    exit 1
+  fi
+
   rm -f "$tmpfile"
   trap - EXIT
 done

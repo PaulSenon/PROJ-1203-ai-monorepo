@@ -26,6 +26,8 @@ Complete the task.
 
 If anything blocks your completion of the task, output <promise>ABORT</promise>.
 
+If you need user to manually perform a task, output <promise>USER TASK REQUESTED</promise> followed by the detailed instructions you want user to perform.
+
 # FEEDBACK LOOPS
 
 Before committing, run the feedback loops:
