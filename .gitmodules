@@ -28,3 +28,6 @@
 [submodule ".llms/git-references/legendlist"]
 	path = .llms/git-references/legendlist
 	url = https://github.com/LegendApp/legend-list.git
+[submodule ".llms/git-references/tanstack-virtual"]
+	path = .llms/git-references/tanstack-virtual
+	url = https://github.com/TanStack/virtual.git
