@@ -3,6 +3,7 @@ import { useScrollToBottomInit } from "@/components/ui-custom/chat/hooks/use-scr
 export function InitialScroll() {
   useScrollToBottomInit({
     enabled: true,
+    skipIfVisible: false,
     target: "bottom",
   });
 
