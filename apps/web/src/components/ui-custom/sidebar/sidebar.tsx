@@ -1,7 +1,7 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { PlusIcon, SearchIcon } from "lucide-react";
-import React, { useCallback, useDeferredValue, useEffect, useRef } from "react";
+import React, { useDeferredValue, useEffect, useRef } from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,12 +17,11 @@ import {
 
 import { useChatNav } from "@/hooks/use-chat-nav";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useInView } from "@/hooks/utils/use-intersection-observer";
 import {
   ScrollEdgeProbe,
   useScrollEdges,
 } from "@/hooks/utils/use-scroll-edges";
-import { cn, useMergedRefs } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { CollapsibleButtonGroup } from "../button-group-collapsible";
 import { Tooltip } from "../tooltip";
 import { ScrollbarZIndexHack } from "../utils/scrollbar-z-index-hack";
@@ -51,6 +50,7 @@ const SIDEBAR_STYLE = {
 } as React.CSSProperties;
 
 const SIDEBAR_VIRTUAL_OVERSCAN = 8;
+const SIDEBAR_LOAD_MORE_BEFORE_END = 6;
 const SIDEBAR_THREAD_ROW_GAP = 6;
 const SIDEBAR_THREAD_ROW_HEIGHT = {
   mobile: 40,
@@ -86,19 +86,6 @@ export function Sidebar({
   const { isAtTop, isAtBottom, topRef, bottomRef } =
     useScrollEdges(scrollContainerRef);
 
-  // handle lazy loading
-  const handleLoadMore = useCallback(() => {
-    onLoadMore?.();
-  }, [onLoadMore]);
-  const { ref: loadMoreRef } = useInView<HTMLDivElement>({
-    rootRef: scrollContainerRef,
-    rootMargin: "0px 0px 100% 0px",
-    continuous: true,
-    onEnter: handleLoadMore,
-  });
-
-  const mergedBottomRef = useMergedRefs<HTMLDivElement>(bottomRef, loadMoreRef);
-
   const deferredThreads = useDeferredValue(threads, []);
 
   return (
@@ -125,13 +112,14 @@ export function Sidebar({
               <SidebarThreads
                 activeThreadId={activeThreadId}
                 isMobile={isMobile}
+                onLoadMore={onLoadMore}
                 scrollContainerRef={scrollContainerRef}
                 threads={deferredThreads}
               />
             </SidebarGroupContent>
           </SidebarGroup>
           <MySidebarFooterSpacer />
-          <ScrollEdgeProbe ref={mergedBottomRef} />
+          <ScrollEdgeProbe ref={bottomRef} />
         </SidebarContent>
         <MySidebarFooter
           className="absolute bottom-0 z-50 w-full"
@@ -150,11 +138,13 @@ const SidebarThreads = React.memo(
     threads,
     activeThreadId,
     isMobile,
+    onLoadMore,
     scrollContainerRef,
   }: {
     threads: Doc<"threads">[];
     activeThreadId?: string;
     isMobile: boolean;
+    onLoadMore?: () => void;
     scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   }) => {
     const rowSize = getSidebarThreadRowSize(isMobile);
@@ -167,6 +157,37 @@ const SidebarThreads = React.memo(
     });
 
     const virtualRows = virtualizer.getVirtualItems();
+    const loadMoreThresholdIndex = Math.max(
+      0,
+      threads.length - 1 - SIDEBAR_LOAD_MORE_BEFORE_END
+    );
+    const loadMoreTriggeredForCountRef = useRef<number | null>(null);
+
+    useEffect(() => {
+      if (!onLoadMore) return;
+
+      if (threads.length === 0) {
+        loadMoreTriggeredForCountRef.current = null;
+        return;
+      }
+
+      const lastVirtualRow = virtualRows.at(-1);
+      if (!lastVirtualRow) {
+        return;
+      }
+
+      if (lastVirtualRow.index < loadMoreThresholdIndex) {
+        return;
+      }
+
+      if (loadMoreTriggeredForCountRef.current === threads.length) {
+        return;
+      }
+
+      loadMoreTriggeredForCountRef.current = threads.length;
+      onLoadMore();
+    }, [loadMoreThresholdIndex, onLoadMore, threads.length, virtualRows]);
+
     const totalSize = Math.max(
       0,
       virtualizer.getTotalSize() - SIDEBAR_THREAD_ROW_GAP
