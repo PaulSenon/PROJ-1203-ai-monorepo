@@ -61,15 +61,6 @@ type ScrollInitOptions = {
   runKey?: string | number;
   /** Skip scroll if probe already visible */
   skipIfVisible?: boolean;
-  /** Optional bounded settle retries for dynamic measured layouts */
-  settle?: ScrollInitSettleOptions;
-};
-
-type ScrollInitSettleOptions = {
-  /** Max animation frames to retry before giving up */
-  maxFrames?: number;
-  /** Consecutive visible frames required to consider settled */
-  stableVisibleFrames?: number;
 };
 
 // ============================================================================
@@ -320,19 +311,10 @@ export function useScrollToBottomInit({
   behavior = "instant",
   runKey,
   skipIfVisible = true,
-  settle,
 }: ScrollInitOptions): void {
   const { scrollToBottom, scrollToCheckpoint, isProbeVisible } =
     useScrollToBottomActions();
   const didRunRef = useRef<string | number | "__once__" | null>(null);
-  const settleRafIdRef = useRef<number | null>(null);
-
-  const clearSettleLoop = useCallback(() => {
-    const rafId = settleRafIdRef.current;
-    if (rafId === null) return;
-    cancelAnimationFrame(rafId);
-    settleRafIdRef.current = null;
-  }, []);
 
   useLayoutEffect(() => {
     if (!enabled) return;
@@ -344,60 +326,21 @@ export function useScrollToBottomInit({
     // Skip if already visible
     if (skipIfVisible && isProbeVisible(target)) return;
 
-    const scrollToTarget = () => {
-      if (target === "checkpoint") {
-        scrollToCheckpoint(behavior);
-      } else {
-        scrollToBottom(behavior);
-      }
-    };
-
-    scrollToTarget();
-
-    if (!settle) return;
-
-    const maxFrames = settle.maxFrames ?? 24;
-    const stableVisibleFrames = settle.stableVisibleFrames ?? 2;
-    if (maxFrames <= 0 || stableVisibleFrames <= 0) return;
-
-    let remainingFrames = maxFrames;
-    let visibleFrames = 0;
-
-    const tick = () => {
-      if (isProbeVisible(target)) {
-        visibleFrames += 1;
-      } else {
-        visibleFrames = 0;
-        scrollToTarget();
-      }
-
-      remainingFrames -= 1;
-      if (visibleFrames >= stableVisibleFrames || remainingFrames <= 0) {
-        settleRafIdRef.current = null;
-        return;
-      }
-
-      settleRafIdRef.current = requestAnimationFrame(tick);
-    };
-
-    clearSettleLoop();
-    settleRafIdRef.current = requestAnimationFrame(tick);
-
-    return clearSettleLoop;
+    if (target === "checkpoint") {
+      scrollToCheckpoint(behavior);
+    } else {
+      scrollToBottom(behavior);
+    }
   }, [
     enabled,
     target,
     behavior,
     runKey,
     skipIfVisible,
-    settle,
     scrollToBottom,
     scrollToCheckpoint,
     isProbeVisible,
-    clearSettleLoop,
   ]);
-
-  useLayoutEffect(() => clearSettleLoop, [clearSettleLoop]);
 }
 
 // ============================================================================

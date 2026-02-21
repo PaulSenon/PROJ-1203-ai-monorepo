@@ -189,11 +189,11 @@ const SidebarThreads = React.memo(
       0,
       threads.length - 1 - SIDEBAR_LOAD_MORE_BEFORE_END
     );
-    const lastLoadAttemptAtRef = useRef<number>(0);
+    const lastLoadTriggeredForCountRef = useRef<number | null>(null);
 
     useEffect(() => {
       virtualizer.measure();
-      lastLoadAttemptAtRef.current = 0;
+      lastLoadTriggeredForCountRef.current = null;
     }, [scrollContainerEl, virtualizer]);
 
     useEffect(() => {
@@ -214,12 +214,11 @@ const SidebarThreads = React.memo(
         return;
       }
 
-      const now = Date.now();
-      if (now - lastLoadAttemptAtRef.current < 450) {
+      if (lastLoadTriggeredForCountRef.current === threads.length) {
         return;
       }
 
-      lastLoadAttemptAtRef.current = now;
+      lastLoadTriggeredForCountRef.current = threads.length;
       onLoadMore();
     }, [
       canLoadMore,

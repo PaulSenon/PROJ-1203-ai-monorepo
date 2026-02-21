@@ -1,15 +1,15 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import { useState } from "react";
+import { useCallback, useLayoutEffect, useState } from "react";
 import { Conversation } from "@/components/ui-custom/chat/conversation";
 import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
 import { useScrollToBottomState } from "../../ui-custom/chat/hooks/use-scroll-to-bottom";
-import { InitialScroll } from "./_parts/initial-scroll";
 import { ConversationMessagesList } from "./_parts/messages-list";
 
 export type ChatConversationLayoutProps = {
   messages: MyUIMessage[];
   isPending: boolean;
   isThreadSettled: boolean;
+  pendingAutoScrollMessageId?: string;
   threadUuid: string;
   onLoadOlder?: () => void;
 };
@@ -18,27 +18,55 @@ export function ChatConversationLayout({
   messages,
   isPending,
   isThreadSettled,
+  pendingAutoScrollMessageId,
   threadUuid,
   onLoadOlder,
 }: ChatConversationLayoutProps) {
   const { bottomRef } = useScrollToBottomState();
   const initialScroll = !isPending && messages.length > 0;
+  const [bootRequestKey, setBootRequestKey] = useState<string | undefined>(
+    undefined
+  );
+  const [isConversationVisible, setIsConversationVisible] = useState(true);
   const shouldReserveLastAssistantSpace = useShouldReserveLastAssistantSpace({
     isThreadSettled,
   });
 
+  useLayoutEffect(() => {
+    if (!initialScroll) {
+      setBootRequestKey(undefined);
+      setIsConversationVisible(true);
+      return;
+    }
+
+    setBootRequestKey(threadUuid);
+    setIsConversationVisible(false);
+  }, [initialScroll, threadUuid]);
+
+  const handleBootAnchored = useCallback((resolvedKey: string) => {
+    setBootRequestKey((current) => {
+      if (current !== resolvedKey) return current;
+      setIsConversationVisible(true);
+      return undefined;
+    });
+  }, []);
+
   return (
     <Conversation.Root className="relative mx-auto w-full max-w-3xl flex-1 p-6">
-      <Conversation.List>
+      <Conversation.List
+        className={isConversationVisible ? undefined : "opacity-0"}
+      >
         <ConversationMessagesList
+          bootRequestKey={bootRequestKey}
           messages={messages}
+          onBootAnchored={handleBootAnchored}
           onLoadOlder={onLoadOlder}
+          pendingAutoScrollMessageId={pendingAutoScrollMessageId}
           shouldReserveLastAssistantSpace={shouldReserveLastAssistantSpace}
         />
       </Conversation.List>
 
       <ScrollEdgeProbe ref={bottomRef} />
-      {initialScroll ? <InitialScroll key={threadUuid} /> : null}
     </Conversation.Root>
   );
 }
