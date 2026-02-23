@@ -10,6 +10,7 @@ services:
       - ../:/app:delegated # Source code mounting
       - volume-pnpm-store:/app/.pnpm-store # Package cache persistence
       - volume-convex-auth:/root/.convex
+      - ~/.ssh/authorized_keys:/home/dev/.ssh/authorized_keys:ro
       - ~/.local/share/opencode:/root/.local/share/opencode # https://opencode.ai/docs/providers/#credentials
       - ~/.config/opencode:/root/.config/opencode # https://opencode.ai/docs/config/#global
       - ~/.claude:/root/.claude # Claude Code cache persistence
@@ -23,17 +24,18 @@ services:
       - "3001:3001" # apps/web
       - "8888:8888" # vite bundler analyser
       - "4096:4096" # opencode web ui port (hard codded in makefile)
+      - "2222:22" # ssh
     env_file:
       - ./.env.local
-    command: pnpm dev
+    command: bash -c "/usr/sbin/sshd -D -e & pnpm exec opencode web --port 4096 --hostname 0.0.0.0"
     networks: [shared]
   #   depends_on:
   #     - convex
 
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    command: tunnel --url http://app:3001
-    networks: [shared]
+  # tunnel:
+  #   image: cloudflare/cloudflared:latest
+  #   command: tunnel --url http://app:3001
+  #   networks: [shared]
   # links:
   #   - app
 

@@ -24,6 +24,10 @@ install: ## Install everything needed for development
 	$(MAKE) pnpm-install
 	$(MAKE) convex-dev-once
 
+start:
+	$(COMPOSE) up
+	$(MAKE) stop
+
 dev: ## Start development server
 	$(MAKE) pnpm-dev
 
@@ -51,6 +55,9 @@ clean-install: ## Clean everything (containers, volumes, dependencies)
 	$(MAKE) docker-build-force
 	$(MAKE) pnpm-install
 	$(MAKE) convex-dev-once
+
+ssh-serve:
+	$(call run_in_container_smart,app,bash -c "/usr/sbin/sshd -D -e")
 
 opencode-serve:
 	$(call run_in_container_smart,app,pnpm exec opencode web --port 4096 --hostname 0.0.0.0)
@@ -169,4 +176,4 @@ llms-ref-clear: ## Clear local downloaded refs to free disk space (keeps submodu
 	@echo "Cleared local checkouts (and module cache). Restore with: make llms-ref-fetch-all"
 
 help: ## Show available commands
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' 
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
