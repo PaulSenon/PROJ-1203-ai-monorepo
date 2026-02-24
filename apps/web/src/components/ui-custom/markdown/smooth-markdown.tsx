@@ -2,22 +2,24 @@
 
 import { useSmoothText } from "@convex-dev/agent/react";
 import { cjk } from "@streamdown/cjk";
-import { createCodePlugin } from "@streamdown/code";
 import { createMathPlugin } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import { Streamdown } from "streamdown";
 import { DEFAULT_TRUSTED_DOMAINS, resolveLinkKind } from "./link-policy";
 import { LinkSafetyModal } from "./link-safety-modal";
+import { workerCodePlugin } from "./worker-code-highlighter-plugin";
 
-const streamdownPlugins = {
-  code: createCodePlugin({
-    themes: ["github-light", "github-dark"],
-  }),
+const streamdownBasePlugins = {
   mermaid,
   math: createMathPlugin({
     singleDollarTextMath: true,
   }),
   cjk,
+};
+
+const streamdownPluginsWithCode = {
+  ...streamdownBasePlugins,
+  code: workerCodePlugin,
 };
 
 export type SmoothMarkdownLinkPolicy = {
@@ -29,6 +31,7 @@ export type SmoothMarkdownProps = {
   isStreaming?: boolean;
   consolidate?: boolean;
   startStreaming?: boolean;
+  enableCodeHighlighting?: boolean;
   className?: string;
   linkPolicy?: SmoothMarkdownLinkPolicy;
 };
@@ -39,12 +42,14 @@ export function SmoothMarkdown({
   isStreaming,
   linkPolicy,
   startStreaming,
+  enableCodeHighlighting = true,
   consolidate,
 }: SmoothMarkdownProps) {
   const [text] = useSmoothText(children, {
     startStreaming: startStreaming ?? false,
     charsPerSec: 200,
   });
+
   const trustedDomains = linkPolicy?.trustedDomains ?? DEFAULT_TRUSTED_DOMAINS;
 
   return (
@@ -82,7 +87,11 @@ export function SmoothMarkdown({
         ),
       }}
       mode={consolidate ? "static" : "streaming"}
-      plugins={streamdownPlugins}
+      plugins={
+        enableCodeHighlighting
+          ? streamdownPluginsWithCode
+          : streamdownBasePlugins
+      }
       remend={{
         linkMode: "text-only",
       }}

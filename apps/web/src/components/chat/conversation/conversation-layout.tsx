@@ -15,7 +15,7 @@ export type ChatConversationLayoutProps = {
   messages: MyUIMessage[];
   isThreadSettled: boolean;
   pendingAutoScrollMessageId: string | undefined;
-  onStartReached: () => void;
+  onStartReached?: () => void;
 };
 
 export function ChatConversationLayout({

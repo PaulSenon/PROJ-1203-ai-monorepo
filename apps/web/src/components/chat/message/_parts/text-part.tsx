@@ -8,6 +8,7 @@ type TextPart = Extract<MyUIMessage["parts"][number], { type: "text" }>;
 export type TextPartProps = {
   part: TextPart;
   consolidate?: boolean;
+  enableCodeHighlighting?: boolean;
 };
 
 const MARKDOWN_OVERFLOW_GUARDS =
@@ -16,6 +17,7 @@ const MARKDOWN_OVERFLOW_GUARDS =
 export const TextPart = memo(function _TextPart({
   part,
   consolidate,
+  enableCodeHighlighting,
 }: TextPartProps) {
   const text = part.text ?? "";
   if (!text.trim()) return null;
@@ -26,6 +28,7 @@ export const TextPart = memo(function _TextPart({
     <SmoothMarkdown
       className={cn(MARKDOWN_OVERFLOW_GUARDS)}
       consolidate={consolidate}
+      enableCodeHighlighting={enableCodeHighlighting}
       isStreaming={isStreaming}
     >
       {text}

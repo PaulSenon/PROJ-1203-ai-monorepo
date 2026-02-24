@@ -72,6 +72,9 @@ function WindowScrollExample() {
 
   useLayoutEffect(() => {
     if (!isLoaded) return;
+
+    // biome-ignore lint/suspicious/noTsIgnore: tkt
+    // @ts-ignore tkt
     listRef.current?.getNativeScrollRef().scrollToEnd({ animated: false });
     // Reaveal on next frame to avoid flicker
     const raf = requestAnimationFrame(() => setIsReady(true));
