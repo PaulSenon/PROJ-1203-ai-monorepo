@@ -10,12 +10,14 @@ import { MessageFooterUser } from "./_parts/footer/footer";
 export type ChatMessageUserProps = ComponentProps<"div"> & {
   message: MyUIMessage;
   consolidate?: boolean;
+  enableCodeHighlighting?: boolean;
 };
 
 export function ChatMessageUser({
   message,
   className,
   consolidate,
+  enableCodeHighlighting,
   ...props
 }: ChatMessageUserProps) {
   const readRawText = useMessageRawTextReader(message.parts);
@@ -34,6 +36,7 @@ export function ChatMessageUser({
         <Message.Content variant="user">
           <MessageContentParts
             consolidate={consolidate}
+            enableCodeHighlighting={enableCodeHighlighting}
             parts={message.parts}
           />
         </Message.Content>

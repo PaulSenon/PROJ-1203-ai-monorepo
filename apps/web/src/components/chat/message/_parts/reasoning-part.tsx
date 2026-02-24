@@ -10,6 +10,7 @@ export type ReasoningPartProps = {
   part: ReasoningPartType;
   previewLines?: number;
   consolidate?: boolean;
+  enableCodeHighlighting?: boolean;
 };
 
 const DEFAULT_PREVIEW_LINES = 2;
@@ -21,6 +22,7 @@ export const ReasoningPart = memo(function _ReasoningPart({
   part,
   previewLines = DEFAULT_PREVIEW_LINES,
   consolidate,
+  enableCodeHighlighting,
 }: ReasoningPartProps) {
   const isStreaming = part.state === "streaming";
   const text = part.text ?? "";
@@ -43,6 +45,7 @@ export const ReasoningPart = memo(function _ReasoningPart({
               MARKDOWN_OVERFLOW_GUARDS
             )}
             consolidate={consolidate}
+            enableCodeHighlighting={enableCodeHighlighting}
             isStreaming={isStreaming}
           >
             {deferredText}
