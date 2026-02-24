@@ -31,3 +31,6 @@
 [submodule ".llms/git-references/tanstack-virtual"]
 	path = .llms/git-references/tanstack-virtual
 	url = https://github.com/TanStack/virtual.git
+[submodule ".llms/git-references/virtua"]
+	path = .llms/git-references/virtua
+	url = https://github.com/inokawa/virtua.git
