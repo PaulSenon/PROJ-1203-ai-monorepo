@@ -108,7 +108,7 @@ export function ConversationMessagesList({
     if (!isLoaded) return;
     if (isReady) return;
     scrollToEnd({ animated: false });
-    setMargin(`${window.document.documentElement.scrollHeight * 0.9}px`);
+    setMargin(`${window.document.documentElement.scrollHeight * 0.5}px`);
     // Reaveal on next frame to avoid flicker
     const raf = requestAnimationFrame(() => setIsReady(true));
     return () => {
@@ -129,6 +129,7 @@ export function ConversationMessagesList({
               shouldReserveForAssistant && "min-h-[calc(100vh-20rem)]"
             )}
             consolidate={!isDynamic}
+            enableCodeHighlighting={true} // TODO: how to handle isReady reactivity here ???
             message={item}
           />
         </div>
@@ -168,18 +169,18 @@ export function ConversationMessagesList({
       <LegendList<MyUIMessage>
         alignItemsAtEnd
         data={messages}
-        initialScrollAtEnd // broken for now. DO NOT USE
-        keyExtractor={(message) => message.id}
-        maintainVisibleContentPosition
+        initialScrollAtEnd
+        keyExtractor={(message) => message.id} // broken for now. DO NOT USE
+        maintainVisibleContentPosition={true}
         onLayout={handleLayout}
         onLoad={() => setIsLoaded(true)}
+        ref={listRef}
         // onScroll={handleScroll}
         // onEndReached={onEndReached} // broken for now. DO NOT USE
         // onEndReachedThreshold={endDetectionOffsetPx} // broken for now. DO NOT USE
         // onStartReached={handleStartReached} // broken for now. DO NOT USE
         // onStartReachedThreshold={0.2} // broken for now. DO NOT USE
         // recycleItems
-        ref={listRef}
         renderItem={renderItem}
         useWindowScroll
       />

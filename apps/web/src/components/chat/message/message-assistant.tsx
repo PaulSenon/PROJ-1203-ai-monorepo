@@ -15,6 +15,7 @@ export type ChatMessageAssistantProps = ComponentProps<"div"> & {
   message: MyUIMessage;
   reasoningPreviewLines?: number;
   consolidate?: boolean;
+  enableCodeHighlighting?: boolean;
 };
 
 function shouldShowThinking(message: MyUIMessage) {
@@ -72,6 +73,7 @@ export function ChatMessageAssistant({
   reasoningPreviewLines,
   className,
   consolidate,
+  enableCodeHighlighting,
   ...props
 }: ChatMessageAssistantProps) {
   const showThinking = shouldShowThinking(message);
@@ -102,6 +104,7 @@ export function ChatMessageAssistant({
           {showThinking ? <Message.Thinking /> : null}
           <MessageContentParts
             consolidate={consolidate}
+            enableCodeHighlighting={enableCodeHighlighting}
             parts={message.parts}
             reasoningPreviewLines={reasoningPreviewLines}
           />

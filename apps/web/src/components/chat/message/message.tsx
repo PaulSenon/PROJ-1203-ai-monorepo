@@ -7,12 +7,14 @@ export type ChatMessageProps = ComponentProps<"div"> & {
   message: MyUIMessage;
   reasoningPreviewLines?: number;
   consolidate?: boolean;
+  enableCodeHighlighting?: boolean;
 };
 
 export const ChatMessage = memo(function _ChatMessage({
   message,
   reasoningPreviewLines,
   consolidate,
+  enableCodeHighlighting,
   ...props
 }: ChatMessageProps) {
   if (message.role === "user") {
@@ -20,6 +22,7 @@ export const ChatMessage = memo(function _ChatMessage({
       <ChatMessageUser
         consolidate={consolidate}
         data-msg-id={message.id}
+        enableCodeHighlighting={enableCodeHighlighting}
         message={message}
         {...props}
       />
@@ -31,6 +34,7 @@ export const ChatMessage = memo(function _ChatMessage({
       <ChatMessageAssistant
         consolidate={consolidate}
         data-msg-id={message.id}
+        enableCodeHighlighting={enableCodeHighlighting}
         message={message}
         reasoningPreviewLines={reasoningPreviewLines}
         {...props}
