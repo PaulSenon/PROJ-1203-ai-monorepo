@@ -1,160 +1,213 @@
-# PRD - Virtua Migration for Chat Virtualization (Perf-First, No UX Drift)
+# PRD - Virtua Virtualization (Sidebar First, Conversation Second)
 
 ## Problem Statement
 
-The current chat virtualization stack works but still feels imperfect in real UX:
+Current chat UX/perf target (high INP quality, no visible virtualization artifacts) is at risk with growing list sizes.
 
-- conversation behavior is now acceptable but still fragile around dynamic-height transitions,
-- interaction smoothness is not consistently "native-feel" under heavy chat payloads,
-- implementation complexity grew around framework-specific behavior,
-- we need a cleaner, more reliable virtualization foundation while preserving current successful UX contracts.
+- Sidebar currently uses CSS/content-visibility based pseudo-virtualization and React Activity gating, not true range virtualization.
+- Conversation renders full message list in window scroll context; data is paginated but UI does not yet implement robust top-boundary infinite loading behavior.
+- MVP requires strict scroll stability: initial open at bottom, submit auto-scroll to bottom, no jitter while prepending/appending/streaming.
 
-From user perspective, virtualization must be invisible:
-
-1. opening a thread must feel instant and stable,
-2. initial open must land at bottom with no visible jump,
-3. streaming must not move viewport unless user is already at bottom,
-4. modal-like interactions must remain instant even with heavy conversation content.
+User expectation is strict: virtualization must be invisible to end users.
 
 ## Solution
 
-Migrate from TanStack Virtual to Virtua with a strict behavior-preserving approach:
+Adopt `virtua` in two controlled phases with no scope creep.
 
-1. Keep current proven interaction contracts (boot-gated reveal, bottom-anchor semantics, submit anchor behavior, streaming no-autofollow, sidebar load-more contract).
-2. Replace only virtualization engine internals (conversation + sidebar) with Virtua equivalents.
-3. Use Virtua **normal mode** (not reverse/chat mode) for conversation to avoid iOS reverse-scroll caveats and keep existing window-scroll semantics.
-4. Keep rollout patch-in-place on current branch, not full rollback to pre-virtualization baseline.
+1. **Phase A (Sidebar)**: replace pseudo-virtualization with `Virtualizer` based true virtualization inside existing sidebar UX/perf architecture.
+2. **Phase B (Conversation)**: add `WindowVirtualizer` with top-direction infinite scroll (older messages), strict anchor stability, and deterministic bottom behavior.
 
-This gives a cleaner virtualization engine change without reintroducing solved UX regressions.
+Core doctrine:
+
+- Preserve existing meaningful optimizations (deferred values, always-mounted mobile/sidebar behavior, layout containment where useful).
+- Remove fake virtualization mechanisms that duplicate/conflict with range virtualization.
+- Conversation scroll model is normal-flow only (non-inverted). Reverse/inverted scroll layout is forbidden as primary architecture.
+- No timeout/RAF retry hacks for scroll correctness. If initial convergence is async by nature, allow one explicit temporary hidden/stabilizing state with deterministic reveal only.
 
 ## User Stories
 
-1. As a chat user, I want thread opening to feel instant, so interaction feels native.
-2. As a chat user, I want first visible frame at thread open to already be at bottom, so there is no flicker or jump.
-3. As a chat user, I want submit to land exactly at bottom, so I can immediately follow assistant output.
-4. As a chat user, I want streaming growth to not move my viewport when I am reading older content.
-5. As a chat user, I want sidebar scrolling to remain smooth on mobile and desktop.
-6. As a chat user, I want sidebar load-more to keep triggering reliably during fast scroll.
-7. As a chat user, I want no empty-gap artifacts in virtualized lists.
-8. As a chat user, I want context-menu/drawer/dialog opening to remain responsive with heavy conversation rendered.
-9. As a chat user, I want sidebar overlay/backdrop behavior unchanged.
-10. As a chat user, I want sticky input and keyboard behavior unchanged.
-11. As a developer, I want virtualization internals simpler than current implementation, so maintenance cost is lower.
-12. As a developer, I want no fallback runtime mode and no feature-flag complexity, so behavior is deterministic.
-13. As a developer, I want stable key-based virtualization invariants preserved, so measurement/anchor behavior remains correct.
-14. As a developer, I want current boot visibility gate retained, so first-paint UX stays clean.
-15. As a developer, I want current load-more gating contract retained, so pagination behavior stays reliable.
-16. As a maintainer, I want a phased migration plan with objective acceptance gates, so regressions are caught quickly.
-17. As a maintainer, I want migration decisions documented without ambiguous fallback branches.
-18. As a maintainer, I want the final UI behavior indistinguishable from non-virtualized UX.
+1. As a user, I want the sidebar to stay smooth with large thread history, so navigation feels instant.
+2. As a user, I want thread list scrolling to never show blank jumps, so the UI feels native.
+3. As a user, I want sidebar load-more to trigger reliably even during fast flick scrolls, so I never get stuck at pagination boundaries.
+4. As a user, I want the active thread item behavior to stay correct after virtualization, so state and selection remain trustworthy.
+5. As a user, I want mobile sidebar behavior unchanged, so drawer/sheet interactions keep current quality.
+6. As a user, I want desktop sidebar collapse/expand performance to stay excellent, so virtualization does not regress INP.
+7. As a user, I want conversation open to land at bottom deterministically, so I can continue chat immediately.
+8. As a user, I want submitting a message to keep me at the bottom, so I can follow assistant response without manual scrolling.
+9. As a user, I want no visible scroll jumps while assistant content streams and grows, so reading remains stable.
+10. As a user, I want my viewport to stay stable while older messages load above, so reading context is preserved.
+11. As a user, I want no sticky-scroll forcing when I intentionally scroll away from bottom, so control stays with me.
+12. As a user, I want conversation infinite loading for older history (top boundary) to be reliable, so no missing history or stuck state.
+13. As a user, I want loading states to feel smooth and minimal, so virtualization does not look artificial.
+14. As a user, I want message interaction affordances (context actions, copy, hover actions) to behave the same after virtualization.
+15. As a user, I want no regression in keyboard navigation and accessibility semantics.
+16. As a user, I want iOS/Android behavior to stay stable during momentum scrolling.
+17. As a developer, I want clear anchor rules for prepend vs append changes, so behavior is deterministic.
+18. As a developer, I want pagination triggers decoupled from fragile visual sentinels where needed, so fast scroll cannot skip load boundaries.
+19. As a developer, I want explicit module boundaries (sidebar virtual module, conversation virtual module, pagination controller), so complexity stays manageable.
+20. As a maintainer, I want phased rollout with reversible checkpoints, so risk is controlled.
+21. As a maintainer, I want manual QA scripts that validate non-jitter guarantees, so regressions are caught before merge.
 
 ## 'Polishing' Requirements
 
-1. No visible layout drift in conversation or sidebar.
-2. No visible jump at thread open, submit, or stream completion.
-3. Last-assistant reserve behavior remains unchanged.
-4. Scroll-to-bottom button behavior remains unchanged.
-5. Sidebar header/footer overlay effect remains unchanged.
-6. Context menu/drawer/dialog open latency feels instant under heavy conversation.
-7. Mobile touch scrolling remains smooth and reliable.
-8. No debug logs or instrumentation noise leaks into runtime UX path.
+1. No obvious virtualization artifacts (flash, blank holes, jump-correction feel).
+2. INP quality on core interactions remains at least as good as current baseline.
+3. Initial open + submit scroll behavior feel deterministic on desktop and mobile.
+4. Streaming growth and prepend history preserve perceived visual anchor.
+5. Existing sidebar visual/timing polish (header/footer overlays, deferred updates, always-mounted behavior) remains intact.
+6. No accessibility regressions (focus, semantics, keyboard shortcuts, context menu activation).
+7. Logs/debug leftovers removed after validation.
 
 ## Implementation Decisions
 
-1. **Migration strategy decision**
-   - Rework on current branch HEAD, not full rollback to pre-virtualization commit.
-   - Rationale: current branch already contains correct UX contracts that must be preserved; rollback would reintroduce solved regressions and expand scope.
+1. **Phased execution**
+   - Implement sidebar virtualization first and freeze scope until QA pass.
+   - Only then implement conversation window virtualization.
 
-2. **Virtualization engine decision**
-   - Replace TanStack Virtual with Virtua for both surfaces:
-     - conversation: window-scroller virtualization,
-     - sidebar: element-scroller virtualization.
+2. **Sidebar virtualization architecture**
+   - Use Virtua `Virtualizer` as source of truth for mounted range.
+   - Keep current sidebar scroll container; integrate `Virtualizer` into that container rather than replacing container architecture.
+   - Keep existing sidebar outer architecture (sticky overlays, scroll edge behaviors, mobile persisted mount behavior, deferred list input data).
+   - Remove pseudo-virtualization mechanisms (`content-visibility` event gating / Activity-based hidden subtree toggling) from row rendering path.
+   - Keep lightweight CSS containment optimizations that do not conflict with Virtua range logic.
 
-3. **Conversation mode decision**
-   - Use Virtua normal mode.
-   - Do not use reverse/chat mode for production conversation in this phase.
-   - Keep current bottom-anchor model through explicit anchor control + visibility gating.
+3. **Sidebar pagination trigger reliability**
+   - Use deterministic load-more trigger with explicit status gating (`CanLoadMore`-style state checks and in-flight guard).
+   - Design trigger to be impossible to miss during fast scroll (index/offset threshold based, not fragile single-frame checks).
+   - Policy: single in-flight request per boundary detection, never duplicate while pending, never miss required call.
 
-4. **Behavior contracts to keep unchanged (must preserve)**
-   - boot-gated reveal (`opacity: 0`) until anchor-ready,
-   - pending-submit auto-scroll intent semantics,
-   - streaming no-force-follow semantics,
-   - last-assistant reserve-space UX contract,
-   - bottom/checkpoint probe architecture for future last-read checkpoint evolution,
-   - sidebar load-more gating by pagination status + near-end threshold.
+4. **Sidebar item identity and sizing**
+   - Use stable message/thread IDs for keys; never index keys.
+   - Preserve known row-height assumptions where valid; only add item size hints if empirically reducing jump.
+   - Keep per-item interactivity and context-menu behavior unchanged.
 
-5. **TanStack-specific logic to remove/replace**
-   - hook-based virtualizer plumbing,
-   - tanstack-specific measurement/adjustment option wiring,
-   - tanstack dependency and lockfile entries.
+5. **Conversation virtualization architecture**
+   - Use `WindowVirtualizer` (window scroll native) for conversation list.
+   - Keep current conversation L3 split (adapter/layout) and integrate virtualization inside layout boundary.
+   - Preserve existing business UX rules (last-assistant reserve latch, optimistic assistant shell behavior).
 
-6. **Virtua adapter architecture**
-   - Build two deep adapters with strict, minimal interfaces:
-     - Sidebar Virtua Adapter: thread range rendering + near-end load trigger.
-     - Conversation Virtua Adapter: window virtualization + bottom-anchor lifecycle + submit anchor contract.
-   - Keep presentational components unchanged.
+6. **Conversation anchor model**
+   - Canonical rule: pixel-stable viewport at all times unless user action explicitly changes position.
+   - Define explicit anchor rules for each mutation type:
+     - prepend older history,
+     - append user/assistant messages,
+     - in-place height growth while streaming.
+   - Use Virtua `shift` only when data mutation is prepend-at-start; keep `shift=false` for append/mid updates.
+   - No generic sticky-bottom mode, no auto-follow while user is away from bottom.
 
-7. **Initial anchor policy**
-   - Keep boot gate and resolve reveal only when bottom-anchor condition is satisfied.
-   - No timer-driven reveal fallback and no retry-loop hacks.
-   - Open budget target remains <=100ms for reveal in canonical heavy fixture.
+7. **Conversation scrolling architecture hard rule**
+   - Use `WindowVirtualizer` with normal DOM/message order and explicit programmatic bottom alignment.
+   - Do not use reverse/inverted scrolling architecture (`column-reverse` / reverse-flow chat model) as foundation.
+   - Reason: iOS Safari reverse infinite behavior has known platform limitations and upstream fix is not planned.
 
-8. **Scroll behavior policy**
-   - Programmatic anchor actions remain non-smooth for deterministic placement.
-   - No forced continuous auto-follow while streaming.
+8. **Initial open and submit-to-bottom behavior**
+   - Always force exact bottom on conversation open.
+   - Always force exact bottom on submit.
+   - Keep deterministic programmatic bottom alignment using virtualizer handle methods.
+   - No timeout/RAF retry loops.
+   - If first-paint exactness cannot be guaranteed due async measurement, allow short explicit stabilization state that hides list until alignment is applied once.
+   - Reveal from hidden state only on deterministic readiness condition; no timeout fallback.
 
-9. **Overlay performance compatibility**
-   - Migration must not regress context-menu/drawer/dialog interaction INP.
-   - Virtualization integration must preserve render isolation expectations from existing CSS/layout segmentation.
+9. **Conversation pagination (top boundary only in this scope)**
+   - Implement reliable load-more strategy for top boundary (older messages) with gating and duplicate prevention.
+   - In this scope, top boundary callback is wired to mocked debug logging only, to validate callback reliability without backend wiring changes.
+   - On iOS Safari, prepend commits must be applied in an idle-safe timing path (not while active touch momentum is mutating scroll) to preserve visual stability.
+   - Integrate with existing paginated data source semantics and keep message order contract unchanged.
 
-10. **Scope boundaries**
-    - No additional product features.
-    - No new runtime fallback mode for virtualized/non-virtualized paths.
-    - No broad overlay-library migration in this PRD (Virtua migration only).
+10. **Scroll restoration future-proofing**
+
+- Do not implement restoration now.
+- Structure modules so Virtua cache snapshot + offset restoration can be added later without redesign.
+
+11. **Module boundaries (deep modules)**
+
+- `SidebarVirtualListController`: virtualization + range + load trigger + key policy.
+- `SidebarLoadMorePolicy`: status gating and threshold/in-flight logic.
+- `ConversationWindowVirtualController`: virtualizer handle orchestration and anchor rules.
+- `ConversationPaginationPolicy`: top/bottom boundary detection + reliable load triggers.
+- `ConversationBottomAlignmentPolicy`: initial open + submit alignment semantics.
+
+12. **Rollout gates**
+
+- Gate A: sidebar QA sign-off.
+- Gate B: conversation QA sign-off.
+- Each gate requires manual QA checklist completion and explicit user validation report.
+
+13. **Platform quality requirement**
+
+- iOS Safari momentum/reverse edge behavior is hard pass criterion, not best-effort.
+
+14. **Bottom-state signal source**
+
+- Replace probe-only bottom-state dependency for conversation controls with virtualizer-aware bottom logic in this migration.
+- Keep resulting behavior equivalent for user-facing controls.
 
 ## Testing Decisions
 
-1. **Good test definition**
-   - Validate external behavior and perceived UX contracts, not internals of the virtualization engine.
+1. **Test quality bar**
+   - Verify external behavior and user-visible stability only.
+   - Avoid coupling tests/QA checks to implementation internals.
 
-2. **Execution mode for this phase**
-   - Manual QA + production-profile trace validation.
-   - `pnpm run check-types` on each migration step.
+2. **Validation mode in this scope**
+   - Manual QA by user is primary acceptance mechanism.
+   - `pnpm run check-types` after each implementation phase.
 
-3. **Modules to validate**
-   - Conversation Virtua Adapter (anchor stability, submit behavior, stream stability).
-   - Sidebar Virtua Adapter (smooth range rendering, load-more reliability).
-   - Boot gate lifecycle (hidden -> anchored reveal under 100ms target).
-   - Overlay interaction path (context menu and drawer responsiveness under heavy conversation).
+3. **Sidebar QA decisions**
+   - Validate very long thread history scroll smoothness.
+   - Validate rapid bottom flick + load-more reliability.
+   - Validate desktop collapse/expand and mobile open/close unchanged.
+   - Validate active thread highlighting and context-menu interactions across virtualized rows.
 
-4. **Mandatory QA matrix**
-   - heavy fixture open-to-bottom first frame,
-   - submit exact-bottom,
-   - streaming while reading mid-history (no jump on completion),
-   - fast sidebar scroll + repeated load-more,
-   - context-menu open cost on heavy conversation,
-   - mobile drawer + sidebar behavior.
+4. **Conversation QA decisions**
+   - Validate initial open at bottom for short/long conversations.
+   - Validate submit auto-scroll behavior for repeated sends.
+   - Validate prepend older messages while user reading near top/middle.
+   - Validate streaming growth while user at bottom and while user away from bottom.
+   - Validate no jitter under top-boundary pagination and fast wheel/touch scroll.
+   - Validate iOS Safari prepend behavior under active touch/momentum and confirm no visible instability (using idle-safe prepend application rule).
 
-5. **Acceptance gates**
-   - Thread-open reveal <=100ms in canonical heavy fixture.
-   - Context-menu/drawer interaction remains instant-feel (no notable regression vs current good state).
-   - No visible jump in required anchor paths.
+5. **Manual QA script required at implementation handoff**
+   - Sidebar pass:
+     1. Open very long thread history.
+     2. Fast-scroll to bottom multiple times.
+     3. Confirm load-more always triggers at least once when boundary reached.
+     4. Confirm no duplicate load burst while one request pending.
+     5. Confirm no visible shift while new thread insertions happen above current viewport.
+     6. Confirm mobile sheet + desktop collapse/expand interactions unchanged.
+   - Conversation pass:
+     1. Open existing long conversation and confirm immediate exact-bottom state.
+     2. Submit message repeatedly and confirm exact-bottom after each submit.
+     3. Scroll up, trigger top prepend loads, confirm pixel-stable viewport.
+     4. Scroll away from bottom during streaming and confirm zero autonomous movement.
+     5. Trigger top-boundary callback path repeatedly and confirm invocation policy works (single in-flight, non-missed).
+     6. Repeat on iOS Safari / touch momentum scroll and confirm same stability bar.
+   - QA report format (user-provided): scenario, expected, observed, pass/fail, notes/video.
+
+6. **Regression checks**
+   - Validate no UX regression in deferred sidebar updates.
+   - Validate no regression in existing reserve-space behavior for last assistant message.
+   - Validate no regression in keyboard/focus behavior.
 
 ## Out of Scope
 
-1. Persisted message height cache implementation.
-2. Reverse/chat-mode migration in Virtua.
-3. New data-layer pagination features for conversation beyond current scope.
-4. Overlay library replacement/migration unrelated to Virtua adoption.
-5. Visual redesign of chat/sidebar components.
+1. Full scroll restoration implementation.
+2. List virtualization in surfaces other than sidebar + conversation.
+3. Redesign of sidebar/conversation visual language.
+4. Data-layer refactors unrelated to virtualization integration.
+5. New feature additions not required for virtualization correctness/perf.
 
 ## Further Notes
 
-1. Virtua supports window virtualization and dynamic item measurement, and includes reverse-scroll features, but this PRD intentionally avoids reverse mode for conversation due known iOS caveats.
-2. This PRD keeps only baseline, deterministic features and explicitly avoids workaround loops/timers/sync-force patterns in anchor logic.
-3. Migration success is defined by invisible virtualization from user perspective, not by framework feature parity.
-4. If migration cannot satisfy the hard UX contracts, fallback is to halt and reassess architecture before adding complexity.
+1. **Warning (high-risk area):** conversation virtualization + streaming + prepend pagination is a fragile combination; strict phased rollout is mandatory.
+2. Virtua docs/source confirm `shift` is prepend-specific; misuse on append/mid mutations can produce unstable behavior.
+3. Virtua source also explicitly handles browser scroll anchoring conflicts (`overflow-anchor: none`) and iOS momentum edge cases; integration must not reintroduce conflicting browser anchoring hacks.
+4. Upstream reverse-scroll iOS limitation is known and not planned for library-level fix; this PRD intentionally avoids reverse/inverted architecture as a primary design.
+5. Keep architecture minimal: prefer simple deterministic policies over heuristic-heavy autoscroll logic.
 
 ## Unresolved Questions
 
-- none
+none
+
+## Resources
+
+- @.llms/git-references/virtua for virtua source code (browse with sub-agent)
