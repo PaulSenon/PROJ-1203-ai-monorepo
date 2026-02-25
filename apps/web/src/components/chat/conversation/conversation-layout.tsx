@@ -54,7 +54,7 @@ export function ChatConversationLayout({
   return (
     <Conversation.Root className="relative mx-auto w-full max-w-3xl flex-1 p-6">
       <Conversation.List
-        className={isConversationVisible ? undefined : "opacity-0"}
+      // className={isConversationVisible ? undefined : "opacity-0"}
       >
         <ConversationMessagesList
           bootRequestKey={bootRequestKey}

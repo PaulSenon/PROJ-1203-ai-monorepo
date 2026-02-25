@@ -1,7 +1,8 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { PlusIcon, SearchIcon } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
+import type { VirtualizerHandle } from "virtua";
+import { Virtualizer } from "virtua";
 import { UserProfileButton } from "@/components/auth/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,21 +50,16 @@ const SIDEBAR_STYLE = {
   // "--ease-default": "ease-out",
 } as React.CSSProperties;
 
-const SIDEBAR_VIRTUAL_OVERSCAN = 8;
-const SIDEBAR_VIRTUAL_USE_FLUSH_SYNC = false;
 const SIDEBAR_LOAD_MORE_BEFORE_END = 6;
-const SIDEBAR_THREAD_ROW_GAP = 6;
 const SIDEBAR_THREAD_ROW_HEIGHT = {
   mobile: 40,
   desktop: 36,
 } as const;
 
 function getSidebarThreadRowSize(isMobile: boolean) {
-  return (
-    (isMobile
-      ? SIDEBAR_THREAD_ROW_HEIGHT.mobile
-      : SIDEBAR_THREAD_ROW_HEIGHT.desktop) + SIDEBAR_THREAD_ROW_GAP
-  );
+  return isMobile
+    ? SIDEBAR_THREAD_ROW_HEIGHT.mobile
+    : SIDEBAR_THREAD_ROW_HEIGHT.desktop;
 }
 
 export function Sidebar({
@@ -86,13 +82,6 @@ export function Sidebar({
   onLoadMore?: () => void;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [scrollContainerEl, setScrollContainerEl] =
-    useState<HTMLDivElement | null>(null);
-  const setScrollContainerNode = useCallback((node: HTMLDivElement | null) => {
-    scrollContainerRef.current = node;
-    setScrollContainerEl(node);
-  }, []);
-
   const isMobile = useIsMobile();
   // handle scroll edges intersect for UI tweaks
   const { isAtTop, isAtBottom, topRef, bottomRef } =
@@ -111,7 +100,7 @@ export function Sidebar({
         />
         <SidebarContent
           className="gap-0 overscroll-contain p-0"
-          ref={setScrollContainerNode}
+          ref={scrollContainerRef}
         >
           <ScrollEdgeProbe ref={topRef} />
           <MySidebarHeaderSpacer />
@@ -125,7 +114,7 @@ export function Sidebar({
                 isLoadingMore={isLoadingMore}
                 isMobile={isMobile}
                 onLoadMore={onLoadMore}
-                scrollContainerEl={scrollContainerEl}
+                scrollContainerRef={scrollContainerRef}
                 threads={threads}
               />
             </SidebarGroupContent>
@@ -153,7 +142,7 @@ const SidebarThreads = React.memo(
     canLoadMore,
     isLoadingMore,
     onLoadMore,
-    scrollContainerEl,
+    scrollContainerRef,
   }: {
     threads: Doc<"threads">[];
     activeThreadId?: string;
@@ -161,104 +150,80 @@ const SidebarThreads = React.memo(
     canLoadMore?: boolean;
     isLoadingMore?: boolean;
     onLoadMore?: () => void;
-    scrollContainerEl: HTMLDivElement | null;
+    scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   }) => {
     const rowSize = getSidebarThreadRowSize(isMobile);
-    const getThreadItemKey = React.useCallback(
-      (index: number) => {
-        const thread = threads[index];
-        if (!thread) {
-          throw new Error("Sidebar virtualizer key invariant violated");
-        }
-        return thread.uuid;
-      },
-      [threads]
-    );
-
-    const virtualizer = useVirtualizer({
-      count: threads.length,
-      estimateSize: () => rowSize,
-      getItemKey: getThreadItemKey,
-      getScrollElement: () => scrollContainerEl,
-      overscan: SIDEBAR_VIRTUAL_OVERSCAN,
-      useFlushSync: SIDEBAR_VIRTUAL_USE_FLUSH_SYNC,
-    });
-
-    const virtualRows = virtualizer.getVirtualItems();
-    const loadMoreThresholdIndex = Math.max(
-      0,
-      threads.length - 1 - SIDEBAR_LOAD_MORE_BEFORE_END
-    );
+    const vlistRef = useRef<VirtualizerHandle>(null);
     const lastLoadTriggeredForCountRef = useRef<number | null>(null);
 
-    useEffect(() => {
-      virtualizer.measure();
-      lastLoadTriggeredForCountRef.current = null;
-    }, [scrollContainerEl, virtualizer]);
+    const handleScroll = React.useCallback(
+      (offset: number) => {
+        if (!onLoadMore) return;
+        if (!canLoadMore) return;
+        if (isLoadingMore) return;
+        if (threads.length === 0) return;
 
-    useEffect(() => {
-      if (!onLoadMore) return;
-      if (!canLoadMore) return;
-      if (isLoadingMore) return;
+        const handle = vlistRef.current;
+        if (!handle) return;
 
-      if (threads.length === 0) {
-        return;
-      }
+        const scrollSize = handle.scrollSize;
+        const viewportSize = handle.viewportSize;
+        if (viewportSize === 0) return;
 
-      const lastVirtualRow = virtualRows.at(-1);
-      if (!lastVirtualRow) {
-        return;
-      }
+        const remainingPx = scrollSize - offset - viewportSize;
+        const thresholdPx = SIDEBAR_LOAD_MORE_BEFORE_END * rowSize;
 
-      if (lastVirtualRow.index < loadMoreThresholdIndex) {
-        return;
-      }
+        if (remainingPx > thresholdPx) return;
 
-      if (lastLoadTriggeredForCountRef.current === threads.length) {
-        return;
-      }
+        if (lastLoadTriggeredForCountRef.current === threads.length) return;
 
-      lastLoadTriggeredForCountRef.current = threads.length;
-      onLoadMore();
-    }, [
-      canLoadMore,
-      isLoadingMore,
-      loadMoreThresholdIndex,
-      onLoadMore,
-      threads.length,
-      virtualRows,
-    ]);
-
-    const totalSize = Math.max(
-      0,
-      virtualizer.getTotalSize() - SIDEBAR_THREAD_ROW_GAP
+        lastLoadTriggeredForCountRef.current = threads.length;
+        onLoadMore();
+      },
+      [canLoadMore, isLoadingMore, onLoadMore, rowSize, threads.length]
     );
 
-    return (
-      <SidebarMenu
-        className="relative select-none gap-0 overflow-hidden"
-        style={{ height: totalSize }}
-      >
-        {virtualRows.map((virtualRow) => {
-          const thread = threads[virtualRow.index];
-          if (!thread) {
-            return null;
-          }
+    // Reset load trigger when thread count changes
+    useEffect(() => {
+      lastLoadTriggeredForCountRef.current = null;
+    }, [threads.length]);
 
-          return (
+    // Trigger initial load-more check on mount for short lists
+    useEffect(() => {
+      if (!(onLoadMore && canLoadMore) || isLoadingMore) return;
+      if (threads.length === 0) return;
+
+      const handle = vlistRef.current;
+      if (!handle) return;
+
+      const viewportSize = handle.viewportSize;
+      if (viewportSize === 0) return;
+
+      const scrollSize = handle.scrollSize;
+      if (scrollSize <= viewportSize) {
+        if (lastLoadTriggeredForCountRef.current === threads.length) return;
+        lastLoadTriggeredForCountRef.current = threads.length;
+        onLoadMore();
+      }
+    }, [canLoadMore, isLoadingMore, onLoadMore, threads.length]);
+
+    return (
+      <SidebarMenu className="select-none gap-0">
+        <Virtualizer
+          itemSize={rowSize}
+          onScroll={handleScroll}
+          ref={vlistRef}
+          scrollRef={scrollContainerRef}
+        >
+          {threads.map((thread) => (
             <SidebarThreadItem
-              className="absolute top-0 left-0 w-full"
               isActive={thread.uuid === activeThreadId}
               isMobile={isMobile}
-              key={virtualRow.key}
-              style={{
-                height: `${virtualRow.size}px`,
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
+              key={thread.uuid}
               thread={thread}
             />
-          );
-        })}
+          ))}
+        </Virtualizer>
       </SidebarMenu>
     );
   }

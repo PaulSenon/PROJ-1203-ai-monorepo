@@ -1,29 +1,9 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import {
-  useWindowVirtualizer,
-  type Virtualizer,
-} from "@tanstack/react-virtual";
-import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import type { WindowVirtualizerHandle } from "virtua";
+import { WindowVirtualizer } from "virtua";
 import { ChatMessage } from "@/components/chat/message/message";
 import { cn } from "@/lib/utils";
-
-const CONVERSATION_VIRTUAL_OVERSCAN = 3;
-const CONVERSATION_VIRTUAL_ESTIMATE_ASSISTANT_SIZE = 280;
-const CONVERSATION_VIRTUAL_ESTIMATE_USER_SIZE = 96;
-const CONVERSATION_VIRTUAL_ESTIMATE_OTHER_SIZE = 140;
-const CONVERSATION_ROW_BOTTOM_PADDING = 40;
-const CONVERSATION_VIRTUAL_USE_FLUSH_SYNC = false;
-
-function estimateMessageSize(message: MyUIMessage | undefined) {
-  if (!message) return CONVERSATION_VIRTUAL_ESTIMATE_ASSISTANT_SIZE;
-  if (message.role === "assistant") {
-    return CONVERSATION_VIRTUAL_ESTIMATE_ASSISTANT_SIZE;
-  }
-  if (message.role === "user") {
-    return CONVERSATION_VIRTUAL_ESTIMATE_USER_SIZE;
-  }
-  return CONVERSATION_VIRTUAL_ESTIMATE_OTHER_SIZE;
-}
 
 export type ConversationMessagesListProps = {
   messages: MyUIMessage[];
@@ -41,106 +21,19 @@ export const ConversationMessagesList = memo(function ConversationMessagesList({
   onBootAnchored,
   shouldReserveLastAssistantSpace,
 }: ConversationMessagesListProps) {
-  const listRef = useRef<HTMLDivElement>(null);
-  const [scrollMargin, setScrollMargin] = useState(0);
+  const virtualizerRef = useRef<WindowVirtualizerHandle>(null);
 
-  useLayoutEffect(() => {
-    const listEl = listRef.current;
-    if (!listEl) return;
-
-    const updateScrollMargin = () => {
-      const next = listEl.offsetTop;
-      setScrollMargin((prev) => (prev === next ? prev : next));
-    };
-
-    updateScrollMargin();
-    window.addEventListener("resize", updateScrollMargin);
-
-    return () => {
-      window.removeEventListener("resize", updateScrollMargin);
-    };
-  }, []);
-  const getMessageItemKey = useCallback(
-    (index: number) => {
-      const message = messages[index];
-      if (!message) {
-        throw new Error("Conversation virtualizer key invariant violated");
-      }
-      return message.id;
-    },
-    [messages]
-  );
-
-  const initialOffset = useCallback(() => {
-    if (typeof window === "undefined") return 0;
-    if (!bootRequestKey || messages.length === 0) {
-      return window.scrollY;
-    }
-
-    const listTop = listRef.current?.offsetTop ?? scrollMargin;
-    const estimatedTotal = messages.reduce((sum, message, index) => {
-      const isLast = index === messages.length - 1;
-      const rowPadding = isLast ? 0 : CONVERSATION_ROW_BOTTOM_PADDING;
-      return sum + estimateMessageSize(message) + rowPadding;
-    }, 0);
-
-    return Math.max(0, listTop + estimatedTotal - window.innerHeight);
-  }, [bootRequestKey, messages, scrollMargin]);
-
-  const initialRect =
-    typeof window === "undefined"
-      ? undefined
-      : {
-          height: window.innerHeight,
-          width: window.innerWidth,
-        };
-
+  // ── Boot anchor: scroll to bottom on thread open ──────────────────────
   const bootResolvedKeyRef = useRef<string | null>(null);
 
-  const maybeResolveBootAnchor = useCallback(
-    (instance: Virtualizer<Window, Element>) => {
-      if (!(bootRequestKey && onBootAnchored)) return;
-      if (bootResolvedKeyRef.current === bootRequestKey) return;
-      if (messages.length === 0) {
-        bootResolvedKeyRef.current = bootRequestKey;
-        onBootAnchored(bootRequestKey);
-        return;
-      }
+  const scrollToConversationBottom = useCallback(() => {
+    if (messages.length === 0) return;
+    virtualizerRef.current?.scrollToIndex(messages.length - 1, {
+      align: "start",
+    });
+  }, [messages.length]);
 
-      const scrollRect = instance.scrollRect;
-      if (!scrollRect) return;
-
-      const renderedItems = instance.getVirtualItems();
-      const hasLastRendered = renderedItems.some(
-        (item) => item.index === messages.length - 1
-      );
-      if (!hasLastRendered) return;
-
-      const scrollOffset = instance.scrollOffset ?? 0;
-      const bottomDistance =
-        instance.getTotalSize() - (scrollOffset + scrollRect.height);
-      if (bottomDistance > 2) return;
-
-      bootResolvedKeyRef.current = bootRequestKey;
-      onBootAnchored(bootRequestKey);
-    },
-    [bootRequestKey, messages.length, onBootAnchored]
-  );
-
-  const virtualizer = useWindowVirtualizer({
-    count: messages.length,
-    estimateSize: (index) => estimateMessageSize(messages[index]),
-    getItemKey: getMessageItemKey,
-    initialRect,
-    initialOffset,
-    onChange: (instance) => {
-      maybeResolveBootAnchor(instance);
-    },
-    overscan: CONVERSATION_VIRTUAL_OVERSCAN,
-    scrollMargin,
-    useFlushSync: CONVERSATION_VIRTUAL_USE_FLUSH_SYNC,
-  });
-
+  // Initial bottom anchor on boot
   useLayoutEffect(() => {
     if (!bootRequestKey) {
       bootResolvedKeyRef.current = null;
@@ -148,32 +41,45 @@ export const ConversationMessagesList = memo(function ConversationMessagesList({
     }
 
     bootResolvedKeyRef.current = null;
+
     if (messages.length === 0) {
       onBootAnchored?.(bootRequestKey);
       return;
     }
 
-    virtualizer.scrollToIndex(messages.length - 1, {
-      align: "end",
-      behavior: "auto",
-    });
-    maybeResolveBootAnchor(virtualizer);
+    scrollToConversationBottom();
   }, [
     bootRequestKey,
-    maybeResolveBootAnchor,
     messages.length,
     onBootAnchored,
-    virtualizer,
+    scrollToConversationBottom,
   ]);
 
-  const scrollToConversationBottom = useCallback(() => {
+  // Resolve boot anchor after virtualizer settles near bottom
+  useEffect(() => {
+    if (!(bootRequestKey && onBootAnchored)) return;
+    if (bootResolvedKeyRef.current === bootRequestKey) return;
     if (messages.length === 0) return;
-    virtualizer.scrollToIndex(messages.length - 1, {
-      align: "end",
-      behavior: "auto",
-    });
-  }, [messages.length, virtualizer]);
 
+    const handle = virtualizerRef.current;
+    if (!handle) return;
+
+    const viewportSize = handle.viewportSize;
+    if (viewportSize === 0) return;
+
+    const scrollHeight = document.documentElement.scrollHeight;
+    const bottomDistance = scrollHeight - handle.scrollOffset - viewportSize;
+    if (bottomDistance > 2) {
+      // Not at bottom yet — try once more
+      scrollToConversationBottom();
+      return;
+    }
+
+    bootResolvedKeyRef.current = bootRequestKey;
+    onBootAnchored(bootRequestKey);
+  });
+
+  // ── Submit anchor: scroll to bottom on new message ────────────────────
   const lastHandledSubmitIntentRef = useRef<string | undefined>(undefined);
   const tailMessageId = messages.at(-1)?.id;
   const beforeTailMessageId = messages.at(-2)?.id;
@@ -197,59 +103,14 @@ export const ConversationMessagesList = memo(function ConversationMessagesList({
     scrollToConversationBottom,
   ]);
 
-  useLayoutEffect(() => {
-    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (
-      item,
-      _delta,
-      instance
-    ) => {
-      const isStreamingTail = item.index === messages.length - 1;
-
-      if (isStreamingTail) {
-        return false;
-      }
-
-      const scrollOffset = instance.scrollOffset ?? 0;
-      return item.start < scrollOffset;
-    };
-
-    return () => {
-      virtualizer.shouldAdjustScrollPositionOnItemSizeChange = undefined;
-    };
-  }, [messages.length, virtualizer]);
-
-  const virtualRows = virtualizer.getVirtualItems();
-
+  // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div
-      className="relative w-full"
-      ref={listRef}
-      style={{
-        height: `${virtualizer.getTotalSize()}px`,
-        overflowAnchor: "none",
-      }}
-    >
-      {virtualRows.map((virtualRow) => {
-        const message = messages[virtualRow.index];
-        if (!message) {
-          return null;
-        }
-
-        const isLast = virtualRow.index === messages.length - 1;
+    <WindowVirtualizer bufferSize={500} ref={virtualizerRef}>
+      {messages.map((message, index) => {
+        const isLast = index === messages.length - 1;
 
         return (
-          <div
-            className={cn(
-              "absolute top-0 left-0 w-full pb-10",
-              isLast && "pb-0"
-            )}
-            data-index={virtualRow.index}
-            key={virtualRow.key}
-            ref={virtualizer.measureElement}
-            style={{
-              transform: `translateY(${virtualRow.start - scrollMargin}px)`,
-            }}
-          >
+          <div className={cn("pb-10", isLast && "pb-0")} key={message.id}>
             <ConversationMessageItem
               isLast={isLast}
               message={message}
@@ -258,7 +119,7 @@ export const ConversationMessagesList = memo(function ConversationMessagesList({
           </div>
         );
       })}
-    </div>
+    </WindowVirtualizer>
   );
 }, areConversationMessagesListPropsEqual);
 
