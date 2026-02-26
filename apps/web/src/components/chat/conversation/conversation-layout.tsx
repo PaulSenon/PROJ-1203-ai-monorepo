@@ -26,7 +26,8 @@ export function ChatConversationLayout({
   windowVirtualizerRef,
 }: ChatConversationLayoutProps) {
   const { bottomRef } = useScrollToBottomState();
-  const initialScroll = !isPending && messages.length > 0;
+  const shouldRunProbeInitialScroll =
+    !(useWindowVirtualization || isPending) && messages.length > 0;
   const shouldReserveLastAssistantSpace = useShouldReserveLastAssistantSpace({
     isThreadSettled,
   });
@@ -43,7 +44,7 @@ export function ChatConversationLayout({
       </Conversation.List>
 
       <ScrollEdgeProbe ref={bottomRef} />
-      {initialScroll ? <InitialScroll key={threadUuid} /> : null}
+      {shouldRunProbeInitialScroll ? <InitialScroll key={threadUuid} /> : null}
     </Conversation.Root>
   );
 }
