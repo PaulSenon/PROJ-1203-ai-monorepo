@@ -320,6 +320,7 @@ function RouteComponent() {
                   key={`${threadUuid}:${layoutRemountKey}`}
                   messages={messages}
                   threadUuid={threadUuid}
+                  useWindowVirtualization={false}
                 />
               </ScrollToBottomProvider>
             </div>

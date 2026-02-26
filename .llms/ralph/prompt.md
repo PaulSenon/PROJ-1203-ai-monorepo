@@ -1,6 +1,7 @@
 # PRD
 
 Pull @.llms/ralph/prd.md into your context.
+Pull last 30 lines of @.llms/memory/short_term.txt into your context
 
 You've been passed a file containing the last 10 RALPH commits (SHA, date, full message). Review these to understand what work has been done.
 

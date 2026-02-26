@@ -11,6 +11,7 @@ export type ChatConversationLayoutProps = {
   isPending: boolean;
   isThreadSettled: boolean;
   threadUuid: string;
+  useWindowVirtualization?: boolean;
 };
 
 export function ChatConversationLayout({
@@ -18,6 +19,7 @@ export function ChatConversationLayout({
   isPending,
   isThreadSettled,
   threadUuid,
+  useWindowVirtualization = true,
 }: ChatConversationLayoutProps) {
   const { bottomRef } = useScrollToBottomState();
   const initialScroll = !isPending && messages.length > 0;
@@ -31,6 +33,7 @@ export function ChatConversationLayout({
         <ConversationMessagesList
           messages={messages}
           shouldReserveLastAssistantSpace={shouldReserveLastAssistantSpace}
+          useWindowVirtualization={useWindowVirtualization}
         />
       </Conversation.List>
 
