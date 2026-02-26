@@ -1,5 +1,7 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
+import type { RefObject } from "react";
 import { useState } from "react";
+import type { WindowVirtualizerHandle } from "virtua";
 import { Conversation } from "@/components/ui-custom/chat/conversation";
 import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
 import { useScrollToBottomState } from "../../ui-custom/chat/hooks/use-scroll-to-bottom";
@@ -12,6 +14,7 @@ export type ChatConversationLayoutProps = {
   isThreadSettled: boolean;
   threadUuid: string;
   useWindowVirtualization?: boolean;
+  windowVirtualizerRef?: RefObject<WindowVirtualizerHandle | null>;
 };
 
 export function ChatConversationLayout({
@@ -20,6 +23,7 @@ export function ChatConversationLayout({
   isThreadSettled,
   threadUuid,
   useWindowVirtualization = true,
+  windowVirtualizerRef,
 }: ChatConversationLayoutProps) {
   const { bottomRef } = useScrollToBottomState();
   const initialScroll = !isPending && messages.length > 0;
@@ -34,6 +38,7 @@ export function ChatConversationLayout({
           messages={messages}
           shouldReserveLastAssistantSpace={shouldReserveLastAssistantSpace}
           useWindowVirtualization={useWindowVirtualization}
+          windowVirtualizerRef={windowVirtualizerRef}
         />
       </Conversation.List>
 
