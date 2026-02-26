@@ -33,9 +33,9 @@ export function useScrollToBottomOnSubmit({
       windowVirtualizerRef.current.scrollToIndex(lastIndex, {
         align: "end",
       });
-    } else {
-      scrollToBottom("instant");
     }
+
+    scrollToBottom("instant");
 
     lastHandledIntentIdRef.current = pendingAutoScrollMessageId;
   }, [

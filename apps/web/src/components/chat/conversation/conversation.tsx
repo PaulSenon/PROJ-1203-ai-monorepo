@@ -5,6 +5,7 @@ import { useActiveThreadUIReady } from "./_hooks/use-active-thread-ui-ready";
 import { useConversationDisplayMessages } from "./_hooks/use-conversation-display-messages";
 import { useScrollToBottomOnOpen } from "./_hooks/use-scroll-to-bottom-on-open";
 import { useScrollToBottomOnSubmit } from "./_hooks/use-scroll-to-bottom-on-submit";
+import { useStableBottomOnStream } from "./_hooks/use-stable-bottom-on-stream";
 import { ChatConversationLayout } from "./conversation-layout";
 
 export function ChatConversation() {
@@ -22,6 +23,10 @@ export function ChatConversation() {
   });
   useScrollToBottomOnSubmit({
     pendingAutoScrollMessageId,
+    messages,
+    windowVirtualizerRef,
+  });
+  useStableBottomOnStream({
     messages,
     windowVirtualizerRef,
   });

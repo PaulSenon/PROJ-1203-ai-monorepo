@@ -28,9 +28,9 @@ export function useScrollToBottomOnOpen({
       windowVirtualizerRef.current.scrollToIndex(lastIndex, {
         align: "end",
       });
-    } else {
-      scrollToBottom("instant");
     }
+
+    scrollToBottom("instant");
 
     lastHandledThreadRef.current = threadUuid;
   }, [
