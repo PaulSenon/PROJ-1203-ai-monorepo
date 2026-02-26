@@ -55,6 +55,7 @@ export function Sidebar({
   children,
   onLoadMore,
   onNewChat,
+  renderThreadItem,
 }: {
   className?: string;
   activeThreadId?: string;
@@ -62,6 +63,12 @@ export function Sidebar({
   children: React.ReactNode;
   onNewChat?: () => void;
   onLoadMore?: () => void;
+  renderThreadItem?: (args: {
+    thread: Doc<"threads">;
+    isActive: boolean;
+    isMobile: boolean;
+    index: number;
+  }) => React.ReactNode;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
@@ -108,6 +115,7 @@ export function Sidebar({
               <SidebarThreads
                 activeThreadId={activeThreadId}
                 isMobile={isMobile}
+                renderThreadItem={renderThreadItem}
                 threads={deferredThreads}
               />
             </SidebarGroupContent>
@@ -132,21 +140,37 @@ const SidebarThreads = React.memo(
     threads,
     activeThreadId,
     isMobile,
+    renderThreadItem,
   }: {
     threads: Doc<"threads">[];
     activeThreadId?: string;
     isMobile: boolean;
+    renderThreadItem?: (args: {
+      thread: Doc<"threads">;
+      isActive: boolean;
+      isMobile: boolean;
+      index: number;
+    }) => React.ReactNode;
   }) => (
     <SidebarMenu className="select-none gap-1.5">
-      {threads.map((thread, index) => (
-        <SidebarThreadItem
-          isActive={thread.uuid === activeThreadId}
-          isMobile={isMobile}
-          key={thread.uuid}
-          prerender={index < 25}
-          thread={thread}
-        />
-      ))}
+      {threads.map((thread, index) => {
+        const isActive = thread.uuid === activeThreadId;
+        const item = renderThreadItem?.({
+          thread,
+          isActive,
+          isMobile,
+          index,
+        }) ?? (
+          <SidebarThreadItem
+            isActive={isActive}
+            isMobile={isMobile}
+            prerender={index < 25}
+            thread={thread}
+          />
+        );
+
+        return <React.Fragment key={thread.uuid}>{item}</React.Fragment>;
+      })}
     </SidebarMenu>
   )
 );
