@@ -26,13 +26,13 @@ export function useStableBottomOnStream({
   const { scrollToBottom } = useScrollToBottomActions();
 
   const tailMessage = messages.at(-1);
-  const tailMessageId = tailMessage?.id;
-  const tailUpdatedAt = tailMessage?.metadata?.updatedAt;
+  const streamTick = tailMessage?.metadata?.updatedAt ?? -1;
   const shouldStabilizeBottom =
     isAtBottom && isStreamingAssistantMessage(tailMessage);
 
   useLayoutEffect(() => {
     if (!shouldStabilizeBottom) return;
+    if (streamTick < 0) return;
 
     const lastIndex = messages.length - 1;
     if (lastIndex >= 0 && windowVirtualizerRef.current) {
@@ -44,9 +44,8 @@ export function useStableBottomOnStream({
     scrollToBottom("instant");
   }, [
     shouldStabilizeBottom,
+    streamTick,
     messages.length,
-    tailMessageId,
-    tailUpdatedAt,
     windowVirtualizerRef,
     scrollToBottom,
   ]);
