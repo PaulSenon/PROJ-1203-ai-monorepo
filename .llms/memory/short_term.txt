@@ -209,3 +209,13 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - root cause: mobile sidebar uses `Sheet` (Dialog); context-menu content is portaled outside sheet subtree, so touch action selection was treated as dialog outside interaction and closed sheet
 - fix: mobile sidebar primitive now guards `SheetContent.onInteractOutside` and prevents close when target is inside `[data-slot="context-menu-content"]`
 - feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
+
+2026-02-25: completed deep reverse-engineered LegendList web beta documentation
+- path: `.llms/plan/virtualization/0-legendlist-documentation.md`
+- sources: legendlist local source + tests + example-web + git history only (no external docs)
+- focus: sidebar virtualization + window-scroll chat bottom-anchor + prepend infinite top + stability internals
+
+2026-02-25: drafted LegendList virtualization PRD v0 (sidebar first, conversation second)
+- path: `.llms/plan/virtualization/2-prd-legendlist.md`
+- decisions: real top-boundary pagination wiring for conversation (not mock), remove sidebar pseudo-virtual row gating, preserve existing shell UX
+- unresolved: final initial-open anchor policy (force-end vs restore alternate anchor)

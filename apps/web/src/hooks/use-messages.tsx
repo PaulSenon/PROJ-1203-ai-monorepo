@@ -503,7 +503,7 @@ export function useMessages({
 
   useEffect(() => {
     if (isSkip) return;
-    cache.set(messages);
+    cache.set(messages.slice(-10));
   }, [isSkip, messages, cache.set]);
 
   return useMemo(

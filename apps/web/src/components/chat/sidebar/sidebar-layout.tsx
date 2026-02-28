@@ -36,8 +36,9 @@ export function ChatSidebarLayout({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
-  const { isAtTop, isAtBottom, topRef, bottomRef } =
-    useScrollEdges(scrollContainerRef);
+  const { isAtTop, isAtBottom, topRef, bottomRef } = useScrollEdges({
+    viewportRef: scrollContainerRef,
+  });
 
   const handleLoadMore = useCallback(() => {
     onLoadMore?.();

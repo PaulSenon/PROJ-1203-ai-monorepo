@@ -262,6 +262,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.65.0(react@19.2.1))
+      '@legendapp/list':
+        specifier: 3.0.0-beta.38
+        version: 3.0.0-beta.38(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.13.5(@opentelemetry/api@1.9.0)
@@ -2364,6 +2367,18 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
+
+  '@legendapp/list@3.0.0-beta.38':
+    resolution: {integrity: sha512-toPEL1P3nqwJHg7ycTjChQrrgnpMs9wzq59cQ2kVmC0fbRnae5EoztY2ZftB/fz3p4pLoBaQbAeFoYOUxmkmEg==}
+    peerDependencies:
+      react: '*'
+      react-dom: '*'
+      react-native: '*'
+    peerDependenciesMeta:
+      react-dom:
+        optional: true
+      react-native:
+        optional: true
 
   '@mermaid-js/parser@0.6.3':
     resolution: {integrity: sha512-lnjOhe7zyHjc+If7yT4zoedx2vo4sHaTmtkl1+or8BRTnCtDmcTpAjpzDSfCZrshM5bCoz0GyidzadJAH1xobA==}
@@ -9561,6 +9576,13 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@legendapp/list@3.0.0-beta.38(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+    dependencies:
+      react: 19.2.1
+      use-sync-external-store: 1.6.0(react@19.2.1)
+    optionalDependencies:
+      react-dom: 19.2.1(react@19.2.1)
 
   '@mermaid-js/parser@0.6.3':
     dependencies:

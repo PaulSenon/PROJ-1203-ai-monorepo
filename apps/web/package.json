@@ -23,6 +23,7 @@
     "@clerk/themes": "catalog:clerk",
     "@convex-dev/agent": "catalog:convex",
     "@hookform/resolvers": "^5.2.2",
+    "@legendapp/list": "3.0.0-beta.38",
     "@orpc/client": "catalog:orpc",
     "@orpc/contract": "catalog:orpc",
     "@orpc/openapi-client": "catalog:orpc",
