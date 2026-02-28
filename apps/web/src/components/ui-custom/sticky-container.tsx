@@ -39,7 +39,7 @@ export function StickyContainer({ children, className }: StickyContainerProps) {
   return (
     <div
       className={cn(
-        "sticky bottom-[10px] mx-auto h-auto w-full transition-transform duration-150 ease-out md:sticky md:bottom-0 md:translate-y-0",
+        "fixed mx-auto h-auto w-full transition-transform duration-150 ease-out md:sticky md:translate-y-0",
         "bottom-[10px]", // IOS 26 hack, should never be at the very bottom or if breaks fullscreen continuity
         className
       )}
