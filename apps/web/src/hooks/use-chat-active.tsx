@@ -61,7 +61,11 @@ type ActiveThreadActions = {
 type ActiveThreadMessagesType = Pick<
   ActiveThreadState,
   "messages" | "isDataPending" | "isDataStale"
->;
+> & {
+  isLoadingOlder: ReturnType<typeof useMessages>["isLoading"];
+  olderHistoryStatus: ReturnType<typeof useMessages>["paginatedStatus"];
+  loadOlder: ReturnType<typeof useMessages>["loadMore"];
+};
 const ActiveTheadMessagesContext =
   createContext<ActiveThreadMessagesType | null>(null);
 type ActiveThreadStateType = Pick<
@@ -151,6 +155,9 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     messages,
     isPending: isMessagesQueryPending,
     isStale: isMessagesStale,
+    isLoading: isLoadingOlder,
+    loadMore,
+    paginatedStatus,
     applyOptimisticPatch,
     revertOptimisticPatch,
   } = useMessages({
@@ -451,8 +458,18 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         messages,
         isDataPending,
         isDataStale,
+        isLoadingOlder,
+        olderHistoryStatus: paginatedStatus,
+        loadOlder: loadMore,
       }) satisfies ActiveThreadMessagesType,
-    [messages, isDataPending, isDataStale]
+    [
+      messages,
+      isDataPending,
+      isDataStale,
+      isLoadingOlder,
+      paginatedStatus,
+      loadMore,
+    ]
   );
 
   return (

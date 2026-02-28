@@ -296,6 +296,21 @@ html body[data-scroll-locked][style] {
   overscroll-behavior-x: contain;
 }
 
+/**
+ * Hack to temporarily hide scroll handle on main scroll
+ * while stabilizing legendList virtualizer because the
+ * initialScroll at end isn't properly working yet (beta 38)
+ */
+@layer utilities {
+  html:has([data-loading-window-scrollbar]) {
+    scrollbar-width: none; /* Firefox (when supported) */
+  }
+
+  html:has([data-loading-window-scrollbar])::-webkit-scrollbar {
+    display: none; /* Chromium / Safari */
+  }
+}
+
 /* :root {
   --background: oklch(0.9551 0 0);
   --foreground: oklch(0.3211 0 0);

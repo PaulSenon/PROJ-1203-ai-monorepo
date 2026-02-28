@@ -17,7 +17,12 @@ export const ChatMessage = memo(function _ChatMessage({
 }: ChatMessageProps) {
   if (message.role === "user") {
     return (
-      <ChatMessageUser consolidate={consolidate} message={message} {...props} />
+      <ChatMessageUser
+        consolidate={consolidate}
+        data-msg-id={message.id}
+        message={message}
+        {...props}
+      />
     );
   }
 
@@ -25,6 +30,7 @@ export const ChatMessage = memo(function _ChatMessage({
     return (
       <ChatMessageAssistant
         consolidate={consolidate}
+        data-msg-id={message.id}
         message={message}
         reasoningPreviewLines={reasoningPreviewLines}
         {...props}

@@ -66,8 +66,9 @@ export function Sidebar({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   // handle scroll edges intersect for UI tweaks
-  const { isAtTop, isAtBottom, topRef, bottomRef } =
-    useScrollEdges(scrollContainerRef);
+  const { isAtTop, isAtBottom, topRef, bottomRef } = useScrollEdges({
+    viewportRef: scrollContainerRef,
+  });
 
   // handle lazy loading
   const handleLoadMore = useCallback(() => {

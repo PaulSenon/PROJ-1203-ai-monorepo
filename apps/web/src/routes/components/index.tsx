@@ -26,6 +26,10 @@ const components = [
     name: "Conversation",
     path: "/components/conversation",
   },
+  {
+    name: "Window Scroll Virtualization",
+    path: "/components/window-scroll-virtualization",
+  },
 ] as const;
 
 function RouteComponent() {

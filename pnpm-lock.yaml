@@ -262,6 +262,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.65.0(react@19.2.1))
+      '@legendapp/list':
+        specifier: 3.0.0-beta.38
+        version: 3.0.0-beta.38(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.13.5(@opentelemetry/api@1.9.0)
@@ -362,8 +365,8 @@ importers:
         specifier: ^1.0.2
         version: 1.0.2(@types/mdast@4.0.4)(micromark-util-types@2.0.2)(micromark@4.0.2)(react@19.2.1)(unified@11.0.5)
       '@streamdown/code':
-        specifier: file:/app/.tmp/streamdown-code-1.0.2.tgz
-        version: file:.tmp/streamdown-code-1.0.2.tgz(react@19.2.1)
+        specifier: ^1.0.3
+        version: 1.0.3(react@19.2.1)
       '@streamdown/math':
         specifier: ^1.0.2
         version: 1.0.2(react@19.2.1)
@@ -467,8 +470,8 @@ importers:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       streamdown:
-        specifier: file:/app/.tmp/streamdown-2.2.0.tgz
-        version: file:.tmp/streamdown-2.2.0.tgz(react@19.2.1)
+        specifier: ^2.3.0
+        version: 2.3.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       tailwind-merge:
         specifier: ^3.3.1
         version: 3.3.1
@@ -2365,6 +2368,18 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
+  '@legendapp/list@3.0.0-beta.38':
+    resolution: {integrity: sha512-toPEL1P3nqwJHg7ycTjChQrrgnpMs9wzq59cQ2kVmC0fbRnae5EoztY2ZftB/fz3p4pLoBaQbAeFoYOUxmkmEg==}
+    peerDependencies:
+      react: '*'
+      react-dom: '*'
+      react-native: '*'
+    peerDependenciesMeta:
+      react-dom:
+        optional: true
+      react-native:
+        optional: true
+
   '@mermaid-js/parser@0.6.3':
     resolution: {integrity: sha512-lnjOhe7zyHjc+If7yT4zoedx2vo4sHaTmtkl1+or8BRTnCtDmcTpAjpzDSfCZrshM5bCoz0GyidzadJAH1xobA==}
 
@@ -3814,9 +3829,8 @@ packages:
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
 
-  '@streamdown/code@file:.tmp/streamdown-code-1.0.2.tgz':
-    resolution: {integrity: sha512-RDhojCrkulcLik0GhGYH6CMjK0+aJS5tgLDLpwPkIDY+AkUYm1KcGGv6T4jJPRvQptwvwlZ19tfTW8j538Fh4g==, tarball: file:.tmp/streamdown-code-1.0.2.tgz}
-    version: 1.0.2
+  '@streamdown/code@1.0.3':
+    resolution: {integrity: sha512-3Ym5TCLcGhrHY2qBaUVWpqNRtxnZvqh4Y5Qm/pTIKA4AmEWwAAoYjZnxG7mOsvOpWVWiDwETjUtchNL1XzQEAw==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
 
@@ -6617,8 +6631,8 @@ packages:
     resolution: {integrity: sha512-NZQZdC5wOE/H3UT28fVGL+ikOZcEzfMGk/c3iN9UGxzWHMa1op7274oyiUVrAG4B2EuFhus8SvkaYnhvW92p9Q==}
     hasBin: true
 
-  rehype-harden@1.1.7:
-    resolution: {integrity: sha512-j5DY0YSK2YavvNGV+qBHma15J9m0WZmRe8posT5AtKDS6TNWtMVTo6RiqF8SidfcASYz8f3k2J/1RWmq5zTXUw==}
+  rehype-harden@1.1.8:
+    resolution: {integrity: sha512-Qn7vR1xrf6fZCrkm9TDWi/AB4ylrHy+jqsNm1EHOAmbARYA6gsnVJBq/sdBh6kmT4NEZxH5vgIjrscefJAOXcw==}
 
   rehype-katex@7.0.1:
     resolution: {integrity: sha512-OiM2wrZ/wuhKkigASodFoo8wimG3H12LWQaH8qSPVJn9apWKFSH3YOCtbKpBorTVw/eI7cuT21XBbvwEswbIOA==}
@@ -6664,8 +6678,8 @@ packages:
   remark-stringify@11.0.0:
     resolution: {integrity: sha512-1OSmLd3awB/t8qdoEOMazZkNsfVTeY4fTsgzcQFdXNq8ToTN4ZGwrMnlda4K6smTFKD+GRV6O48i6Z4iKgPPpw==}
 
-  remend@1.2.0:
-    resolution: {integrity: sha512-NbKrdWweTRuByPYErzQCNpNtsR9M1QQ0hK2UzmnmlSaEqHnkQ5Korlyi8KpdbOJ0rImJfRy4EAY0uDxYnL9Plw==}
+  remend@1.2.1:
+    resolution: {integrity: sha512-4wC12bgXsfKAjF1ewwkNIQz5sqewz/z1xgIgjEMb3r1pEytQ37F0Cm6i+OhbTWEvguJD7lhOUJhK5fSasw9f0w==}
 
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
@@ -6907,11 +6921,11 @@ packages:
     resolution: {integrity: sha512-KXDYZ9dszj6bzvnEMRYvxgeTHU74QBFL54XKtP3nyMuJ81CFYtABZ3bAzL2EdFUaEwJOBOgENyFj3R7oTzDyyw==}
     engines: {node: '>=4', npm: '>=6'}
 
-  streamdown@file:.tmp/streamdown-2.2.0.tgz:
-    resolution: {integrity: sha512-mUCIL1v8QvhY7AKgvJkj6hSrLTU755SdXpg3/BRUv8qY9uibyxtl1suEZ6tFkV1ak4w3e9sOxSMFcS0BdPiEjg==, tarball: file:.tmp/streamdown-2.2.0.tgz}
-    version: 2.2.0
+  streamdown@2.3.0:
+    resolution: {integrity: sha512-OqS3by/lt91lSicE8RQP2nTsYI6Q/dQgGP2vcyn9YesCmRHhNjswAuBAZA1z0F4+oBU3II/eV51LqjCqwTb1lw==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
 
   string-width@4.2.3:
     resolution: {integrity: sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==}
@@ -9563,6 +9577,13 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  '@legendapp/list@3.0.0-beta.38(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+    dependencies:
+      react: 19.2.1
+      use-sync-external-store: 1.6.0(react@19.2.1)
+    optionalDependencies:
+      react-dom: 19.2.1(react@19.2.1)
+
   '@mermaid-js/parser@0.6.3':
     dependencies:
       langium: 3.3.1
@@ -11130,7 +11151,7 @@ snapshots:
       - micromark-util-types
       - unified
 
-  '@streamdown/code@file:.tmp/streamdown-code-1.0.2.tgz(react@19.2.1)':
+  '@streamdown/code@1.0.3(react@19.2.1)':
     dependencies:
       react: 19.2.1
       shiki: 3.22.0
@@ -14458,7 +14479,7 @@ snapshots:
     dependencies:
       jsesc: 3.1.0
 
-  rehype-harden@1.1.7:
+  rehype-harden@1.1.8:
     dependencies:
       unist-util-visit: 5.0.0
 
@@ -14546,7 +14567,7 @@ snapshots:
       mdast-util-to-markdown: 2.1.2
       unified: 11.0.5
 
-  remend@1.2.0: {}
+  remend@1.2.1: {}
 
   require-from-string@2.0.2: {}
 
@@ -14898,20 +14919,21 @@ snapshots:
 
   stoppable@1.1.0: {}
 
-  streamdown@file:.tmp/streamdown-2.2.0.tgz(react@19.2.1):
+  streamdown@2.3.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
     dependencies:
       clsx: 2.1.1
       hast-util-to-jsx-runtime: 2.3.6
       html-url-attributes: 3.0.1
       marked: 17.0.2
       react: 19.2.1
-      rehype-harden: 1.1.7
+      react-dom: 19.2.1(react@19.2.1)
+      rehype-harden: 1.1.8
       rehype-raw: 7.0.0
       rehype-sanitize: 6.0.0
       remark-gfm: 4.0.1
       remark-parse: 11.0.0
       remark-rehype: 11.1.2
-      remend: 1.2.0
+      remend: 1.2.1
       tailwind-merge: 3.4.0
       unified: 11.0.5
       unist-util-visit: 5.0.0

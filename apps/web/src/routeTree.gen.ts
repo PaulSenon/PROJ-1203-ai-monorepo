@@ -18,6 +18,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ComponentsIndexRouteImport } from './routes/components/index'
 import { Route as ComponentsComponentsRouteImport } from './routes/components/_components'
+import { Route as ComponentsComponentsWindowScrollVirtualizationRouteImport } from './routes/components/_components/window-scroll-virtualization'
 import { Route as ComponentsComponentsTextareaRouteImport } from './routes/components/_components/textarea'
 import { Route as ComponentsComponentsSidebarRouteImport } from './routes/components/_components/sidebar'
 import { Route as ComponentsComponentsMessagesRouteImport } from './routes/components/_components/messages'
@@ -65,6 +66,12 @@ const ComponentsComponentsRoute = ComponentsComponentsRouteImport.update({
   id: '/_components',
   getParentRoute: () => ComponentsRoute,
 } as any)
+const ComponentsComponentsWindowScrollVirtualizationRoute =
+  ComponentsComponentsWindowScrollVirtualizationRouteImport.update({
+    id: '/window-scroll-virtualization',
+    path: '/window-scroll-virtualization',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
 const ComponentsComponentsTextareaRoute =
   ComponentsComponentsTextareaRouteImport.update({
     id: '/textarea',
@@ -131,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/sidebar': typeof ComponentsComponentsSidebarRoute
   '/components/textarea': typeof ComponentsComponentsTextareaRoute
+  '/components/window-scroll-virtualization': typeof ComponentsComponentsWindowScrollVirtualizationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -144,6 +152,7 @@ export interface FileRoutesByTo {
   '/components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/sidebar': typeof ComponentsComponentsSidebarRoute
   '/components/textarea': typeof ComponentsComponentsTextareaRoute
+  '/components/window-scroll-virtualization': typeof ComponentsComponentsWindowScrollVirtualizationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -164,6 +173,7 @@ export interface FileRoutesById {
   '/components/_components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/_components/sidebar': typeof ComponentsComponentsSidebarRoute
   '/components/_components/textarea': typeof ComponentsComponentsTextareaRoute
+  '/components/_components/window-scroll-virtualization': typeof ComponentsComponentsWindowScrollVirtualizationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
     | '/components/messages'
     | '/components/sidebar'
     | '/components/textarea'
+    | '/components/window-scroll-virtualization'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/components/messages'
     | '/components/sidebar'
     | '/components/textarea'
+    | '/components/window-scroll-virtualization'
   id:
     | '__root__'
     | '/'
@@ -212,6 +224,7 @@ export interface FileRouteTypes {
     | '/components/_components/messages'
     | '/components/_components/sidebar'
     | '/components/_components/textarea'
+    | '/components/_components/window-scroll-virtualization'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -280,6 +293,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/components'
       preLoaderRoute: typeof ComponentsComponentsRouteImport
       parentRoute: typeof ComponentsRoute
+    }
+    '/components/_components/window-scroll-virtualization': {
+      id: '/components/_components/window-scroll-virtualization'
+      path: '/window-scroll-virtualization'
+      fullPath: '/components/window-scroll-virtualization'
+      preLoaderRoute: typeof ComponentsComponentsWindowScrollVirtualizationRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
     }
     '/components/_components/textarea': {
       id: '/components/_components/textarea'
@@ -385,6 +405,7 @@ interface ComponentsComponentsRouteChildren {
   ComponentsComponentsMessagesRoute: typeof ComponentsComponentsMessagesRoute
   ComponentsComponentsSidebarRoute: typeof ComponentsComponentsSidebarRoute
   ComponentsComponentsTextareaRoute: typeof ComponentsComponentsTextareaRoute
+  ComponentsComponentsWindowScrollVirtualizationRoute: typeof ComponentsComponentsWindowScrollVirtualizationRoute
 }
 
 const ComponentsComponentsRouteChildren: ComponentsComponentsRouteChildren = {
@@ -393,6 +414,8 @@ const ComponentsComponentsRouteChildren: ComponentsComponentsRouteChildren = {
   ComponentsComponentsMessagesRoute: ComponentsComponentsMessagesRoute,
   ComponentsComponentsSidebarRoute: ComponentsComponentsSidebarRoute,
   ComponentsComponentsTextareaRoute: ComponentsComponentsTextareaRoute,
+  ComponentsComponentsWindowScrollVirtualizationRoute:
+    ComponentsComponentsWindowScrollVirtualizationRoute,
 }
 
 const ComponentsComponentsRouteWithChildren =
