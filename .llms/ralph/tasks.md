@@ -60,9 +60,10 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 - [x] `S5.3a.r2` Remove perceptible header/footer backdrop edge-toggle delay in `/components/sidebar`.
 - [ ] `S5.3d.r2` Improve load-more trigger cadence for fast scroll so pagination keeps up without debounce feel.
 - [x] `S5.3e.r1` Fix mobile context-menu action flow so non-navigation actions do not close sidebar.
+- [x] `S5.3e.r2` Restore context-menu close-on-action while preserving mobile non-navigation no-autoclose behavior.
 
 ## Task Selection
 
-- Selected next task (this iteration): `[x] S5.3e.r1` fix mobile context-menu action flow so non-navigation actions do not close sidebar.
-- Completed outcome: guarded context-menu item select path in `ThreadItem.Root` by preventing default select propagation and suppressing immediate mobile row-link navigation for a short post-action window, so action taps no longer trigger unintended thread navigation auto-close.
+- Selected next task (this iteration): `[x] S5.3e.r2` restore context-menu close-on-action while preserving mobile non-navigation no-autoclose behavior.
+- Completed outcome: removed `preventDefault` from `ContextMenuItem` select path in `ThreadItem.Root` so Radix closes menu on action selection again; retained select `stopPropagation` + existing short mobile link-navigation suppression window so action callbacks fire and sidebar stays open unless actual thread navigation happens.
 - Next queued task: `[>] S5.3d.r2` improve load-more trigger cadence for fast scroll so pagination keeps up without debounce feel.

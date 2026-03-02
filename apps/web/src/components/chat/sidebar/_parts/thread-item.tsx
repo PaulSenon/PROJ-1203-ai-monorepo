@@ -203,7 +203,6 @@ function ThreadContextMenu({
             disabled={item.disabled}
             key={item.id}
             onSelect={(event) => {
-              event.preventDefault();
               event.stopPropagation();
               onActionSelect?.();
               item.callback();

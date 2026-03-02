@@ -199,3 +199,8 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - `ThreadItem.Root` context-menu selection path now prevents default select propagation and sets a short mobile-only navigation suppression window, blocking accidental row-link navigation immediately after selecting a context-menu action
 - intended behavior restored: non-navigation context-menu actions no longer auto-close mobile sidebar; close remains tied to actual thread navigation
 - feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
+
+2026-03-02: sidebar S5.3e.r2 shipped (RALPH)
+- `ThreadItem.Root` context-menu item selection no longer calls `preventDefault`, restoring Radix default close-on-select behavior
+- retained `stopPropagation` + existing short mobile row-link suppression window so action callbacks run and non-navigation actions do not close sidebar
+- feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)

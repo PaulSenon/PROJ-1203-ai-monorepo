@@ -183,3 +183,13 @@ PRD: `.llms/ralph/prd.md`
   - completed `S5.3e.r1` in `/components/sidebar`: context-menu item selection now prevents default/select propagation and marks a short suppression window in `ThreadItem.Root` so immediate post-action mobile row-link clicks are ignored.
   - intended impact: non-navigation context-menu actions no longer trigger unintended thread navigation, so mobile sidebar auto-close remains navigation-only.
   - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch).
+
+#### 2026-03-02 run 17 (S5.3e.r2 menu close parity restore)
+
+- Date: 2026-03-02
+- Tester: OpenCode (gpt-5.3-codex)
+- Result: partial
+- Notes:
+  - completed `S5.3e.r2` in `/components/sidebar`: removed `preventDefault` from `ContextMenuItem` select handler in `ThreadItem.Root` so Radix closes the context menu after action selection again.
+  - preserved mobile safeguard: kept action-select propagation stop + existing short suppression window on row link clicks, so non-navigation actions do not auto-close sidebar while callbacks still execute.
+  - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch).
