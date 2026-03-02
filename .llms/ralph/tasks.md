@@ -51,10 +51,10 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 
 - [x] `S5.3a.r1` Restore header/footer reserved-space behavior for `/components/sidebar` while keeping overlay glass-edge headers/footers.
 - [x] `S5.3b.r1` Restore mobile accessibility path to thread options trigger (keyboard/assistive nav on row actions).
-- [ ] `S5.3d.r1` Tune `/components/sidebar` load-more sentinel responsiveness to remove perceived delay.
+- [x] `S5.3d.r1` Tune `/components/sidebar` load-more sentinel responsiveness to remove perceived delay.
 
 ## Task Selection
 
-- Selected next task (this iteration): `[x] S5.3b.r1` Restore mobile options accessibility path in thread rows.
-- Completed outcome: reintroduced visible mobile `Thread options` trigger in `ThreadItem.Root` so assistive/keyboard navigation can open context menu on mobile path (desktop hover/focus behavior unchanged).
-- Next queued task: `[>] S5.3d.r1` tune `/components/sidebar` load-more sentinel responsiveness.
+- Selected next task (this iteration): `[x] S5.3d.r1` tune `/components/sidebar` load-more sentinel responsiveness.
+- Completed outcome: increased bottom sentinel prefetch window in `ChatSidebarLayout` (`rootMargin` from `100%` to `200%`) so pagination fires earlier and removes perceived wait at list end.
+- Next queued task: `[>] S5.4a` verify `/components/sidebar-thread-item` row preset switching (20/200/1000) parity + no obvious jank.

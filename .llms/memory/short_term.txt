@@ -152,3 +152,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-02: sidebar Step 5 S5.3b.r1 + QA handoff detail capture (RALPH)
 - implemented mobile-accessible thread options path in `ThreadItem.Root`: mobile rows now render visible `Thread options` trigger button to open context menu via existing a11y trigger helper
 - logged additional QA handoff notes: backdrop edge effect toggle feels delayed (~500ms+) on `/components/sidebar` (minor), known pre-existing bug where mobile context-menu action may close sidebar, and long-list INP concern on `/components/sidebar-thread-item` quick/context actions likely tied to demo action-log rerenders
+
+2026-03-02: sidebar Step 5 S5.3d.r1 sentinel responsiveness tune (RALPH)
+- updated `ChatSidebarLayout` bottom `useInView` sentinel `rootMargin` from `100%` to `200%` so `loadMore` prefetch fires earlier near list end
+- objective is perceived responsiveness only; no behavior change to action semantics or mobile auto-close rules
