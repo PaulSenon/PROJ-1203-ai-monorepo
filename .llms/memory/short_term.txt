@@ -120,3 +120,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - correction applied: hard pivot of active sidebar composition to `chat/sidebar/sidebar-layout.tsx` using `ui-custom/sidebar/sidebar-shell.tsx`; all callsite imports of `ui-custom/sidebar/sidebar.tsx` removed
 - demo alignment: `/components/sidebar` route now uses `ChatSidebarLayout` path instead of old mixed shell entry
 - PRD ambiguity fixed: canonical shell path explicitly set to `ui-custom/sidebar/sidebar-shell.tsx`; legacy `ui-custom/sidebar/sidebar.tsx` marked transitional/non-authoritative for refactor path; Step 3 acceptance criteria now include "no imports of legacy shell in L3/demos"
+
+2026-03-02: sidebar-thread-item demo page added for PRD Step 5
+- new route `/components/sidebar-thread-item` exercises L3 `ThreadItem.Root` with 20/200/1000 row stress presets, active-row override, mobile-mode toggle, and action callback log
+- components index now links to sidebar-thread-item demo; route types wired in `apps/web/src/routeTree.gen.ts` so check-types stays green

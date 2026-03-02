@@ -20,6 +20,7 @@ import { Route as ComponentsIndexRouteImport } from './routes/components/index'
 import { Route as ComponentsComponentsRouteImport } from './routes/components/_components'
 import { Route as ComponentsComponentsTextareaRouteImport } from './routes/components/_components/textarea'
 import { Route as ComponentsComponentsSidebarRouteImport } from './routes/components/_components/sidebar'
+import { Route as ComponentsComponentsSidebarThreadItemRouteImport } from './routes/components/_components/sidebar-thread-item'
 import { Route as ComponentsComponentsMessagesRouteImport } from './routes/components/_components/messages'
 import { Route as ComponentsComponentsConversationRouteImport } from './routes/components/_components/conversation'
 import { Route as ComponentsComponentsButtonGroupRouteImport } from './routes/components/_components/button-group'
@@ -77,6 +78,12 @@ const ComponentsComponentsSidebarRoute =
     path: '/sidebar',
     getParentRoute: () => ComponentsComponentsRoute,
   } as any)
+const ComponentsComponentsSidebarThreadItemRoute =
+  ComponentsComponentsSidebarThreadItemRouteImport.update({
+    id: '/sidebar-thread-item',
+    path: '/sidebar-thread-item',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
 const ComponentsComponentsMessagesRoute =
   ComponentsComponentsMessagesRouteImport.update({
     id: '/messages',
@@ -130,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/components/conversation': typeof ComponentsComponentsConversationRoute
   '/components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/sidebar': typeof ComponentsComponentsSidebarRoute
+  '/components/sidebar-thread-item': typeof ComponentsComponentsSidebarThreadItemRoute
   '/components/textarea': typeof ComponentsComponentsTextareaRoute
 }
 export interface FileRoutesByTo {
@@ -143,6 +151,7 @@ export interface FileRoutesByTo {
   '/components/conversation': typeof ComponentsComponentsConversationRoute
   '/components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/sidebar': typeof ComponentsComponentsSidebarRoute
+  '/components/sidebar-thread-item': typeof ComponentsComponentsSidebarThreadItemRoute
   '/components/textarea': typeof ComponentsComponentsTextareaRoute
 }
 export interface FileRoutesById {
@@ -163,6 +172,7 @@ export interface FileRoutesById {
   '/components/_components/conversation': typeof ComponentsComponentsConversationRoute
   '/components/_components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/_components/sidebar': typeof ComponentsComponentsSidebarRoute
+  '/components/_components/sidebar-thread-item': typeof ComponentsComponentsSidebarThreadItemRoute
   '/components/_components/textarea': typeof ComponentsComponentsTextareaRoute
 }
 export interface FileRouteTypes {
@@ -179,6 +189,7 @@ export interface FileRouteTypes {
     | '/components/conversation'
     | '/components/messages'
     | '/components/sidebar'
+    | '/components/sidebar-thread-item'
     | '/components/textarea'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/components/conversation'
     | '/components/messages'
     | '/components/sidebar'
+    | '/components/sidebar-thread-item'
     | '/components/textarea'
   id:
     | '__root__'
@@ -211,6 +223,7 @@ export interface FileRouteTypes {
     | '/components/_components/conversation'
     | '/components/_components/messages'
     | '/components/_components/sidebar'
+    | '/components/_components/sidebar-thread-item'
     | '/components/_components/textarea'
   fileRoutesById: FileRoutesById
 }
@@ -293,6 +306,13 @@ declare module '@tanstack/react-router' {
       path: '/sidebar'
       fullPath: '/components/sidebar'
       preLoaderRoute: typeof ComponentsComponentsSidebarRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
+    }
+    '/components/_components/sidebar-thread-item': {
+      id: '/components/_components/sidebar-thread-item'
+      path: '/sidebar-thread-item'
+      fullPath: '/components/sidebar-thread-item'
+      preLoaderRoute: typeof ComponentsComponentsSidebarThreadItemRouteImport
       parentRoute: typeof ComponentsComponentsRoute
     }
     '/components/_components/messages': {
@@ -384,6 +404,7 @@ interface ComponentsComponentsRouteChildren {
   ComponentsComponentsConversationRoute: typeof ComponentsComponentsConversationRoute
   ComponentsComponentsMessagesRoute: typeof ComponentsComponentsMessagesRoute
   ComponentsComponentsSidebarRoute: typeof ComponentsComponentsSidebarRoute
+  ComponentsComponentsSidebarThreadItemRoute: typeof ComponentsComponentsSidebarThreadItemRoute
   ComponentsComponentsTextareaRoute: typeof ComponentsComponentsTextareaRoute
 }
 
@@ -392,6 +413,8 @@ const ComponentsComponentsRouteChildren: ComponentsComponentsRouteChildren = {
   ComponentsComponentsConversationRoute: ComponentsComponentsConversationRoute,
   ComponentsComponentsMessagesRoute: ComponentsComponentsMessagesRoute,
   ComponentsComponentsSidebarRoute: ComponentsComponentsSidebarRoute,
+  ComponentsComponentsSidebarThreadItemRoute:
+    ComponentsComponentsSidebarThreadItemRoute,
   ComponentsComponentsTextareaRoute: ComponentsComponentsTextareaRoute,
 }
 
