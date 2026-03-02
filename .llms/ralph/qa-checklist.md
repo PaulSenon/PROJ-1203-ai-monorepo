@@ -29,7 +29,7 @@ PRD: `.llms/ralph/prd.md`
 #### `/components/sidebar-thread-item`
 
 - [x] Row presets 20/200/1000 switch instantly and keep interaction parity.
-- [ ] Mobile mode toggle preserves menu + action behavior.
+- [x] Mobile mode toggle preserves menu + action behavior.
 - [ ] Active UUID override updates highlight deterministically.
 - [ ] Action log captures invoked callback and row identity correctly.
 
@@ -97,3 +97,13 @@ PRD: `.llms/ralph/prd.md`
 - Notes:
   - closed `S5.4a` as done by reconciling existing run-3 user QA evidence (`S5.4a` already reported OK for row preset parity/jank).
   - checklist flags updated for `Stress perf` + `/components/sidebar-thread-item` row preset switching to match existing QA evidence; no code-path behavior changed in this iteration.
+
+#### 2026-03-02 run 8 (S5.4b code-path verification)
+
+- Date: 2026-03-02
+- Tester: OpenCode (gpt-5.3-codex)
+- Result: partial
+- Notes:
+  - completed `S5.4b` via code-path verification: `/components/sidebar-thread-item` `isMobile` toggle feeds `ThreadItem.Root isMobile`, and both mobile/desktop affordances dispatch through the same `ThreadContextMenu` action list (`getThreadMenuActions`) and callback handlers.
+  - no code behavior change required in this step; task was verification + ledger/checklist reconciliation only.
+  - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`@ai-monorepo/api-service` dist `.d.ts` build-order issue).

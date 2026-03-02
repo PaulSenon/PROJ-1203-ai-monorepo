@@ -160,3 +160,9 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-02: sidebar Step 5 S5.4a task-state reconciliation (RALPH)
 - reconciled `.llms/ralph/tasks.md` + `.llms/ralph/qa-checklist.md` with existing run-3 user QA evidence that row preset switching (20/200/1000) was OK
 - marked `S5.4a` done without code behavior changes; next queued task now `S5.4b`
+
+2026-03-02: sidebar Step 5 S5.4b verification (RALPH)
+- completed code-path verification that `/components/sidebar-thread-item` mobile mode toggle preserves menu/action behavior
+- `isMobile` only swaps affordance rendering (mobile visible trigger vs desktop hover/focus actions) while action execution stays on shared context-menu action/callback path
+- updated `.llms/ralph/tasks.md` + `.llms/ralph/qa-checklist.md`; next queued task now `S5.4c`
+- feedback loop rerun unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 on `@ai-monorepo/api-service` dist `.d.ts` build-order mismatch
