@@ -136,3 +136,6 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-02: sidebar refactor Step 5 QA log run2 (RALPH)
 - reran feedback loop `pnpm run check-types`; unchanged external blocker in `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
 - manual QA interaction pass on `/components/sidebar` + `/components/sidebar-thread-item` still pending
+
+2026-03-02: sidebar refactor micro-task ledger added (RALPH)
+- added `.llms/ralph/tasks.md` with smallest-unit breakdown for PRD steps 1-5, completion status, and explicit next task selection (`S5.3` manual `/components/sidebar` QA pass)
