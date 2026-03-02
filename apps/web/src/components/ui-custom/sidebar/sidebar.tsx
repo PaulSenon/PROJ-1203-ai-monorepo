@@ -1,6 +1,6 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { PlusIcon, SearchIcon } from "lucide-react";
-import React, { useCallback, useDeferredValue, useEffect, useRef } from "react";
+import React, { useCallback, useDeferredValue, useRef } from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,18 +32,6 @@ import { SidebarHeader } from "./primitives/sidebar-header";
 import { SidebarInset } from "./primitives/sidebar-inset";
 import { SidebarThreadItem } from "./primitives/sidebar-thread-item";
 
-function MobileSidebarAutocloseLogic() {
-  const { setOpenMobile } = useSidebar();
-  const { id } = useChatNav();
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: need reset on chat id change
-  useEffect(() => {
-    setOpenMobile(false);
-  }, [setOpenMobile, id]);
-
-  return null;
-}
-
 const SIDEBAR_STYLE = {
   "--duration-base": "200ms",
   // "--ease-default": "ease-out",
@@ -55,6 +43,7 @@ export function Sidebar({
   children,
   onLoadMore,
   onNewChat,
+  mobileAutoCloseNode,
   renderThreadItem,
 }: {
   className?: string;
@@ -63,6 +52,7 @@ export function Sidebar({
   children: React.ReactNode;
   onNewChat?: () => void;
   onLoadMore?: () => void;
+  mobileAutoCloseNode?: React.ReactNode;
   renderThreadItem?: (args: {
     thread: Doc<"threads">;
     isActive: boolean;
@@ -130,7 +120,7 @@ export function Sidebar({
       </BaseSidebar>
       <CollapsibleButtonGroupAnimated className="fixed top-3 top-safe-offset-2 left-3" />
       <SidebarInset>{children}</SidebarInset>
-      <MobileSidebarAutocloseLogic />
+      {mobileAutoCloseNode}
     </SidebarProvider>
   );
 }
