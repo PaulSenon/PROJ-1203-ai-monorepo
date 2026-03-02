@@ -7,7 +7,7 @@ import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { createFileRoute } from "@tanstack/react-router";
 import type React from "react";
 import { useRef, useState } from "react";
-import { ThreadItem } from "@/components/chat/sidebar/_parts/thread-item";
+import { ChatSidebarLayout } from "@/components/chat/sidebar/sidebar-layout";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { CollapsibleButtonGroup } from "@/components/ui-custom/button-group-collapsible";
@@ -18,7 +18,6 @@ import {
   useScrollToBottomState,
 } from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
 import { ModelSelector } from "@/components/ui-custom/chat/model-selector";
-import { Sidebar } from "@/components/ui-custom/sidebar/sidebar";
 import { StickyContainer } from "@/components/ui-custom/sticky-container";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
@@ -131,18 +130,17 @@ function RouteComponent() {
 
   return (
     <ScrollToBottomProvider>
-      <Sidebar
-        renderThreadItem={({ thread, isActive, isMobile }) => (
-          <ThreadItem.Root
-            isActive={isActive}
-            isMobile={isMobile}
-            thread={thread}
-          />
-        )}
+      <ChatSidebarLayout
+        onLoadMore={() => {
+          // demo no-op
+        }}
+        onNewChat={() => {
+          // demo no-op
+        }}
         threads={_threads}
       >
         <Content />
-      </Sidebar>
+      </ChatSidebarLayout>
     </ScrollToBottomProvider>
   );
 }

@@ -70,6 +70,8 @@ This preserves UI behavior while making the codebase easier to reason about, saf
     - Sidebar shell module (`Sidebar.*`) for container/layout concerns.
     - Sidebar item module (`SidebarItem.*`) for item composition concerns.
   - Keep both modules app-agnostic: no app hooks, no app domain types, no app routing.
+  - Canonical shell module path for this refactor is `components/ui-custom/sidebar/sidebar-shell.tsx`.
+  - `components/ui-custom/sidebar/sidebar.tsx` is legacy transitional surface and must not be used by new/reworked sidebar callsites.
 
 - **L3 ownership**
   - L3 chat-sidebar owns all app concerns:
@@ -108,6 +110,10 @@ This preserves UI behavior while making the codebase easier to reason about, saf
   - Step 1: Define L2 contracts and namespace APIs.
   - Step 2: Move app-aware item logic into L3 adapters.
   - Step 3: Recompose full sidebar in L3 using L2 APIs.
+    - Acceptance criteria:
+      - `chat/sidebar/sidebar-layout.tsx` composes sidebar from `ui-custom/sidebar/sidebar-shell.tsx` (+ `SidebarItem.*` consumers).
+      - No import of `ui-custom/sidebar/sidebar.tsx` in L3 sidebar adapter/layout or sidebar demos.
+      - Data/pagination/deferred/mobile-autoclose concerns live in L3 (`chat/sidebar/*`).
   - Step 4: Remove old fake lazy logic and validate perf baseline.
   - Step 5: Replace/extend demo coverage and run QA checklist.
 
@@ -149,7 +155,8 @@ This preserves UI behavior while making the codebase easier to reason about, saf
 components/
   ui-custom/
     sidebar/
-      sidebar.tsx                 # L2 Sidebar.* shell/layout composition
+      sidebar-shell.tsx           # L2 Sidebar.* shell/layout composition (canonical)
+      sidebar.tsx                 # legacy transitional file (do not import in refactor path)
       sidebar-item.tsx            # L2 SidebarItem.* item composition
   chat/
     sidebar/

@@ -114,3 +114,9 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - `packages/ai/src/libs/deltaStreamChunker.ts` now flushes by `maxBufferedChars` + `maxBufferedMs` with `throttleMs` ceiling
 - addChunk is non-blocking (no await flush) to avoid ingest delay; finish/abort/error now flush pending before final callbacks
 - defaults set for ~500-900ms target window in 50-1000 tok/s assumption with 1tok=4chars (`2000 chars`, `900ms`, `120ms throttle`)
+
+2026-03-02: sidebar refactor drift identified and corrected (RALPH)
+- off-track root cause: active callsites still composed sidebar via `ui-custom/sidebar/sidebar.tsx` (mixed L2/L3 concerns), while PRD intended L3 composition on top of `sidebar-shell.tsx` + `sidebar-item.tsx`
+- correction applied: hard pivot of active sidebar composition to `chat/sidebar/sidebar-layout.tsx` using `ui-custom/sidebar/sidebar-shell.tsx`; all callsite imports of `ui-custom/sidebar/sidebar.tsx` removed
+- demo alignment: `/components/sidebar` route now uses `ChatSidebarLayout` path instead of old mixed shell entry
+- PRD ambiguity fixed: canonical shell path explicitly set to `ui-custom/sidebar/sidebar-shell.tsx`; legacy `ui-custom/sidebar/sidebar.tsx` marked transitional/non-authoritative for refactor path; Step 3 acceptance criteria now include "no imports of legacy shell in L3/demos"
