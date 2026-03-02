@@ -199,3 +199,8 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - `ChatSidebarLayout` load-more sentinel now chains pagination while still in-view (`useInView` + `useEffect` on in-view and `threads.length`) so fast scroll no longer waits for leave/re-enter to fetch next page
 - `useSidebarThreads.loadMore` now hard-gates on Convex paginated status `CanLoadMore` to avoid redundant calls while still re-firing immediately once state returns loadable
 - feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
+
+2026-03-02: sidebar S5.3e.r1 shipped (RALPH)
+- `ThreadItem.Root` context-menu selection path now prevents default select propagation and sets a short mobile-only navigation suppression window, blocking accidental row-link navigation immediately after selecting a context-menu action
+- intended behavior restored: non-navigation context-menu actions no longer auto-close mobile sidebar; close remains tied to actual thread navigation
+- feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)

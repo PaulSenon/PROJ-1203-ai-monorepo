@@ -183,3 +183,13 @@ PRD: `.llms/ralph/prd.md`
   - completed `S5.3d.r2` in `/components/sidebar`: bottom sentinel now triggers `onLoadMore` not only on enter, but also while still in-view after page growth (`useEffect` keyed by in-view + `threads.length`), so fast-scroll can chain subsequent page loads without waiting for leave/re-enter cycles.
   - added `useSidebarThreads` gate so `loadMore` executes only in Convex `CanLoadMore` status; keeps cadence tight while avoiding redundant calls during `LoadingMore`/`Exhausted`.
   - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch).
+
+#### 2026-03-02 run 16 (S5.3e.r1 mobile context-menu action flow)
+
+- Date: 2026-03-02
+- Tester: OpenCode (gpt-5.3-codex)
+- Result: partial
+- Notes:
+  - completed `S5.3e.r1` in `/components/sidebar`: context-menu item selection now prevents default/select propagation and marks a short suppression window in `ThreadItem.Root` so immediate post-action mobile row-link clicks are ignored.
+  - intended impact: non-navigation context-menu actions no longer trigger unintended thread navigation, so mobile sidebar auto-close remains navigation-only.
+  - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch).
