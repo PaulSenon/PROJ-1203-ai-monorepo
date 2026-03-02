@@ -1,11 +1,10 @@
 "use client";
 
 import { useCallback, useLayoutEffect, useMemo } from "react";
-import { Sidebar } from "@/components/ui-custom/sidebar/sidebar";
 import { usePreviousThreadHistoryPaginated } from "@/hooks/queries/use-chat-listing-queries";
 import { useAppLoadStatusActions } from "@/hooks/use-app-load-status";
 import { useChatNav } from "@/hooks/use-chat-nav";
-import { ThreadItem } from "./_parts/thread-item";
+import { ChatSidebarLayout } from "./sidebar-layout";
 
 export function ChatSidebar({
   className,
@@ -40,36 +39,15 @@ export function ChatSidebar({
     [history.results]
   );
 
-  const renderThreadItem = useCallback(
-    ({
-      thread,
-      isActive,
-      isMobile,
-    }: {
-      thread: (typeof memoThreads)[number];
-      isActive: boolean;
-      isMobile: boolean;
-      index: number;
-    }) => (
-      <ThreadItem.Root
-        isActive={isActive}
-        isMobile={isMobile}
-        thread={thread}
-      />
-    ),
-    []
-  );
-
   return (
-    <Sidebar
+    <ChatSidebarLayout
       activeThreadId={chatNav.id}
       className={className}
       onLoadMore={handleLoadMore}
       onNewChat={handleNewChat}
-      renderThreadItem={renderThreadItem}
       threads={memoThreads}
     >
       {children}
-    </Sidebar>
+    </ChatSidebarLayout>
   );
 }
