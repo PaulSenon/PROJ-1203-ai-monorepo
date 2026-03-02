@@ -7,7 +7,7 @@ import {
   ShareIcon,
   XIcon,
 } from "lucide-react";
-import React, { Activity, useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo } from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import {
@@ -288,7 +288,7 @@ SidebarThreadItem.displayName = "SidebarThreadItem";
 
 export function LazySidebarMenuItem({
   children,
-  prerender = false,
+  prerender: _prerender = false,
   isMobile,
   className,
   ...props
@@ -297,33 +297,9 @@ export function LazySidebarMenuItem({
   prerender?: boolean;
   isMobile: boolean;
 } & React.ComponentProps<typeof SidebarMenuItem>) {
-  const ref = useRef<HTMLLIElement>(null);
-  const [isVisible, setIsVisible] = useState(prerender);
-
-  useEffect(() => {
-    if (prerender) return;
-
-    const cb = (e: Event) => {
-      if (!(e instanceof ContentVisibilityAutoStateChangeEvent)) return;
-      if (!e.skipped) {
-        ref.current?.removeEventListener(
-          "contentvisibilityautostatechange",
-          cb
-        );
-        setIsVisible(true);
-      }
-      // setIsVisible(!e.skipped);
-    };
-    ref.current?.addEventListener("contentvisibilityautostatechange", cb);
-    return () => {
-      ref.current?.removeEventListener("contentvisibilityautostatechange", cb);
-    };
-  }, [prerender]);
-
   return (
     <SidebarMenuItem
       className={cn("min-h-10 select-none md:min-h-9", className)}
-      ref={ref}
       style={{
         contain: "layout style",
         contentVisibility: "auto",
@@ -331,7 +307,7 @@ export function LazySidebarMenuItem({
       }}
       {...props}
     >
-      <Activity mode={isVisible ? "visible" : "hidden"}>{children}</Activity>
+      {children}
     </SidebarMenuItem>
   );
 }
