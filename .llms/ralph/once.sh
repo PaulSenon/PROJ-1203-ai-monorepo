@@ -6,6 +6,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PROMPT_FILE="$SCRIPT_DIR/prompt.md"
 ATTACH_URL="${OPENCODE_ATTACH_URL:-http://localhost:4096}"
 ALLOW_LOCAL_FALLBACK="${RALPH_ALLOW_LOCAL_FALLBACK:-1}"
+MODEL="${RALPH_MODEL:-openai/gpt-5.3-codex}"
 
 if [ ! -f "$PROMPT_FILE" ]; then
   echo "Missing prompt file: $PROMPT_FILE" >&2
@@ -34,11 +35,11 @@ message+=$'\n\n'
 message+="Previous RALPH commits: $ralph_commits"
 
 run_attach() {
-  (cd "$REPO_ROOT" && pnpm exec opencode run --attach "$ATTACH_URL" --dir "$REPO_ROOT" "$message")
+  (cd "$REPO_ROOT" && pnpm exec opencode run --attach "$ATTACH_URL" --dir "$REPO_ROOT" --model "$MODEL" "$message")
 }
 
 run_local() {
-  (cd "$REPO_ROOT" && pnpm exec opencode run --dir "$REPO_ROOT" "$message")
+  (cd "$REPO_ROOT" && pnpm exec opencode run --dir "$REPO_ROOT" --model "$MODEL" "$message")
 }
 
 if run_attach; then
