@@ -35,7 +35,9 @@ PRD: `.llms/ralph/prd.md`
 
 ### Result log
 
-- Date:
-- Tester:
-- Result: pass | fail | partial
-- Notes:
+#### 2026-03-02 run 1
+
+- Date: 2026-03-02
+- Tester: OpenCode (gpt-5.3-codex)
+- Result: partial
+- Notes: checklist execution prepared and pending manual route interaction pass on `/components/sidebar` + `/components/sidebar-thread-item`; pre-commit `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`@ai-monorepo/api-service` dist `.d.ts` build-order issue), no new blocker introduced in this task.

@@ -128,3 +128,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-02: sidebar refactor Step 5 manual QA checklist added
 - added `.llms/ralph/qa-checklist.md` mapping PRD polishing requirements to `/components/sidebar` and `/components/sidebar-thread-item`
 - checklist includes parity, a11y keyboard/touch flow, stress perf, demo coverage, and result log stub for repeatable manual validation
+
+2026-03-02: sidebar refactor Step 5 QA log seeded (RALPH)
+- updated `.llms/ralph/qa-checklist.md` result log with first partial run entry
+- notes capture that manual route interaction checks still pending and `pnpm run check-types` remains blocked by pre-existing `apps/server` TS6305 (`@ai-monorepo/api-service` dist type build-order issue)
