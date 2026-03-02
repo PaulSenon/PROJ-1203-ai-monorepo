@@ -154,3 +154,12 @@ PRD: `.llms/ralph/prd.md`
   - load-more trigger still feels delayed during fast scroll (debounce-like).
   - bug still present: opening context menu then selecting action closes sidebar on mobile; should remain open for non-navigation actions.
 - Follow-up queue: `S5.3b.r2`, `S5.3a.r2`, `S5.3d.r2`, `S5.3e.r1`.
+
+#### 2026-03-02 run 13 (S5.3b.r2 mobile affordance adjustment)
+
+- Date: 2026-03-02
+- Tester: OpenCode (gpt-5.3-codex)
+- Result: partial
+- Notes:
+  - completed `S5.3b.r2` in `/components/sidebar` thread rows: mobile `Thread options` trigger is now hidden from default touch UI (`sr-only`) while preserving keyboard/screenreader path (`focus-visible:not-sr-only`).
+  - this cut intentionally changes only trigger visibility affordance; no action callback/menu semantics changed.

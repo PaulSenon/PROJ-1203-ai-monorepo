@@ -56,13 +56,13 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 
 ### QA remediation micro-tasks (post run-12 feedback)
 
-- [ ] `S5.3b.r2` Hide visible mobile three-dots affordance while preserving screenreader/keyboard path to thread options.
+- [x] `S5.3b.r2` Hide visible mobile three-dots affordance while preserving screenreader/keyboard path to thread options.
 - [ ] `S5.3a.r2` Remove perceptible header/footer backdrop edge-toggle delay in `/components/sidebar`.
 - [ ] `S5.3d.r2` Improve load-more trigger cadence for fast scroll so pagination keeps up without debounce feel.
 - [ ] `S5.3e.r1` Fix mobile context-menu action flow so non-navigation actions do not close sidebar.
 
 ## Task Selection
 
-- Selected next task (this iteration): `[x] T0.3` capture new post-final QA feedback in PRD + reseed remediation queue before implementation.
-- Completed outcome: added explicit run-12 QA blockers to `.llms/ralph/prd.md` and queued four smallest remediation tasks (`S5.3b.r2`, `S5.3a.r2`, `S5.3d.r2`, `S5.3e.r1`) without behavior/code changes.
-- Next queued task: `[>] S5.3b.r2` hide visible mobile three-dots affordance while preserving screenreader/keyboard thread-options path.
+- Selected next task (this iteration): `[x] S5.3b.r2` hide visible mobile three-dots affordance while preserving screenreader/keyboard thread-options path.
+- Completed outcome: updated mobile `Thread options` trigger in `thread-item.tsx` to be screenreader-only by default (`sr-only`) while remaining keyboard-reachable (`focus-visible:not-sr-only`) so visible touch three-dots are no longer shown.
+- Next queued task: `[>] S5.3a.r2` remove perceptible header/footer backdrop edge-toggle delay in `/components/sidebar`.

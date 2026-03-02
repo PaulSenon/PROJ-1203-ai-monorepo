@@ -309,7 +309,7 @@ export function ThreadItemRoot({
                 <A11YContextMenuTriggerButton
                   aria-label="Thread options"
                   className={cn(
-                    "h-7 w-7 shrink-0 rounded-md bg-transparent p-1.5 text-foreground hover:bg-sidebar-ring/50 hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                    "sr-only h-7 w-7 shrink-0 rounded-md bg-transparent p-1.5 text-foreground hover:bg-sidebar-ring/50 hover:text-accent-foreground focus-visible:not-sr-only focus-visible:ring-2 focus-visible:ring-sidebar-ring"
                   )}
                 >
                   <MoreVerticalIcon className="size-4" />

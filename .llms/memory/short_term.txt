@@ -185,3 +185,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-02: sidebar run12 user QA blockers captured before remediation start (RALPH)
 - captured four explicit blockers into PRD + QA log: mobile visible three-dots should be hidden (SR/keyboard path only), backdrop edge toggle delay, load-more fast-scroll delay, mobile context-menu action still wrongly closes sidebar
 - reseeded micro-task queue for next implementation cuts: `S5.3b.r2`, `S5.3a.r2`, `S5.3d.r2`, `S5.3e.r1`
+
+2026-03-02: sidebar S5.3b.r2 shipped (RALPH)
+- mobile row `Thread options` trigger now hidden by default touch UI via `sr-only` and still keyboard/screenreader reachable via `focus-visible:not-sr-only`
+- scope kept to visibility affordance only; context-menu action semantics unchanged
