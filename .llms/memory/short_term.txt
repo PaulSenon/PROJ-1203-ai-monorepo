@@ -143,3 +143,9 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - feature branch rewritten to 2 commits only: `perf(startTransition swap + changeset)` and `docs(worker-backed code plugin pattern)`
 - dropped prior `deferCodeBlocks` contribution from branch history; no `deferCodeBlocks` refs remain
 - backup branch kept: `backup/feat-codeblock-defer-transition-docs-before-clean`
+
+2026-03-02: paginated reactivity bug root-cause confirmed (sidebar + conversation)
+- convex WS showed reactive patches arriving; backend/query/core libs not culprit for this symptom
+- A/B check confirmed `useCvxPaginatedQueryAuthCached` reacts, while `useCvxPaginatedQueryStable` dropped updates after loadMore
+- fix in `apps/web/src/hooks/queries/convex/utils/use-convex-query-1-stable.ts`: memo output now tracks stable `results` ref (`stableResults`) in deps
+- no API change; hooks still wired to auth+cached query layer
