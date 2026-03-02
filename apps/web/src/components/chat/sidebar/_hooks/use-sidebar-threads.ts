@@ -3,6 +3,10 @@ import { usePreviousThreadHistoryPaginated } from "@/hooks/queries/use-chat-list
 
 const SIDEBAR_THREADS_PAGE_SIZE = 20;
 
+export type SidebarThreadsLoadMoreStatus = ReturnType<
+  typeof usePreviousThreadHistoryPaginated
+>["status"];
+
 export function useSidebarThreads() {
   const history = usePreviousThreadHistoryPaginated();
 
@@ -18,6 +22,7 @@ export function useSidebarThreads() {
 
   return {
     isPending: history.isPending,
+    loadMoreStatus: history.status,
     loadMore,
     threads,
   };

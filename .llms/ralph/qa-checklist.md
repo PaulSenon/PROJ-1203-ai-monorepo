@@ -204,3 +204,13 @@ PRD: `.llms/ralph/prd.md`
   - completed `S5.3e.r3` by adding mobile `SheetContent` `onInteractOutside` guard in sidebar primitive that prevents outside-close only when interaction target is within `[data-slot="context-menu-content"]`.
   - expected behavior: context-menu action still executes and closes menu; sidebar remains open for non-navigation actions; overlay/outside taps still close sidebar.
   - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch).
+
+#### 2026-03-02 run 19 (S5.3d.r2 load-more cadence)
+
+- Date: 2026-03-02
+- Tester: OpenCode (gpt-5.3-codex)
+- Result: partial
+- Notes:
+  - completed `S5.3d.r2` in `/components/sidebar`: added status-gated load-more trigger (`CanLoadMore` only), same-cycle lock keyed by loaded row count, and in-view follow-up effect so pagination rearms without requiring sentinel leave/re-enter.
+  - implementation scope kept to one load-more path: `useSidebarThreads` now exposes paginated `status`; `ChatSidebarLayout` owns gating/lock + in-view follow-up trigger.
+  - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch).
