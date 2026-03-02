@@ -156,3 +156,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-02: sidebar Step 5 S5.3d.r1 sentinel responsiveness tune (RALPH)
 - updated `ChatSidebarLayout` bottom `useInView` sentinel `rootMargin` from `100%` to `200%` so `loadMore` prefetch fires earlier near list end
 - objective is perceived responsiveness only; no behavior change to action semantics or mobile auto-close rules
+
+2026-03-02: sidebar Step 5 S5.4a task-state reconciliation (RALPH)
+- reconciled `.llms/ralph/tasks.md` + `.llms/ralph/qa-checklist.md` with existing run-3 user QA evidence that row preset switching (20/200/1000) was OK
+- marked `S5.4a` done without code behavior changes; next queued task now `S5.4b`

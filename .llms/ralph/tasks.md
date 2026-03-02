@@ -41,7 +41,7 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 - [ ] `S5.3b` `/components/sidebar`: verify keyboard flow (focus visibility, trigger/menu nav, focus return).
 - [ ] `S5.3c` `/components/sidebar`: verify touch/mouse parity + tooltip non-interference.
 - [ ] `S5.3d` `/components/sidebar`: verify active-row parity, load-more sentinel behavior, mobile auto-close, placeholder action parity.
-- [ ] `S5.4a` `/components/sidebar-thread-item`: verify row preset switching (20/200/1000) keeps parity and no obvious jank.
+- [x] `S5.4a` `/components/sidebar-thread-item`: verify row preset switching (20/200/1000) keeps parity and no obvious jank.
 - [ ] `S5.4b` `/components/sidebar-thread-item`: verify mobile mode toggle preserves menu/action behavior.
 - [ ] `S5.4c` `/components/sidebar-thread-item`: verify active UUID override determinism + action log correctness.
 - [ ] `S5.5` Run feedback loop `pnpm run check-types` after manual QA passes and log result.
@@ -55,6 +55,6 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 
 ## Task Selection
 
-- Selected next task (this iteration): `[x] S5.3d.r1` tune `/components/sidebar` load-more sentinel responsiveness.
-- Completed outcome: increased bottom sentinel prefetch window in `ChatSidebarLayout` (`rootMargin` from `100%` to `200%`) so pagination fires earlier and removes perceived wait at list end.
-- Next queued task: `[>] S5.4a` verify `/components/sidebar-thread-item` row preset switching (20/200/1000) parity + no obvious jank.
+- Selected next task (this iteration): `[x] S5.4a` verify `/components/sidebar-thread-item` row preset switching (20/200/1000) parity + no obvious jank.
+- Completed outcome: accepted prior user QA run-3 evidence (`S5.4a` marked OK) and reconciled task ledger/checklist state to match recorded result.
+- Next queued task: `[>] S5.4b` verify `/components/sidebar-thread-item` mobile mode toggle preserves menu/action behavior.

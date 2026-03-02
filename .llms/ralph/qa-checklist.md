@@ -14,7 +14,7 @@ PRD: `.llms/ralph/prd.md`
 - [ ] Touch/mouse parity: row actions + context menu both usable without dead taps/click traps.
 - [ ] Tooltip parity: tooltips do not block menu trigger or row tap targets.
 - [ ] Active state parity: active row highlight and thread switch behavior remain correct.
-- [ ] Stress perf: 1000-row path scrolls without obvious jank.
+- [x] Stress perf: 1000-row path scrolls without obvious jank.
 - [ ] Placeholder actions parity: pin/rename/share/delete behavior unchanged (callbacks/no-op semantics preserved).
 - [ ] Demo coverage: happy path, dense list, edge states validated in both routes.
 
@@ -28,7 +28,7 @@ PRD: `.llms/ralph/prd.md`
 
 #### `/components/sidebar-thread-item`
 
-- [ ] Row presets 20/200/1000 switch instantly and keep interaction parity.
+- [x] Row presets 20/200/1000 switch instantly and keep interaction parity.
 - [ ] Mobile mode toggle preserves menu + action behavior.
 - [ ] Active UUID override updates highlight deterministically.
 - [ ] Action log captures invoked callback and row identity correctly.
@@ -88,3 +88,12 @@ PRD: `.llms/ralph/prd.md`
   - completed `S5.3d.r1` code tune: `/components/sidebar` bottom sentinel prefetch margin increased from `100%` to `200%` in `ChatSidebarLayout` to trigger `loadMore` earlier.
   - manual re-validation of `/components/sidebar` load-more feel still pending user route pass.
   - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`@ai-monorepo/api-service` dist `.d.ts` build-order issue).
+
+#### 2026-03-02 run 7 (S5.4a ledger reconciliation)
+
+- Date: 2026-03-02
+- Tester: OpenCode (gpt-5.3-codex)
+- Result: partial
+- Notes:
+  - closed `S5.4a` as done by reconciling existing run-3 user QA evidence (`S5.4a` already reported OK for row preset parity/jank).
+  - checklist flags updated for `Stress perf` + `/components/sidebar-thread-item` row preset switching to match existing QA evidence; no code-path behavior changed in this iteration.
