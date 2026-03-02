@@ -163,3 +163,13 @@ PRD: `.llms/ralph/prd.md`
 - Notes:
   - completed `S5.3b.r2` in `/components/sidebar` thread rows: mobile `Thread options` trigger is now hidden from default touch UI (`sr-only`) while preserving keyboard/screenreader path (`focus-visible:not-sr-only`).
   - this cut intentionally changes only trigger visibility affordance; no action callback/menu semantics changed.
+
+#### 2026-03-02 run 14 (S5.3a.r2 backdrop toggle responsiveness)
+
+- Date: 2026-03-02
+- Tester: OpenCode (gpt-5.3-codex)
+- Result: partial
+- Notes:
+  - completed `S5.3a.r2` in `/components/sidebar`: extracted thread row mapping into memoized `threadRows` in `ChatSidebarLayout` so scroll-edge probe toggles (`isAtTop`/`isAtBottom`) do not remap the full list every edge-state change.
+  - intended impact: reduce render work on edge toggles so header/footer backdrop edge visibility flips feel immediate.
+  - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch).

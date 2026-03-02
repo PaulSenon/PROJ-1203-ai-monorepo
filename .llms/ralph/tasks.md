@@ -57,12 +57,12 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 ### QA remediation micro-tasks (post run-12 feedback)
 
 - [x] `S5.3b.r2` Hide visible mobile three-dots affordance while preserving screenreader/keyboard path to thread options.
-- [ ] `S5.3a.r2` Remove perceptible header/footer backdrop edge-toggle delay in `/components/sidebar`.
+- [x] `S5.3a.r2` Remove perceptible header/footer backdrop edge-toggle delay in `/components/sidebar`.
 - [ ] `S5.3d.r2` Improve load-more trigger cadence for fast scroll so pagination keeps up without debounce feel.
 - [ ] `S5.3e.r1` Fix mobile context-menu action flow so non-navigation actions do not close sidebar.
 
 ## Task Selection
 
-- Selected next task (this iteration): `[x] S5.3b.r2` hide visible mobile three-dots affordance while preserving screenreader/keyboard thread-options path.
-- Completed outcome: updated mobile `Thread options` trigger in `thread-item.tsx` to be screenreader-only by default (`sr-only`) while remaining keyboard-reachable (`focus-visible:not-sr-only`) so visible touch three-dots are no longer shown.
-- Next queued task: `[>] S5.3a.r2` remove perceptible header/footer backdrop edge-toggle delay in `/components/sidebar`.
+- Selected next task (this iteration): `[x] S5.3a.r2` remove perceptible header/footer backdrop edge-toggle delay in `/components/sidebar`.
+- Completed outcome: memoized mapped `ThreadItem.Root` rows in `sidebar-layout.tsx` so top/bottom probe state flips (`isAtTop`/`isAtBottom`) no longer remap large thread lists on every scroll-edge toggle, reducing perceived backdrop edge lag.
+- Next queued task: `[>] S5.3d.r2` improve load-more trigger cadence for fast scroll so pagination keeps up without debounce feel.

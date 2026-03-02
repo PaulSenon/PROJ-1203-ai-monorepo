@@ -1,6 +1,6 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { PlusIcon, SearchIcon } from "lucide-react";
-import React, { useCallback, useDeferredValue, useRef } from "react";
+import React, { useCallback, useDeferredValue, useMemo, useRef } from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -54,6 +54,18 @@ export function ChatSidebarLayout({
 
   const mergedBottomRef = useMergedRefs<HTMLDivElement>(bottomRef, loadMoreRef);
   const deferredThreads = useDeferredValue(threads, []);
+  const threadRows = useMemo(
+    () =>
+      deferredThreads.map((thread) => (
+        <ThreadItem.Root
+          isActive={thread.uuid === activeThreadId}
+          isMobile={isMobile}
+          key={thread.uuid}
+          thread={thread}
+        />
+      )),
+    [deferredThreads, activeThreadId, isMobile]
+  );
 
   return (
     <SidebarShell.Provider>
@@ -70,16 +82,7 @@ export function ChatSidebarLayout({
           <SidebarShell.Group>
             <SidebarShell.GroupLabel>Previous Chats</SidebarShell.GroupLabel>
             <SidebarShell.GroupContent>
-              <SidebarShell.Menu>
-                {deferredThreads.map((thread) => (
-                  <ThreadItem.Root
-                    isActive={thread.uuid === activeThreadId}
-                    isMobile={isMobile}
-                    key={thread.uuid}
-                    thread={thread}
-                  />
-                ))}
-              </SidebarShell.Menu>
+              <SidebarShell.Menu>{threadRows}</SidebarShell.Menu>
             </SidebarShell.GroupContent>
           </SidebarShell.Group>
           <ChatSidebarFooterSpacer />
