@@ -40,7 +40,8 @@ Problems:
 - [x] sidebar set selected thread state (from url)
 - [ ] sidebar plug delete thread feature
 - [x] sidebar when open mobile, shouldn't set first item active.
-- [x] sidebar fix reactive update (when thread state changes, it does not reflect on UI) => root cause found: stale memo deps in `useCvxPaginatedQueryStable` (`use-convex-query-1-stable.ts`) dropped paginated `results` updates when `status/isLoading` unchanged after loadMore.
+- [x] sidebar fix reactive update (when thread state changes, it does not reflect on UI) (weird, it get fixed when reactive update from convex dashboard, then it work, but broken while never "fixed" by toggling liveStatus from convex dashboard.... Really weird behavior. Need to investigate more.)
+    => root cause found: stale memo deps in `useCvxPaginatedQueryStable` (`use-convex-query-1-stable.ts`) dropped paginated `results` updates when `status/isLoading` unchanged after loadMore.
 - [~] sidebar close on link click ( const { setOpenMobile } = useSidebar(); setOpenMobile(false);)
 - [ ] message footer, aligned start (even for infos)
 - [ ] message thinking arrow should be right after thinking text, not aligned end.
