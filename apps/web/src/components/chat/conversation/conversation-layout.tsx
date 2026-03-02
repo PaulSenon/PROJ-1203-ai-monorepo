@@ -6,6 +6,7 @@ import {
   useScrollToBottomState,
 } from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
 import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
+import { cn } from "@/lib/utils";
 import {
   ConversationMessagesList,
   type EnrichedLegendListRef,
@@ -13,6 +14,7 @@ import {
 
 export type ChatConversationLayoutProps = {
   messages: MyUIMessage[];
+  hasMoreContent?: boolean;
   isThreadSettled: boolean;
   pendingAutoScrollMessageId: string | undefined;
   onStartReached?: () => void;
@@ -22,6 +24,7 @@ export function ChatConversationLayout({
   messages,
   isThreadSettled,
   pendingAutoScrollMessageId,
+  hasMoreContent,
   onStartReached,
 }: ChatConversationLayoutProps) {
   const { bottomRef } = useScrollToBottomState();
@@ -44,7 +47,12 @@ export function ChatConversationLayout({
   });
 
   return (
-    <Conversation.Root className="relative mx-auto mb-[130px] w-full max-w-3xl flex-1 p-6 md:mb-0">
+    <Conversation.Root
+      className={cn(
+        "relative mx-auto mb-[130px] w-full max-w-3xl flex-1 p-6 md:mb-0",
+        hasMoreContent && "mt-[300vh]"
+      )}
+    >
       <Conversation.List>
         <ConversationMessagesList
           listRef={listRef}
