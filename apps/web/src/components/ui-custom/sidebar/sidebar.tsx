@@ -14,7 +14,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-import { useChatNav } from "@/hooks/use-chat-nav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInView } from "@/hooks/utils/use-intersection-observer";
 import {
@@ -116,7 +115,10 @@ export function Sidebar({
           isOverflowing={!isAtBottom}
         />
       </BaseSidebar>
-      <CollapsibleButtonGroupAnimated className="fixed top-3 top-safe-offset-2 left-3" />
+      <CollapsibleButtonGroupAnimated
+        className="fixed top-3 top-safe-offset-2 left-3"
+        onNewChat={onNewChat}
+      />
       <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
   );
@@ -231,13 +233,15 @@ const MySidebarFooterSpacer = React.memo(
 MySidebarFooterSpacer.displayName = "MySidebarFooterSpacer";
 
 function CollapsibleButtonGroupAnimated({
+  onNewChat,
   ...props
-}: React.ComponentProps<typeof CollapsibleButtonGroup>) {
+}: React.ComponentProps<typeof CollapsibleButtonGroup> & {
+  onNewChat?: () => void;
+}) {
   // TODO: fix bug, isMobile is false then true, so it opens the button group (animation)
   const { open, isMobile } = useSidebar();
   const isDesktop = !isMobile;
   const isButtonGroupCollapsed = isDesktop && open;
-  const { openNewChat } = useChatNav();
 
   return (
     <CollapsibleButtonGroup
@@ -260,7 +264,7 @@ function CollapsibleButtonGroupAnimated({
           </Button>
         </Tooltip>
         <Tooltip asChild isMobile={isMobile} tooltip="New Chat">
-          <Button className="size-8" onClick={openNewChat} variant="ghost">
+          <Button className="size-8" onClick={onNewChat} variant="ghost">
             <PlusIcon className="size-4" />
             <span className="sr-only">New Chat</span>
           </Button>
