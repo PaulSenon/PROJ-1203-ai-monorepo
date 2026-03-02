@@ -22,6 +22,10 @@ import { SidebarItem } from "@/components/ui-custom/sidebar/sidebar-item";
 import { Tooltip } from "@/components/ui-custom/tooltip";
 import { cn } from "@/lib/utils";
 import {
+  type LiveStateIndicatorVariant,
+  useThreadItemState,
+} from "../_hooks/use-thread-item-state";
+import {
   getThreadMenuActions,
   getThreadQuickActions,
   type ThreadItemAction,
@@ -30,31 +34,13 @@ import {
 
 type ThreadDoc = Doc<"threads">;
 
-type LiveStateIndicatorVariant = "pending" | "error" | "unread" | "need-action";
-
-function reduceLiveStateToIndicatorVariant(
-  thread: ThreadDoc
-): LiveStateIndicatorVariant | undefined {
-  if (thread.liveStatus === "pending" || thread.liveStatus === "streaming") {
-    return "pending";
-  }
-  if (thread.liveStatus === "error") {
-    return "error";
-  }
-  if (thread.liveStatus === "completed") {
-    return undefined;
-  }
-  return undefined;
-}
-
 function LiveStateIndicatorIcon({
   className,
-  thread,
+  variant,
 }: {
   className?: string;
-  thread: ThreadDoc;
+  variant: LiveStateIndicatorVariant | undefined;
 }) {
-  const variant = reduceLiveStateToIndicatorVariant(thread);
   const isVisible = variant !== undefined;
   return (
     <div
@@ -283,9 +269,7 @@ export function ThreadItemRoot({
   isMobile?: boolean;
   actionHandlers?: ThreadItemActionHandlers;
 }) {
-  const isLoading =
-    thread.liveStatus === "pending" || thread.liveStatus === "streaming";
-  const tooltip = thread.title || "Loading title";
+  const { indicatorVariant, isLoading, tooltip } = useThreadItemState(thread);
 
   const quickActions = useMemo(
     () => getThreadQuickActions(thread, actionHandlers),
@@ -311,7 +295,7 @@ export function ThreadItemRoot({
             params={{ id: thread.uuid }}
             to="/chat/{-$id}"
           >
-            <LiveStateIndicatorIcon thread={thread} />
+            <LiveStateIndicatorIcon variant={indicatorVariant} />
             <span className="mx-1 h-full min-w-0 flex-1 content-center">
               {isMobile ? null : (
                 <Tooltip asChild isMobile={isMobile} tooltip={tooltip}>
