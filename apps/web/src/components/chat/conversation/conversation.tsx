@@ -29,6 +29,7 @@ export function ChatConversation() {
 
   return (
     <ChatConversationLayout
+      hasMoreContent={olderHistoryStatusRef.current !== "Exhausted"}
       isThreadSettled={isThreadSettled}
       key={uuid}
       messages={messages}

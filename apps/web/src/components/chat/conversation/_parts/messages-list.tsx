@@ -108,7 +108,7 @@ export function ConversationMessagesList({
     if (!isLoaded) return;
     if (isReady) return;
     scrollToEnd({ animated: false });
-    setMargin(`${window.document.documentElement.scrollHeight * 0.5}px`);
+    // setMargin(`${window.document.documentElement.scrollHeight * 0.5}px`);
     // Reaveal on next frame to avoid flicker
     const raf = requestAnimationFrame(() => setIsReady(true));
     return () => {
@@ -138,7 +138,7 @@ export function ConversationMessagesList({
     [shouldReserveLastAssistantSpace]
   );
 
-  const [margin, setMargin] = useState("0px");
+  const [margin, setMargin] = useState("2000px");
   const handleStartReached = useCallback(() => {
     if (!isReady) return;
     onStartReached?.();
