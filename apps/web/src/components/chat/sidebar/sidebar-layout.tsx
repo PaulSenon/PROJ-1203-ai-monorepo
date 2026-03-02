@@ -24,7 +24,6 @@ export function ChatSidebarLayout({
   children,
   onLoadMore,
   onNewChat,
-  mobileAutoCloseNode,
 }: {
   className?: string;
   activeThreadId?: string;
@@ -32,13 +31,11 @@ export function ChatSidebarLayout({
   children?: React.ReactNode;
   onLoadMore?: () => void;
   onNewChat?: () => void;
-  mobileAutoCloseNode?: React.ReactNode;
 }) {
   return (
     <Sidebar
       activeThreadId={activeThreadId}
       className={className}
-      mobileAutoCloseNode={mobileAutoCloseNode}
       onLoadMore={onLoadMore}
       onNewChat={onNewChat}
       renderThreadItem={renderThreadItem}

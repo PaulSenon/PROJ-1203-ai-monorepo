@@ -7,12 +7,8 @@ import { useMobileSidebarAutoclose } from "./_hooks/use-mobile-sidebar-autoclose
 import { useSidebarThreads } from "./_hooks/use-sidebar-threads";
 import { ChatSidebarLayout } from "./sidebar-layout";
 
-function MobileSidebarAutoclose({
-  activeThreadId,
-}: {
-  activeThreadId?: string;
-}) {
-  useMobileSidebarAutoclose(activeThreadId);
+function MobileSidebarAutoclose() {
+  useMobileSidebarAutoclose();
   return null;
 }
 
@@ -44,14 +40,12 @@ export function ChatSidebar({
     <ChatSidebarLayout
       activeThreadId={chatNav.id}
       className={className}
-      mobileAutoCloseNode={
-        <MobileSidebarAutoclose activeThreadId={chatNav.id} />
-      }
       onLoadMore={sidebarThreads.loadMore}
       onNewChat={handleNewChat}
       threads={sidebarThreads.threads}
     >
       {children}
+      <MobileSidebarAutoclose key={chatNav.id ?? "new"} />
     </ChatSidebarLayout>
   );
 }

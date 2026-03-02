@@ -43,7 +43,6 @@ export function Sidebar({
   children,
   onLoadMore,
   onNewChat,
-  mobileAutoCloseNode,
   renderThreadItem,
 }: {
   className?: string;
@@ -52,7 +51,6 @@ export function Sidebar({
   children: React.ReactNode;
   onNewChat?: () => void;
   onLoadMore?: () => void;
-  mobileAutoCloseNode?: React.ReactNode;
   renderThreadItem?: (args: {
     thread: Doc<"threads">;
     isActive: boolean;
@@ -120,7 +118,6 @@ export function Sidebar({
       </BaseSidebar>
       <CollapsibleButtonGroupAnimated className="fixed top-3 top-safe-offset-2 left-3" />
       <SidebarInset>{children}</SidebarInset>
-      {mobileAutoCloseNode}
     </SidebarProvider>
   );
 }
