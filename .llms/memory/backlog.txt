@@ -1,4 +1,24 @@
 ----
+[id] sidebar-pagination-placeholder-prefill
+[status] parked
+[captured_at] 2026-03-02
+[context] During sidebar follow-up PRD scoping, we discussed improving fast-scroll pagination UX by instantly reserving next-page space with placeholder rows while real rows load.
+[why_deferred] Valuable UX idea but adds state/render complexity and risk of feature creep during current stabilization pass (legacy cleanup + gating + rerender containment).
+[rough_spec]
+- When load-more is triggered, append temporary placeholder rows equal to page size (or bounded by known max once backend total count exists).
+- Replace placeholders progressively with real loaded rows when page resolves.
+- Keep placeholder generation bounded to avoid runaway growth when total count unknown.
+- Preserve accessibility and avoid confusing keyboard focus targets.
+[decisions]
+- Not part of current sidebar follow-up implementation.
+- Current follow-up uses status-gated loadMore cadence only.
+- Re-evaluate after backend provides total count / hasMore contract improvements.
+[open_questions]
+- Should placeholder count always equal requested page size, or adapt from observed API response sizes?
+- How to avoid visual jump when placeholders are replaced by rows with dynamic title/indicator widths?
+- Should placeholder rows be non-interactive or partially interactive during loading?
+[next_trigger] Revisit after current sidebar follow-up ships and pagination status-gating is validated in production-like usage.
+----
 [id] streamdown-code-worker-wasm-phase2
 [status] parked
 [captured_at] 2026-02-18

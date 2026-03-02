@@ -1,196 +1,173 @@
 ## Problem Statement
 
-The current sidebar implementation mixes app-aware logic and app-agnostic UI concerns, which breaks the intended 3-layer architecture and makes the sidebar hard to evolve safely.
+This PRD is a follow-up stabilization pass after the previous sidebar refactor PRD.
 
-From a user perspective, this creates risk on three fronts:
+The previous work successfully split the sidebar into cleaner L2/L3 paths, moved app logic to L3, removed fake lazy mounting from the active path, and added dedicated demo routes. However, key follow-up issues remain:
 
-1. Feature velocity risk: small changes in thread items, menus, or mobile behavior require touching tightly coupled code.
-2. UX regression risk: context menu, tooltip, keyboard/mobile interactions, and hover behaviors are fragile because they are intertwined with data and routing logic.
-3. Performance risk: large thread lists rely on a "fake lazy mount" pattern that increases complexity and does not represent the long-term optimization strategy.
+1. Legacy sidebar code still exists and is still edited in the refactor window, increasing confusion and accidental reuse risk.
+2. Pagination load-more cadence can feel delayed or trigger poorly under fast scrolling.
+3. Per-row context-menu force-mounting adds avoidable DOM/render overhead in long lists.
+4. Thread list rerender fanout is still higher than needed for active-row changes.
+5. L3 composition can be further aligned with complex feature conventions used by message components.
 
-We need a refactor that preserves current behavior and visuals, improves maintainability, and introduces a cleaner performance strategy that is virtualization-ready without implementing full virtualization yet.
+From user perspective, this creates risk of subtle UX regression (scroll/pagination/menu behavior), and from maintainer perspective, it leaves architecture debt and unclear ownership.
 
 ## Solution
 
-Refactor the sidebar into a strict layered design with:
+Finalize the sidebar refactor by hardening architecture and performance without expanding product scope:
 
-- Two independent L2 design-system modules:
-  - `Sidebar.*` for shell/layout composition.
-  - `SidebarItem.*` for item-level composition.
-- L3 chat-sidebar modules that own all app concerns: data fetching, route awareness, business actions, mobile auto-close rules, and app-specific composition.
-- Removal of fake lazy loading based on content-visibility events and `Activity`; keep CSS-level list optimizations and replace with simpler, predictable optimizations (stable props, targeted memoization, deferred updates, low-cost row structure).
-- Dedicated component demo pages for:
-  - Full sidebar behavior and composition.
-  - Sidebar item stress/a11y/perf behavior.
+- Remove unused legacy sidebar modules now (hard cleanup), so only canonical L2/L3 paths remain.
+- Keep and formalize current bug fix allowing mobile sheet + context-menu coexistence.
+- Tighten L3 composition boundaries to better match complex feature structure conventions.
+- Remove force-mounted per-row context menus and rely on default lazy mount behavior.
+- Implement pagination gating based on paginated query status (`CanLoadMore`, `LoadingMore`, `Exhausted`) to prevent duplicate calls while preserving fast-scroll responsiveness.
+- Reduce unnecessary list rerenders (memo boundaries + stable props/contracts at hot row boundaries).
+- Keep `useDeferredValue` strategy unchanged in this phase.
 
-This preserves UI behavior while making the codebase easier to reason about, safer to iterate, and ready for future virtualization.
+This pass is intentionally scope-limited: no new product behavior, no full virtualization, no skeleton-prefill pagination strategy yet.
 
 ## User Stories
 
-1. As a chat user, I want the sidebar to look and behave exactly as before, so that refactoring does not disrupt my workflow.
-2. As a keyboard user, I want to open thread options and execute actions without a mouse, so that navigation remains accessible.
-3. As a touch/mobile user, I want thread options and sidebar open/close behavior to remain reliable, so that mobile UX parity is preserved.
-4. As a user browsing many threads, I want scrolling to remain smooth, so that large history lists stay responsive.
-5. As a user switching chats, I want mobile sidebar auto-close behavior to stay correct, so that selected content is immediately visible.
-6. As a user, I want thread active state and title rendering to remain accurate, so that I can quickly orient in history.
-7. As a user, I want quick actions to appear consistently on desktop hover/focus, so that common actions are efficient.
-8. As a user, I want context menus to be positioned and navigated correctly, so that actions are discoverable and usable.
-9. As a user, I want tooltip behavior to remain non-intrusive and accessible, so that hints help without blocking interaction.
-10. As a user, I want loading and live-status indicators to stay clear and consistent, so that I understand thread state.
-11. As a product engineer, I want app logic removed from design-system modules, so that reusable UI remains app-agnostic.
-12. As a product engineer, I want item composition isolated from shell composition, so that item complexity does not bloat shell code.
-13. As a product engineer, I want routing and business actions centralized in app-layer adapters, so that behavior changes are made in one place.
-14. As a product engineer, I want explicit contracts between L2 and L3, so that cross-layer dependencies are obvious and safe.
-15. As a product engineer, I want a predictable optimization strategy, so that performance changes are measurable and maintainable.
-16. As a product engineer, I want to avoid premature full virtualization in this refactor, so that scope stays focused and shippable.
-17. As a product engineer, I want a clear virtualization integration seam, so that future implementation is low-risk.
-18. As a reviewer, I want architecture compliance to be explicit, so that layer violations are easy to detect.
-19. As a QA engineer, I want dedicated demo pages for shell and item behaviors, so that manual verification is fast and repeatable.
-20. As a QA engineer, I want large-list stress scenarios in demos, so that regressions are visible before release.
-21. As a designer, I want no visual regressions in spacing, overlays, and glass-edge details, so that quality remains consistent.
-22. As a tech lead, I want a migration that avoids touching legacy lower-layer primitives unless critical, so that risk is controlled.
-23. As a maintainer, I want module responsibilities documented in one PRD, so that future contributors can follow the design intent.
-24. As a maintainer, I want out-of-scope boundaries clear, so that this refactor does not turn into feature creep.
+1. As a chat user, I want sidebar behavior to stay consistent while internals are cleaned up, so my workflow is unchanged.
+2. As a chat user with many threads, I want load-more to keep up during fast scrolling, so I do not feel list stalls near the bottom.
+3. As a chat user, I want context menus to open instantly without hurting list responsiveness, so actions remain smooth in dense histories.
+4. As a mobile user, I want non-navigation context-menu actions to keep the sidebar open, so I can continue browsing actions safely.
+5. As a mobile user, I want overlay/outside tap dismiss behavior to still work normally, so drawer behavior stays native-feel.
+6. As a keyboard user, I want thread options to remain reachable and operable, so accessibility parity is preserved.
+7. As a product engineer, I want all active sidebar callsites to use canonical L2/L3 surfaces only, so architecture is unambiguous.
+8. As a product engineer, I want legacy unused sidebar modules removed, so accidental imports cannot reintroduce old patterns.
+9. As a product engineer, I want L2 sidebar modules to stay app-agnostic, so design-system reuse remains safe.
+10. As a product engineer, I want L3 to own routing/data/actions/autoclose concerns, so behavior changes stay localized.
+11. As a maintainer, I want complex sidebar composition organized like other complex features, so code navigation is predictable.
+12. As a maintainer, I want thread row rerenders minimized, so performance work remains measurable and maintainable.
+13. As a maintainer, I want pagination trigger logic explicit and state-driven, so duplicate fetch bugs are easy to reason about.
+14. As a reviewer, I want removal of legacy modules to be explicit and complete, so no transitional ambiguity remains.
+15. As a reviewer, I want architecture exceptions documented (mobile sheet/context-menu guard), so future edits do not undo critical fixes.
+16. As a QA engineer, I want demo routes to continue validating full sidebar and item stress paths, so regressions are easy to catch.
+17. As a QA engineer, I want clear parity checks for fast-scroll pagination cadence, so responsiveness issues are objectively evaluated.
+18. As a tech lead, I want this follow-up to avoid feature creep, so delivery stays focused and shippable.
+19. As a tech lead, I want deferred advanced ideas parked explicitly, so roadmap work does not leak into this refactor.
+20. As a future implementer, I want this PRD to be self-sufficient, so implementation requires no hidden conversation context.
 
 ## 'Polishing' Requirements
 
-- Confirm visual parity for header/footer overlays, spacing, and thread row density on desktop and mobile.
-- Confirm keyboard flow: focus visibility, menu trigger, menu navigation, action execution, and focus return.
-- Confirm touch/mouse parity for context menu and action buttons.
-- Confirm tooltip behavior does not interfere with tap targets or menu interactions.
-- Confirm active-thread highlighting and navigation transitions remain correct.
-- Confirm large-list scrolling remains smooth and avoids noticeable jank.
-- Confirm no accidental behavior changes to placeholder thread actions.
-- Confirm demo pages cover happy path, dense list path, and edge states.
+- Confirm no remaining runtime imports to removed legacy sidebar modules.
+- Confirm mobile context-menu action path keeps sidebar open for non-navigation actions.
+- Confirm mobile outside tap still closes sidebar sheet as expected.
+- Confirm fast-scroll bottom approach does not cause duplicate `loadMore` bursts.
+- Confirm fast-scroll bottom approach does not stall when sentinel stays intersecting after a page resolves.
+- Confirm thread active-state changes do not visibly jank the full list.
+- Confirm desktop hover/focus quick actions and menu trigger parity remain intact.
+- Confirm keyboard menu open/select/escape/focus-return flow still works.
+- Confirm `/components/sidebar` and `/components/sidebar-thread-item` still cover dense-list and interaction checks.
 
 ## Implementation Decisions
 
-- **Architecture split**
-  - Use two L2 modules:
-    - Sidebar shell module (`Sidebar.*`) for container/layout concerns.
-    - Sidebar item module (`SidebarItem.*`) for item composition concerns.
-  - Keep both modules app-agnostic: no app hooks, no app domain types, no app routing.
-  - Canonical shell module path for this refactor is `components/ui-custom/sidebar/sidebar-shell.tsx`.
-  - `components/ui-custom/sidebar/sidebar.tsx` is legacy transitional surface and must not be used by new/reworked sidebar callsites.
+- **Follow-up scope baseline**
+  - This PRD is a continuation of prior sidebar refactor completion work.
+  - Keep product behavior parity as default rule.
 
-- **L3 ownership**
-  - L3 chat-sidebar owns all app concerns:
-    - Data acquisition, filtering, pagination, deferred update strategy.
-    - Route-aware active state and navigation links.
-    - Business actions (pin/rename/share/delete semantics and callbacks).
-    - Mobile auto-close behavior on thread changes.
-    - App-specific shell composition (header controls, profile footer, floating actions).
+- **Legacy cleanup (hard requirement)**
+  - Delete unused legacy sidebar modules that are no longer part of canonical architecture.
+  - Ensure all active imports use canonical surfaces only.
+  - Do not keep dual-path transitional exports after this pass.
 
-- **Performance strategy update**
-  - Remove fake lazy-mount mechanism based on content-visibility state-change events and `Activity` toggling.
-  - Keep CSS-level row optimization (`content-visibility`, containment, intrinsic size hints).
-  - Use lower-complexity optimizations:
-    - Stable mapped row props from L3.
-    - Targeted memoization at row boundaries.
-    - Avoid per-render inline allocations in hot paths where practical.
-    - Deferred/non-urgent list updates where helpful.
-  - Prepare explicit render-strategy seam so virtualization can be introduced later with minimal L2 churn.
+- **Canonical architecture after cleanup**
+  - L2 keeps exactly two sidebar-facing namespaces:
+    - `Sidebar.*` for shell/layout composition.
+    - `SidebarItem.*` for item-level composition primitives.
+  - L3 owns app-aware concerns:
+    - data acquisition/filtering/pagination orchestration,
+    - route-aware active state/navigation,
+    - thread action wiring,
+    - mobile auto-close behavior.
 
-- **Legacy guardrail**
-  - Keep existing legacy sidebar base untouched unless a critical blocker is found.
-  - If a critical blocker is discovered, pause and request approval before modifying legacy internals.
+- **L3 composition structure refinement**
+  - Keep adapter + layout split for sidebar feature root.
+  - Extract non-trivial layout sub-compositions into `_parts` where it improves readability and guideline compliance.
+  - Preserve file naming conventions (`[feature]-layout`, `_parts`, `_hooks`) and avoid barrel exports.
 
-- **Behavior parity rules**
-  - Preserve current visual language and interaction model.
-  - Preserve existing placeholders and no-op action semantics unless explicitly changed by follow-up scope.
-  - Preserve accessibility behavior for context menus/tooltips across keyboard, mouse, and touch.
+- **Mobile context-menu/sheet interaction guard**
+  - Keep existing mobile interaction guard that prevents sheet outside-close when interaction originates from context-menu content.
+  - Treat this as an approved fix, not a temporary hack.
+  - Preserve normal sheet dismiss behavior for true outside interactions.
 
-- **Demo strategy**
-  - Provide two demos:
-    - Full sidebar integration demo.
-    - Sidebar item stress/a11y/perf demo.
-  - Demos are for manual QA and architecture verification, not production behavior changes.
+- **Context-menu mount strategy**
+  - Remove per-row forced mounting from thread item context menus.
+  - Use default mount behavior to reduce hidden DOM cost in long lists.
 
-- **Migration sequencing**
-  - Step 1: Define L2 contracts and namespace APIs.
-  - Step 2: Move app-aware item logic into L3 adapters.
-  - Step 3: Recompose full sidebar in L3 using L2 APIs.
-    - Acceptance criteria:
-      - `chat/sidebar/sidebar-layout.tsx` composes sidebar from `ui-custom/sidebar/sidebar-shell.tsx` (+ `SidebarItem.*` consumers).
-      - No import of `ui-custom/sidebar/sidebar.tsx` in L3 sidebar adapter/layout or sidebar demos.
-      - Data/pagination/deferred/mobile-autoclose concerns live in L3 (`chat/sidebar/*`).
-  - Step 4: Remove old fake lazy logic and validate perf baseline.
-  - Step 5: Replace/extend demo coverage and run QA checklist.
+- **Pagination cadence hardening (no feature creep)**
+  - Gate `loadMore` requests using paginated status.
+  - Request only when status is `CanLoadMore`.
+  - No-op when status is `LoadingMore`, `LoadingFirstPage`, or `Exhausted`.
+  - Implement cycle lock to avoid duplicate `loadMore` calls for same cycle.
+  - Rearm automatically after status leaves `LoadingMore` so if sentinel is still intersecting, next page request can fire without extra scroll jiggle.
+  - Keep current product behavior; no skeleton-prefill pagination in this PRD.
+
+- **Rerender containment**
+  - Add memoization boundary at thread item root and keep row props stable.
+  - Prefer re-rendering only rows impacted by active-state or live-status/title change.
+  - Avoid expanding optimization into global virtualization in this pass.
+
+- **Deferred strategy**
+  - Keep current `useDeferredValue` behavior unchanged in this PRD.
+  - Cross-app deferred-value strategy review is explicitly deferred.
+
+- **Delivery constraints**
+  - No new unit/integration test suite in this pass (explicitly accepted).
+  - Keep existing demos as manual verification surfaces.
 
 ## Testing Decisions
 
-- **What makes a good test**
-  - Validate external behavior and user-observable outcomes.
-  - Avoid asserting implementation details (internal hooks, memo internals, class micro-details not tied to behavior).
-  - Prefer intent-based tests: interaction, state transitions, accessibility semantics.
+- **What makes a good test (when tests are added later)**
+  - Validate user-observable outcomes and interaction contracts.
+  - Avoid asserting implementation details such as internal refs/memo internals.
+  - Prioritize behavior-level assertions: menu behavior, pagination cadence, active-row transitions.
 
-- **Modules to test**
-  - L2 Sidebar shell module:
-    - Slot composition and accessibility-relevant structure.
-    - Inset/header/footer behavior contracts.
-  - L2 Sidebar item module:
-    - Item composition contracts, action/menu rendering behavior, keyboard trigger behavior.
-  - L3 chat sidebar adapter/layout:
-    - Data-to-view mapping, active item resolution, load-more triggering, mobile auto-close.
-  - Demo-level manual verification:
-    - Dense list scenarios, interaction parity, visual regression checks.
+- **This PRD test policy**
+  - No new unit tests for this follow-up (explicit scope decision).
+  - Validation remains manual via component demo routes and targeted QA checklist.
 
-- **Prior art expectations**
-  - Follow existing component testing conventions already used for composable UI modules and route-level component demos.
-  - Reuse established testing style for accessibility and interaction assertions where available.
+- **Manual verification focus**
+  - Full sidebar route: mobile sheet/menu interaction parity, load-more cadence under fast scroll, active-row behavior.
+  - Thread-item demo route: dense-list interaction behavior and quick-action/menu responsiveness.
 
 ## Out of Scope
 
-- Implementing full list virtualization in this iteration.
-- Changing product behavior of thread actions beyond architectural relocation.
-- Redesigning visual style, branding, or introducing new sidebar features.
-- Broad rewrites of legacy lower-layer sidebar internals.
-- Cross-feature refactors unrelated to sidebar and sidebar-item architecture.
+- Placeholder/skeleton-prefill pagination strategy (optimistic slot reservation while next page loads).
+- Full list virtualization implementation.
+- Global app-wide deferred rendering strategy redesign.
+- Broad INP optimization pass across unrelated demos/components.
+- New product features or action semantics changes.
+- Backend total-thread-count integration.
+- New automated test suite for sidebar in this iteration.
 
 ## Further Notes
 
-### Target directory layout (annotated)
+### Previous refactor recap (completed baseline)
 
-```text
-components/
-  ui-custom/
-    sidebar/
-      sidebar-shell.tsx           # L2 Sidebar.* shell/layout composition (canonical)
-      sidebar.tsx                 # legacy transitional file (do not import in refactor path)
-      sidebar-item.tsx            # L2 SidebarItem.* item composition
-  chat/
-    sidebar/
-      sidebar.tsx                 # L3 adapter: app hooks/data/actions wiring
-      sidebar-layout.tsx          # L3 pure composition of full sidebar
-      _parts/
-        thread-item.tsx           # L3 thread adapter -> SidebarItem.*
-        thread-item-actions.tsx   # L3 business action definitions/callbacks
-        sidebar-floating-actions.tsx # L3 floating controls composition
-        sidebar-user-footer.tsx   # L3 app-aware footer content
-      _hooks/
-        use-sidebar-threads.ts    # L3 list/query/deferred/pagination shaping
-        use-thread-item-state.ts  # L3 thread->view-state mapping
-        use-mobile-sidebar-autoclose.ts # L3 mobile close-on-navigation
-routes/components/_components/
-  sidebar.tsx                     # Full sidebar demo page
-  sidebar-thread-item.tsx         # Item stress/a11y/perf demo page
-```
+- L3 sidebar adapter/layout split implemented.
+- New L2 shell/item namespaces introduced.
+- Fake lazy mount path removed from active sidebar path.
+- Dedicated full sidebar and thread-item demo routes added.
 
-### Virtualization-ready seam (no implementation yet)
+### Follow-up migration sequence
 
-Define a list-render strategy boundary in L3 so future virtualization can replace only list rendering orchestration while preserving L2 `SidebarItem.*` contracts and item composition.
+1. Remove legacy sidebar modules and reconcile imports.
+2. Refine L3 layout decomposition to align with complex feature conventions.
+3. Remove row context-menu `forceMount` usage.
+4. Implement status-gated pagination cadence with rearm behavior.
+5. Add/confirm row-level memo boundaries and stable props.
+6. Re-run manual QA checklist across both demo routes.
 
-### Risk notes
+### Risks
 
-- Main risk is subtle interaction regression in context menu/tooltip/focus behavior.
-- Mitigation is explicit parity checklist and dedicated demo pages focused on interaction states.
+- Main risk: introducing pagination dead-zone when preventing duplicate load-more calls.
+- Mitigation: explicit status machine gating + rearm-on-status-transition behavior.
 
-### Post-final QA feedback to remediate before ship (2026-03-02)
+### Explicitly deferred idea (valuable, not now)
 
-- Mobile options trigger visibility: on mobile, thread options trigger must remain available for keyboard/screenreader navigation but the visible three-dots affordance should not be shown by default touch UI.
-- Header/footer backdrop responsiveness: top/bottom backdrop edge effect should toggle immediately on probe state changes (no noticeable delay).
-- Load-more responsiveness: pagination trigger must keep up with fast scrolling near list bottom and avoid debounce-like perceived delay.
-- Mobile context-menu action bug: selecting a non-navigation context-menu action on mobile must not close the sidebar; auto-close remains navigation-only.
+- Optimistic placeholder rows during pagination is intentionally deferred to backlog to avoid feature creep in this follow-up.
 
 ### Unresolved questions
 
