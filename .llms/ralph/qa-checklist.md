@@ -174,16 +174,6 @@ PRD: `.llms/ralph/prd.md`
   - intended impact: reduce render work on edge toggles so header/footer backdrop edge visibility flips feel immediate.
   - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch).
 
-#### 2026-03-02 run 15 (S5.3d.r2 fast-scroll pagination cadence)
-
-- Date: 2026-03-02
-- Tester: OpenCode (gpt-5.3-codex)
-- Result: partial
-- Notes:
-  - completed `S5.3d.r2` in `/components/sidebar`: bottom sentinel now triggers `onLoadMore` not only on enter, but also while still in-view after page growth (`useEffect` keyed by in-view + `threads.length`), so fast-scroll can chain subsequent page loads without waiting for leave/re-enter cycles.
-  - added `useSidebarThreads` gate so `loadMore` executes only in Convex `CanLoadMore` status; keeps cadence tight while avoiding redundant calls during `LoadingMore`/`Exhausted`.
-  - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch).
-
 #### 2026-03-02 run 16 (S5.3e.r1 mobile context-menu action flow)
 
 - Date: 2026-03-02
