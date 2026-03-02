@@ -4,6 +4,7 @@ import { MoreVerticalIcon } from "lucide-react";
 import {
   type ButtonHTMLAttributes,
   type ElementType,
+  memo,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   useMemo,
@@ -258,23 +259,21 @@ function A11YContextMenuTriggerButton(
   );
 }
 
-export const ThreadItem = {
-  Root: ThreadItemRoot,
-};
-
-export function ThreadItemRoot({
-  thread,
-  isActive = false,
-  className,
-  isMobile = false,
-  actionHandlers,
-}: {
+type ThreadItemRootProps = {
   thread: ThreadDoc;
   isActive?: boolean;
   className?: string;
   isMobile?: boolean;
   actionHandlers?: ThreadItemActionHandlers;
-}) {
+};
+
+function ThreadItemRootImpl({
+  thread,
+  isActive = false,
+  className,
+  isMobile = false,
+  actionHandlers,
+}: ThreadItemRootProps) {
   const suppressNavigationUntilRef = useRef(0);
   const { indicatorVariant, isLoading, tooltip } = useThreadItemState(thread);
 
@@ -372,3 +371,23 @@ export function ThreadItemRoot({
     </SidebarItem.Root>
   );
 }
+
+const ThreadItemRoot = memo(
+  ThreadItemRootImpl,
+  (previousProps, nextProps) =>
+    previousProps.className === nextProps.className &&
+    previousProps.isActive === nextProps.isActive &&
+    previousProps.isMobile === nextProps.isMobile &&
+    previousProps.actionHandlers === nextProps.actionHandlers &&
+    previousProps.thread.uuid === nextProps.thread.uuid &&
+    previousProps.thread.title === nextProps.thread.title &&
+    previousProps.thread.liveStatus === nextProps.thread.liveStatus
+);
+
+ThreadItemRoot.displayName = "ThreadItemRoot";
+
+export const ThreadItem = {
+  Root: ThreadItemRoot,
+};
+
+export { ThreadItemRoot };
