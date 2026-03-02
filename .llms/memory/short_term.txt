@@ -132,3 +132,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-02: sidebar refactor Step 5 QA log seeded (RALPH)
 - updated `.llms/ralph/qa-checklist.md` result log with first partial run entry
 - notes capture that manual route interaction checks still pending and `pnpm run check-types` remains blocked by pre-existing `apps/server` TS6305 (`@ai-monorepo/api-service` dist type build-order issue)
+
+2026-03-02: sidebar refactor Step 5 QA log run2 (RALPH)
+- reran feedback loop `pnpm run check-types`; unchanged external blocker in `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
+- manual QA interaction pass on `/components/sidebar` + `/components/sidebar-thread-item` still pending
