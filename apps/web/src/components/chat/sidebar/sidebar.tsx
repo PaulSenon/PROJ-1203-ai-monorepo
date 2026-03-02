@@ -20,10 +20,7 @@ export function ChatSidebar({
   children?: React.ReactNode;
 }) {
   const appUiStatus = useAppLoadStatusActions();
-  // const { isInitialUIStateReady } = useAppLoadStatus();
   const chatNav = useChatNav();
-  // const handleNewChat = () => chatNav.openNewChat();
-  // TODO: debug
 
   const sidebarThreads = useSidebarThreads();
 
