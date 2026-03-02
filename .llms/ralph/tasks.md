@@ -61,9 +61,10 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 - [ ] `S5.3d.r2` Improve load-more trigger cadence for fast scroll so pagination keeps up without debounce feel.
 - [x] `S5.3e.r1` Fix mobile context-menu action flow so non-navigation actions do not close sidebar.
 - [x] `S5.3e.r2` Restore context-menu close-on-action while preserving mobile non-navigation no-autoclose behavior.
+- [x] `S5.3e.r3` Fix touch-only sidebar auto-close root cause by excluding context-menu portal interactions from mobile sheet outside-close.
 
 ## Task Selection
 
-- Selected next task (this iteration): `[x] S5.3e.r2` restore context-menu close-on-action while preserving mobile non-navigation no-autoclose behavior.
-- Completed outcome: removed `preventDefault` from `ContextMenuItem` select path in `ThreadItem.Root` so Radix closes menu on action selection again; retained select `stopPropagation` + existing short mobile link-navigation suppression window so action callbacks fire and sidebar stays open unless actual thread navigation happens.
+- Selected next task (this iteration): `[x] S5.3e.r3` fix touch-only sidebar auto-close root cause by excluding context-menu portal interactions from mobile sheet outside-close.
+- Completed outcome: root cause identified in mobile `SheetContent` outside-interaction handling (context-menu content is portaled outside sheet DOM); added `onInteractOutside` guard in sidebar mobile primitive to prevent sheet close when interaction target is `[data-slot="context-menu-content"]`, preserving normal overlay tap dismiss while keeping context-menu action close behavior.
 - Next queued task: `[>] S5.3d.r2` improve load-more trigger cadence for fast scroll so pagination keeps up without debounce feel.
