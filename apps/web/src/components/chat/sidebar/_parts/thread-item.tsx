@@ -304,7 +304,19 @@ export function ThreadItemRoot({
               )}
               <ThreadTitle isLoading={isLoading} text={thread.title} />
             </span>
-            {isMobile ? null : (
+            {isMobile ? (
+              <div className="relative z-30 mr-1 ml-1 flex shrink-0 items-center justify-center">
+                <A11YContextMenuTriggerButton
+                  aria-label="Thread options"
+                  className={cn(
+                    "h-7 w-7 shrink-0 rounded-md bg-transparent p-1.5 text-foreground hover:bg-sidebar-ring/50 hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                  )}
+                >
+                  <MoreVerticalIcon className="size-4" />
+                  <span className="sr-only">Thread options</span>
+                </A11YContextMenuTriggerButton>
+              </div>
+            ) : (
               <>
                 <div
                   className={cn(

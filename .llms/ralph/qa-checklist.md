@@ -65,3 +65,16 @@ PRD: `.llms/ralph/prd.md`
 - Tester: OpenCode (gpt-5.3-codex)
 - Result: partial
 - Notes: completed `S5.3a.r1` code fix (overlay absolute classes now only on live header/footer instances; spacer clones are in-flow again); reran `pnpm run check-types`, still blocked by pre-existing `apps/server` TS6305 (`@ai-monorepo/api-service` dist `.d.ts` build-order issue).
+
+#### 2026-03-02 run 5 (handoff detail capture + S5.3b.r1)
+
+- Date: 2026-03-02
+- Tester: user + OpenCode
+- Result: partial
+- Additional QA details captured for handoff:
+  - `/components/sidebar-thread-item`: user reports poor INP feeling on long-list quick-action and context-menu action clicks; likely coupled to demo action-log state updates, needs isolation check.
+  - `/components/sidebar`: user reports backdrop edge toggle (top/bottom probe -> header/footer effect) feels delayed (~500ms+), minor/non-blocking for now.
+  - `/components/sidebar`: known pre-existing bug note, mobile context-menu action can close sidebar though only thread navigation should auto-close.
+- Task status update:
+  - `S5.3b.r1` implemented: mobile row now exposes visible `Thread options` trigger button so keyboard/assistive mobile navigation can open context menu.
+  - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`@ai-monorepo/api-service` dist `.d.ts` build-order issue).

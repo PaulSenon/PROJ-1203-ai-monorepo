@@ -148,3 +148,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - user QA flagged `/components/sidebar` failures: header/footer reserved-space regression (`S5.3a`), mobile options accessibility path (`S5.3b`), load-more sentinel delay feel (`S5.3d`)
 - implemented `S5.3a.r1`: moved absolute positioning out of L2 `sidebar-shell` header/footer defaults and set absolute classes only on `ChatSidebarLayout` overlay instances so spacer clones can reserve layout space again
 - `/components/sidebar-thread-item` feedback captured: `S5.4a` and `S5.4c` OK, INP concern noted for quick action/context-menu paths (follow-up pending)
+
+2026-03-02: sidebar Step 5 S5.3b.r1 + QA handoff detail capture (RALPH)
+- implemented mobile-accessible thread options path in `ThreadItem.Root`: mobile rows now render visible `Thread options` trigger button to open context menu via existing a11y trigger helper
+- logged additional QA handoff notes: backdrop edge effect toggle feels delayed (~500ms+) on `/components/sidebar` (minor), known pre-existing bug where mobile context-menu action may close sidebar, and long-list INP concern on `/components/sidebar-thread-item` quick/context actions likely tied to demo action-log rerenders

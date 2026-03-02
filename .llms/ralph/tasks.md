@@ -50,11 +50,11 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 ### QA remediation micro-tasks (post run-3 feedback)
 
 - [x] `S5.3a.r1` Restore header/footer reserved-space behavior for `/components/sidebar` while keeping overlay glass-edge headers/footers.
-- [ ] `S5.3b.r1` Restore mobile accessibility path to thread options trigger (keyboard/assistive nav on row actions).
+- [x] `S5.3b.r1` Restore mobile accessibility path to thread options trigger (keyboard/assistive nav on row actions).
 - [ ] `S5.3d.r1` Tune `/components/sidebar` load-more sentinel responsiveness to remove perceived delay.
 
 ## Task Selection
 
-- Selected next task (this iteration): `[x] S5.3a.r1` Restore `/components/sidebar` header/footer reserved-space behavior.
-- Completed outcome: moved absolute overlay positioning out of L2 `SidebarShell.Header/Footer` defaults and into `ChatSidebarLayout` overlay instances so spacer clones reserve real flow space again.
-- Next queued task: `[>] S5.3b.r1` restore mobile accessibility path to thread options trigger.
+- Selected next task (this iteration): `[x] S5.3b.r1` Restore mobile options accessibility path in thread rows.
+- Completed outcome: reintroduced visible mobile `Thread options` trigger in `ThreadItem.Root` so assistive/keyboard navigation can open context menu on mobile path (desktop hover/focus behavior unchanged).
+- Next queued task: `[>] S5.3d.r1` tune `/components/sidebar` load-more sentinel responsiveness.
