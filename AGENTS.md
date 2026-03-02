@@ -17,6 +17,7 @@ Never guess product/spec details. If ambiguity, ask and wait; update PRD/AGENTS 
 ## Code principles
 
 - Simplicity over complexity: always prefer the simplest elegant solution instead of over-engineering. (You might even raise warning if something will lead to over-engineering because taking the wrong path)
+  - If choosing complex path, present simple alternative + tradeoff and wait for explicit approval.
 - Typesafety like you were Matt Pocock or Tanner Linsley. When needed, build strong type system isolated from runtime usage, allowing DX with almost no TS syntax outside of type core, but with best in class typesafety (inspiration: tanstack, oRPC/tRPC)
 - When designing React component, always keep in mind:
   - Accessibility and SEO (html and semantic structure, but also design and navigation)
