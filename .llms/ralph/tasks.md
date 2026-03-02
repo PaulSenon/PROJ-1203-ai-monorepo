@@ -44,7 +44,7 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 - [x] `S5.4a` `/components/sidebar-thread-item`: verify row preset switching (20/200/1000) keeps parity and no obvious jank.
 - [x] `S5.4b` `/components/sidebar-thread-item`: verify mobile mode toggle preserves menu/action behavior.
 - [x] `S5.4c` `/components/sidebar-thread-item`: verify active UUID override determinism + action log correctness.
-- [ ] `S5.5` Run feedback loop `pnpm run check-types` after manual QA passes and log result.
+- [x] `S5.5` Run feedback loop `pnpm run check-types` after manual QA passes and log result.
 - [ ] `S5.6` Update QA result log from `partial` to final status with route-by-route pass/fail notes.
 
 ### QA remediation micro-tasks (post run-3 feedback)
@@ -55,6 +55,6 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 
 ## Task Selection
 
-- Selected next task (this iteration): `[x] S5.4c` verify `/components/sidebar-thread-item` active UUID override determinism + action log correctness.
-- Completed outcome: verified demo wiring keeps active-state resolution deterministic (`isActive={thread.uuid===activeUuid}`) and action log entries sourced from invoked callbacks with matching thread uuid/title payload.
-- Next queued task: `[>] S5.5` run feedback loop `pnpm run check-types` and log result.
+- Selected next task (this iteration): `[x] S5.5` run feedback loop `pnpm run check-types` and log result.
+- Completed outcome: reran workspace typecheck; failure unchanged at pre-existing `apps/server` TS6305 referencing `packages/api-service/dist/src/service.d.ts` build-order mismatch from `packages/api-service/src/service.ts`.
+- Next queued task: `[>] S5.6` update QA result log from `partial` to final status with route-by-route pass/fail notes.

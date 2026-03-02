@@ -117,3 +117,13 @@ PRD: `.llms/ralph/prd.md`
   - completed `S5.4c` via code-path verification in `/components/sidebar-thread-item`: active highlight is fully controlled by `activeUuid` input and strict `thread.uuid === activeUuid` comparison passed to `ThreadItem.Root isActive`.
   - action log path verified: each action callback (`onPin/onRename/onShare/onDelete`) appends event + selected thread identity from callback payload (`thread.uuid`, `thread.title`) through shared `appendLog` path.
   - no behavior change required in this step; verification + QA/task ledger reconciliation only.
+
+#### 2026-03-02 run 10 (S5.5 feedback loop)
+
+- Date: 2026-03-02
+- Tester: OpenCode (gpt-5.3-codex)
+- Result: partial
+- Notes:
+  - completed `S5.5` by rerunning `pnpm run check-types`.
+  - outcome unchanged: pre-existing `apps/server` failure `TS6305` at `src/index.ts` due `packages/api-service/dist/src/service.d.ts` not built from `packages/api-service/src/service.ts`.
+  - no new type errors introduced by sidebar refactor path in this run.

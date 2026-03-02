@@ -171,3 +171,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - verified `/components/sidebar-thread-item` active UUID override determinism from direct `activeUuid` control (`thread.uuid === activeUuid` -> `ThreadItem.Root isActive`)
 - verified action-log correctness path: all menu callbacks append event + selected thread identity via shared `appendLog` callback
 - updated `.llms/ralph/tasks.md` + `.llms/ralph/qa-checklist.md`; next queued task now `S5.5`
+
+2026-03-02: sidebar Step 5 S5.5 feedback loop rerun (RALPH)
+- reran workspace `pnpm run check-types`; failure unchanged in `apps/server` with `TS6305` (`packages/api-service/dist/src/service.d.ts` build-order mismatch against `packages/api-service/src/service.ts`)
+- updated `.llms/ralph/tasks.md` + `.llms/ralph/qa-checklist.md`; next queued task now `S5.6`
