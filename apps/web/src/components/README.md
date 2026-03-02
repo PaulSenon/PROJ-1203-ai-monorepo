@@ -78,7 +78,8 @@ ui-custom/
 
 **What belongs here**:
 
-- `Sidebar.Root`, `Sidebar.Item`, `Sidebar.Footer`
+- `Sidebar.Root`, `Sidebar.Header`, `Sidebar.Footer`
+- `SidebarItem.Root`, `SidebarItem.Button`, `SidebarItem.Title`
 - `Message.Root`, `Message.Content`, `Message.Actions`
 - Generic slots and layouts, no app logic
 
@@ -134,7 +135,8 @@ components/
     primitives/                # Browser/a11y fixes
       textarea.tsx
     sidebar/
-      sidebar.tsx              # Sidebar.* compound export
+      sidebar-shell.tsx        # Sidebar.* shell/layout namespace
+      sidebar-item.tsx         # SidebarItem.* row/item namespace
     chat/
       message.tsx              # Message.* compound export
       reasoning.tsx            # Reasoning.* compound export
@@ -382,23 +384,23 @@ Message.* components (L2 compound)
 
 ### Layer Breakdown
 
-**L2 (Design System)**: `ui-custom/sidebar/sidebar.tsx`
+**L2 (Design System)**: `ui-custom/sidebar/sidebar-shell.tsx` + `ui-custom/sidebar/sidebar-item.tsx`
 
-- `Sidebar.Root` — Wraps shadcn sidebar with styling
-- `Sidebar.Header` — Logo + actions slot
-- `Sidebar.Content` — Scrollable list area
-- `Sidebar.Item` — Generic item (icon, label, active state)
-- `Sidebar.Footer` — Bottom slot
-- `Sidebar.Trigger` — Mobile toggle
+- `Sidebar.*` (`sidebar-shell.tsx`) — Shell/layout primitives (provider, root, header, content, footer, trigger, inset)
+- `SidebarItem.*` (`sidebar-item.tsx`) — Item primitives (row, button, title, actions)
 
-**L3 (App Layer)**: `sidebar/`
+**L3 (App Layer)**: `chat/sidebar/`
 
 ```
-sidebar/
-  app-sidebar.tsx              # Feature Root: hooks + composition
+chat/sidebar/
+  sidebar.tsx                  # Feature Root: hooks + composition
+  sidebar-layout.tsx           # Feature Layout: pure composition
   _parts/
     thread-item.tsx            # Feature Part: knows Thread type
-    user-menu.tsx              # Feature Part: knows User type
+    thread-item-actions.tsx    # Feature Part: action definitions
+  _hooks/
+    use-sidebar-threads.ts     # Feature Hook: data + pagination orchestration
+    use-mobile-sidebar-autoclose.ts # Feature Hook: mobile close behavior
 ```
 
 ### Why SidebarThreadItem is L3
@@ -411,7 +413,7 @@ It knows app concepts:
 
 But it composes L2 primitives:
 
-- `Sidebar.Item` for visual structure
+- `SidebarItem.*` for visual structure
 - `ContextMenu` from L1 for interactions
 
 ---
