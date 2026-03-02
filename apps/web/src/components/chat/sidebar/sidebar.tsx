@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useMemo } from "react";
-import { usePreviousThreadHistoryPaginated } from "@/hooks/queries/use-chat-listing-queries";
+import { useCallback, useLayoutEffect } from "react";
 import { useAppLoadStatusActions } from "@/hooks/use-app-load-status";
 import { useChatNav } from "@/hooks/use-chat-nav";
+import { useSidebarThreads } from "./_hooks/use-sidebar-threads";
 import { ChatSidebarLayout } from "./sidebar-layout";
 
 export function ChatSidebar({
@@ -19,33 +19,24 @@ export function ChatSidebar({
   // const handleNewChat = () => chatNav.openNewChat();
   // TODO: debug
 
-  const history = usePreviousThreadHistoryPaginated();
+  const sidebarThreads = useSidebarThreads();
 
   useLayoutEffect(() => {
-    if (history.isPending) return;
+    if (sidebarThreads.isPending) return;
     appUiStatus.setSidebarUIReady();
-  }, [history.isPending, appUiStatus.setSidebarUIReady]);
-
-  const handleLoadMore = useCallback(() => {
-    history.loadMore(20);
-  }, [history.loadMore]);
+  }, [sidebarThreads.isPending, appUiStatus.setSidebarUIReady]);
 
   const handleNewChat = useCallback(() => {
     chatNav.openNewChat();
   }, [chatNav.openNewChat]);
 
-  const memoThreads = useMemo(
-    () => history.results.filter((t) => t.lifecycleState === "active"),
-    [history.results]
-  );
-
   return (
     <ChatSidebarLayout
       activeThreadId={chatNav.id}
       className={className}
-      onLoadMore={handleLoadMore}
+      onLoadMore={sidebarThreads.loadMore}
       onNewChat={handleNewChat}
-      threads={memoThreads}
+      threads={sidebarThreads.threads}
     >
       {children}
     </ChatSidebarLayout>
