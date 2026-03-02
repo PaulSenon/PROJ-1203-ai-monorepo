@@ -1,6 +1,12 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { PlusIcon, SearchIcon } from "lucide-react";
-import React, { useCallback, useDeferredValue, useMemo, useRef } from "react";
+import React, {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -45,12 +51,18 @@ export function ChatSidebarLayout({
     onLoadMore?.();
   }, [onLoadMore]);
 
-  const { ref: loadMoreRef } = useInView<HTMLDivElement>({
-    rootRef: scrollContainerRef,
-    rootMargin: "0px 0px 200% 0px",
-    continuous: true,
-    onEnter: handleLoadMore,
-  });
+  const { inView: isLoadMoreInView, ref: loadMoreRef } =
+    useInView<HTMLDivElement>({
+      rootRef: scrollContainerRef,
+      rootMargin: "0px 0px 200% 0px",
+      continuous: true,
+      onEnter: handleLoadMore,
+    });
+
+  useEffect(() => {
+    if (!isLoadMoreInView) return;
+    handleLoadMore();
+  }, [isLoadMoreInView, handleLoadMore, threads.length]);
 
   const mergedBottomRef = useMergedRefs<HTMLDivElement>(bottomRef, loadMoreRef);
   const deferredThreads = useDeferredValue(threads, []);

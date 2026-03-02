@@ -58,11 +58,11 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 
 - [x] `S5.3b.r2` Hide visible mobile three-dots affordance while preserving screenreader/keyboard path to thread options.
 - [x] `S5.3a.r2` Remove perceptible header/footer backdrop edge-toggle delay in `/components/sidebar`.
-- [ ] `S5.3d.r2` Improve load-more trigger cadence for fast scroll so pagination keeps up without debounce feel.
+- [x] `S5.3d.r2` Improve load-more trigger cadence for fast scroll so pagination keeps up without debounce feel.
 - [ ] `S5.3e.r1` Fix mobile context-menu action flow so non-navigation actions do not close sidebar.
 
 ## Task Selection
 
-- Selected next task (this iteration): `[x] S5.3a.r2` remove perceptible header/footer backdrop edge-toggle delay in `/components/sidebar`.
-- Completed outcome: memoized mapped `ThreadItem.Root` rows in `sidebar-layout.tsx` so top/bottom probe state flips (`isAtTop`/`isAtBottom`) no longer remap large thread lists on every scroll-edge toggle, reducing perceived backdrop edge lag.
-- Next queued task: `[>] S5.3d.r2` improve load-more trigger cadence for fast scroll so pagination keeps up without debounce feel.
+- Selected next task (this iteration): `[x] S5.3d.r2` improve load-more trigger cadence for fast scroll so pagination keeps up without debounce feel.
+- Completed outcome: kept bottom sentinel prefetch active while in-view by coupling in-view state + list growth effect in `ChatSidebarLayout`, and gated `useSidebarThreads.loadMore` to `history.status === "CanLoadMore"` so repeated in-view triggers avoid redundant non-load calls and re-fire immediately when Convex pagination re-enters loadable state.
+- Next queued task: `[>] S5.3e.r1` fix mobile context-menu action flow so non-navigation actions do not close sidebar.

@@ -7,8 +7,9 @@ export function useSidebarThreads() {
   const history = usePreviousThreadHistoryPaginated();
 
   const loadMore = useCallback(() => {
+    if (history.status !== "CanLoadMore") return;
     history.loadMore(SIDEBAR_THREADS_PAGE_SIZE);
-  }, [history.loadMore]);
+  }, [history.status, history.loadMore]);
 
   const threads = useMemo(
     () =>
