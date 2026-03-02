@@ -153,7 +153,6 @@ const SidebarThreads = React.memo(
           <SidebarThreadItem
             isActive={isActive}
             isMobile={isMobile}
-            prerender={index < 25}
             thread={thread}
           />
         );

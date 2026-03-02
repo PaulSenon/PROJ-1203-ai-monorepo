@@ -280,21 +280,18 @@ export const SidebarThreadItem = React.memo(
     prev.className === next.className &&
     prev.thread.liveStatus === next.thread.liveStatus &&
     prev.thread.title === next.thread.title &&
-    prev.isMobile === next.isMobile &&
-    prev.prerender === next.prerender
+    prev.isMobile === next.isMobile
 );
 
 SidebarThreadItem.displayName = "SidebarThreadItem";
 
 export function LazySidebarMenuItem({
   children,
-  prerender: _prerender = false,
   isMobile,
   className,
   ...props
 }: {
   children: React.ReactNode;
-  prerender?: boolean;
   isMobile: boolean;
 } & React.ComponentProps<typeof SidebarMenuItem>) {
   return (
@@ -382,13 +379,11 @@ export function _SidebarThreadItem({
   isActive = false,
   className,
   isMobile = false,
-  prerender = false,
 }: {
   thread: Doc<"threads">;
   isActive?: boolean;
   className?: string;
   isMobile?: boolean;
-  prerender?: boolean;
 }) {
   const isLoading =
     thread.liveStatus === "pending" || thread.liveStatus === "streaming";
@@ -445,11 +440,7 @@ export function _SidebarThreadItem({
   );
 
   return (
-    <LazySidebarMenuItem
-      className={className}
-      isMobile={isMobile}
-      prerender={prerender}
-    >
+    <LazySidebarMenuItem className={className} isMobile={isMobile}>
       <SidebarChatLinkContextMenuContent actions={menuItems}>
         <SidebarMenuButton asChild>
           <SidebarMenuItemLink
