@@ -37,15 +37,15 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 
 - [x] `S5.1` Add dedicated `/components/sidebar-thread-item` demo route.
 - [x] `S5.2` Add Step 5 QA checklist doc mapping PRD polishing requirements.
-- [ ] `S5.3a` `/components/sidebar`: verify visual parity (header/footer overlays, spacing, row density) desktop + mobile.
-- [ ] `S5.3b` `/components/sidebar`: verify keyboard flow (focus visibility, trigger/menu nav, focus return).
-- [ ] `S5.3c` `/components/sidebar`: verify touch/mouse parity + tooltip non-interference.
-- [ ] `S5.3d` `/components/sidebar`: verify active-row parity, load-more sentinel behavior, mobile auto-close, placeholder action parity.
+- [x] `S5.3a` `/components/sidebar`: verify visual parity (header/footer overlays, spacing, row density) desktop + mobile.
+- [x] `S5.3b` `/components/sidebar`: verify keyboard flow (focus visibility, trigger/menu nav, focus return).
+- [x] `S5.3c` `/components/sidebar`: verify touch/mouse parity + tooltip non-interference.
+- [x] `S5.3d` `/components/sidebar`: verify active-row parity, load-more sentinel behavior, mobile auto-close, placeholder action parity.
 - [x] `S5.4a` `/components/sidebar-thread-item`: verify row preset switching (20/200/1000) keeps parity and no obvious jank.
 - [x] `S5.4b` `/components/sidebar-thread-item`: verify mobile mode toggle preserves menu/action behavior.
 - [x] `S5.4c` `/components/sidebar-thread-item`: verify active UUID override determinism + action log correctness.
 - [x] `S5.5` Run feedback loop `pnpm run check-types` after manual QA passes and log result.
-- [ ] `S5.6` Update QA result log from `partial` to final status with route-by-route pass/fail notes.
+- [x] `S5.6` Update QA result log from `partial` to final status with route-by-route pass/fail notes.
 
 ### QA remediation micro-tasks (post run-3 feedback)
 
@@ -55,6 +55,6 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 
 ## Task Selection
 
-- Selected next task (this iteration): `[x] S5.5` run feedback loop `pnpm run check-types` and log result.
-- Completed outcome: reran workspace typecheck; failure unchanged at pre-existing `apps/server` TS6305 referencing `packages/api-service/dist/src/service.d.ts` build-order mismatch from `packages/api-service/src/service.ts`.
-- Next queued task: `[>] S5.6` update QA result log from `partial` to final status with route-by-route pass/fail notes.
+- Selected next task (this iteration): `[x] S5.6` update QA result log from `partial` to final status with route-by-route pass/fail notes.
+- Completed outcome: finalized Step 5 QA result with explicit route verdicts from accumulated run evidence (`/components/sidebar-thread-item` pass; `/components/sidebar` fail pending remediated-behavior manual revalidation + known pre-existing mobile context-menu autoclose bug note); reran feedback loop, failure unchanged at pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch).
+- Next queued task: none in current PRD micro-task ledger.

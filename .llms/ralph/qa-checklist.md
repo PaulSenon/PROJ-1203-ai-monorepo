@@ -127,3 +127,18 @@ PRD: `.llms/ralph/prd.md`
   - completed `S5.5` by rerunning `pnpm run check-types`.
   - outcome unchanged: pre-existing `apps/server` failure `TS6305` at `src/index.ts` due `packages/api-service/dist/src/service.d.ts` not built from `packages/api-service/src/service.ts`.
   - no new type errors introduced by sidebar refactor path in this run.
+
+#### 2026-03-02 run 11 (S5.6 finalization)
+
+- Date: 2026-03-02
+- Tester: OpenCode (gpt-5.3-codex)
+- Result: final (fail)
+- Route verdicts:
+  - `/components/sidebar`: fail.
+    - Evidence: run-3 user QA reported `S5.3a` KO (header/footer reserved-space), `S5.3b` KO (mobile options accessibility path), `S5.3d` KO (load-more delay feel); remediation tasks `S5.3a.r1`, `S5.3b.r1`, `S5.3d.r1` were implemented, but no post-remediation manual route revalidation is logged yet.
+    - Known note: pre-existing mobile context-menu action may close sidebar (documented in run 5).
+  - `/components/sidebar-thread-item`: pass.
+    - Evidence: run-3 `S5.4a` OK, run-8 `S5.4b` verified, run-9 `S5.4c` verified; callback/action-path parity confirmed.
+    - Known note: user-reported long-list INP concern on quick-action/context-menu clicks remains a non-blocking follow-up (likely demo action-log rerender coupling).
+- Feedback loop:
+  - reran `pnpm run check-types`; still blocked by pre-existing `apps/server` `TS6305` (`packages/api-service/dist/src/service.d.ts` build-order mismatch).

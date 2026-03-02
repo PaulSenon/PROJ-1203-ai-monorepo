@@ -175,3 +175,9 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-02: sidebar Step 5 S5.5 feedback loop rerun (RALPH)
 - reran workspace `pnpm run check-types`; failure unchanged in `apps/server` with `TS6305` (`packages/api-service/dist/src/service.d.ts` build-order mismatch against `packages/api-service/src/service.ts`)
 - updated `.llms/ralph/tasks.md` + `.llms/ralph/qa-checklist.md`; next queued task now `S5.6`
+
+2026-03-02: sidebar Step 5 S5.6 QA finalization (RALPH)
+- finalized `.llms/ralph/qa-checklist.md` result log from partial to explicit route verdicts: `/components/sidebar-thread-item` pass, `/components/sidebar` final fail (post-remediation manual revalidation not yet logged)
+- kept pre-existing notes explicit: mobile context-menu autoclose bug on `/components/sidebar` and non-blocking INP concern on `/components/sidebar-thread-item` long-list actions
+- reran feedback loop `pnpm run check-types`; unchanged pre-existing blocker `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
+- updated `.llms/ralph/tasks.md`: marked `S5.6` complete and set PRD micro-task ledger queue to none
