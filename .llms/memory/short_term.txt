@@ -143,3 +143,8 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-02: sidebar refactor Step 5 micro-sliced further (RALPH)
 - refined `.llms/ralph/tasks.md` Step 5 into atomic route-specific QA units (`S5.3a-d`, `S5.4a-c`) to keep one-change-per-task cadence
 - current queued next task set to `S5.3a` (`/components/sidebar` visual parity desktop/mobile)
+
+2026-03-02: sidebar Step 5 run3 QA feedback + S5.3a remediation (RALPH)
+- user QA flagged `/components/sidebar` failures: header/footer reserved-space regression (`S5.3a`), mobile options accessibility path (`S5.3b`), load-more sentinel delay feel (`S5.3d`)
+- implemented `S5.3a.r1`: moved absolute positioning out of L2 `sidebar-shell` header/footer defaults and set absolute classes only on `ChatSidebarLayout` overlay instances so spacer clones can reserve layout space again
+- `/components/sidebar-thread-item` feedback captured: `S5.4a` and `S5.4c` OK, INP concern noted for quick action/context-menu paths (follow-up pending)

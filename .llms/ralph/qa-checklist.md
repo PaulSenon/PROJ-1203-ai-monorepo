@@ -48,3 +48,20 @@ PRD: `.llms/ralph/prd.md`
 - Tester: OpenCode (gpt-5.3-codex)
 - Result: partial
 - Notes: reran feedback loop (`pnpm run check-types`), still blocked by the same pre-existing `apps/server` TS6305 (`@ai-monorepo/api-service` dist `.d.ts` build-order issue); manual interaction checks on `/components/sidebar` and `/components/sidebar-thread-item` remain pending.
+
+#### 2026-03-02 run 3 (user QA feedback)
+
+- Date: 2026-03-02
+- Tester: user
+- Result: partial
+- Route notes:
+  - `/components/sidebar`: `S5.3a` KO (header/footer reserved-space regression), `S5.3b` KO (mobile options accessibility path missing), `S5.3c` OK, `S5.3d` KO (load-more sentinel feels delayed).
+  - `/components/sidebar-thread-item`: `S5.4a` OK (preset behavior OK; refresh persistence noted non-blocking), `S5.4c` OK, additional concern flagged for INP on quick-action/context-menu actions (possible demo action-log rerender coupling).
+- Follow-up action started: `S5.3a.r1` fix queued/executed to restore reserved-space behavior by reintroducing overlay-vs-spacer separation.
+
+#### 2026-03-02 run 4
+
+- Date: 2026-03-02
+- Tester: OpenCode (gpt-5.3-codex)
+- Result: partial
+- Notes: completed `S5.3a.r1` code fix (overlay absolute classes now only on live header/footer instances; spacer clones are in-flow again); reran `pnpm run check-types`, still blocked by pre-existing `apps/server` TS6305 (`@ai-monorepo/api-service` dist `.d.ts` build-order issue).

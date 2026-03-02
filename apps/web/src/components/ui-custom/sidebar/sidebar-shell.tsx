@@ -45,12 +45,7 @@ function SidebarRoot({
 export type SidebarHeaderProps = ComponentProps<typeof SidebarHeaderPrimitive>;
 
 function SidebarHeader({ className, ...props }: SidebarHeaderProps) {
-  return (
-    <SidebarHeaderPrimitive
-      className={cn("absolute top-0 z-50 w-full", className)}
-      {...props}
-    />
-  );
+  return <SidebarHeaderPrimitive className={className} {...props} />;
 }
 
 export type SidebarContentProps = ComponentProps<typeof BaseSidebarContent>;
@@ -105,12 +100,7 @@ function SidebarMenu({ className, ...props }: SidebarMenuProps) {
 export type SidebarFooterProps = ComponentProps<typeof SidebarFooterPrimitive>;
 
 function SidebarFooter({ className, ...props }: SidebarFooterProps) {
-  return (
-    <SidebarFooterPrimitive
-      className={cn("absolute bottom-0 z-50 w-full", className)}
-      {...props}
-    />
-  );
+  return <SidebarFooterPrimitive className={className} {...props} />;
 }
 
 export type SidebarInsetProps = ComponentProps<typeof SidebarInsetPrimitive>;

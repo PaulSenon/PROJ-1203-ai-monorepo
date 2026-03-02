@@ -58,7 +58,11 @@ export function ChatSidebarLayout({
   return (
     <SidebarShell.Provider>
       <SidebarShell.Root className={className} variant="inset">
-        <ChatSidebarHeader isOverflowing={!isAtTop} onNewChat={onNewChat} />
+        <ChatSidebarHeader
+          className="absolute top-0 z-50 w-full"
+          isOverflowing={!isAtTop}
+          onNewChat={onNewChat}
+        />
         <SidebarShell.Content ref={scrollContainerRef}>
           <ScrollEdgeProbe ref={topRef} />
           <ChatSidebarHeaderSpacer />
@@ -81,7 +85,10 @@ export function ChatSidebarLayout({
           <ChatSidebarFooterSpacer />
           <ScrollEdgeProbe ref={mergedBottomRef} />
         </SidebarShell.Content>
-        <ChatSidebarFooter isOverflowing={!isAtBottom} />
+        <ChatSidebarFooter
+          className="absolute bottom-0 z-50 w-full"
+          isOverflowing={!isAtBottom}
+        />
       </SidebarShell.Root>
 
       <SidebarFloatingActions

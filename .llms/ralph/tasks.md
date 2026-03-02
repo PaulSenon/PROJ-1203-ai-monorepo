@@ -47,8 +47,14 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 - [ ] `S5.5` Run feedback loop `pnpm run check-types` after manual QA passes and log result.
 - [ ] `S5.6` Update QA result log from `partial` to final status with route-by-route pass/fail notes.
 
+### QA remediation micro-tasks (post run-3 feedback)
+
+- [x] `S5.3a.r1` Restore header/footer reserved-space behavior for `/components/sidebar` while keeping overlay glass-edge headers/footers.
+- [ ] `S5.3b.r1` Restore mobile accessibility path to thread options trigger (keyboard/assistive nav on row actions).
+- [ ] `S5.3d.r1` Tune `/components/sidebar` load-more sentinel responsiveness to remove perceived delay.
+
 ## Task Selection
 
-- Selected next task (this iteration): `[x] T0.2` Re-slice remaining Step 5 work into atomic execution units.
-- Completed outcome: Step 5 split into route-specific one-change micro-tasks to avoid multi-check leaps.
-- Next queued task: `[>] S5.3a` Run `/components/sidebar` visual parity check (desktop/mobile) and record result.
+- Selected next task (this iteration): `[x] S5.3a.r1` Restore `/components/sidebar` header/footer reserved-space behavior.
+- Completed outcome: moved absolute overlay positioning out of L2 `SidebarShell.Header/Footer` defaults and into `ChatSidebarLayout` overlay instances so spacer clones reserve real flow space again.
+- Next queued task: `[>] S5.3b.r1` restore mobile accessibility path to thread options trigger.
