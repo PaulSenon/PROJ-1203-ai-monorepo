@@ -7,6 +7,7 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 ### Tasking bootstrap
 
 - [x] `T0.1` Create smallest-unit task ledger for this PRD with done/pending status.
+- [x] `T0.2` Re-slice remaining Step 5 work into single-change micro-tasks.
 
 ### Step 1 - L2 contracts + namespaces
 
@@ -36,13 +37,18 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 
 - [x] `S5.1` Add dedicated `/components/sidebar-thread-item` demo route.
 - [x] `S5.2` Add Step 5 QA checklist doc mapping PRD polishing requirements.
-- [ ] `S5.3` Run manual QA pass for `/components/sidebar` checklist items.
-- [ ] `S5.4` Run manual QA pass for `/components/sidebar-thread-item` checklist items.
-- [ ] `S5.5` Run feedback loop `pnpm run check-types` after manual pass and log result.
-- [ ] `S5.6` Update QA result log from `partial` to final status with route-by-route notes.
+- [ ] `S5.3a` `/components/sidebar`: verify visual parity (header/footer overlays, spacing, row density) desktop + mobile.
+- [ ] `S5.3b` `/components/sidebar`: verify keyboard flow (focus visibility, trigger/menu nav, focus return).
+- [ ] `S5.3c` `/components/sidebar`: verify touch/mouse parity + tooltip non-interference.
+- [ ] `S5.3d` `/components/sidebar`: verify active-row parity, load-more sentinel behavior, mobile auto-close, placeholder action parity.
+- [ ] `S5.4a` `/components/sidebar-thread-item`: verify row preset switching (20/200/1000) keeps parity and no obvious jank.
+- [ ] `S5.4b` `/components/sidebar-thread-item`: verify mobile mode toggle preserves menu/action behavior.
+- [ ] `S5.4c` `/components/sidebar-thread-item`: verify active UUID override determinism + action log correctness.
+- [ ] `S5.5` Run feedback loop `pnpm run check-types` after manual QA passes and log result.
+- [ ] `S5.6` Update QA result log from `partial` to final status with route-by-route pass/fail notes.
 
 ## Task Selection
 
-- Selected next task (this iteration): `[x] T0.1` Create smallest-unit task ledger for PRD execution control.
-- Completed outcome: task ledger added in this file.
-- Next queued task: `[>] S5.3` Run manual QA pass for `/components/sidebar` checklist items and record outcomes.
+- Selected next task (this iteration): `[x] T0.2` Re-slice remaining Step 5 work into atomic execution units.
+- Completed outcome: Step 5 split into route-specific one-change micro-tasks to avoid multi-check leaps.
+- Next queued task: `[>] S5.3a` Run `/components/sidebar` visual parity check (desktop/mobile) and record result.

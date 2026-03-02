@@ -139,3 +139,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 
 2026-03-02: sidebar refactor micro-task ledger added (RALPH)
 - added `.llms/ralph/tasks.md` with smallest-unit breakdown for PRD steps 1-5, completion status, and explicit next task selection (`S5.3` manual `/components/sidebar` QA pass)
+
+2026-03-02: sidebar refactor Step 5 micro-sliced further (RALPH)
+- refined `.llms/ralph/tasks.md` Step 5 into atomic route-specific QA units (`S5.3a-d`, `S5.4a-c`) to keep one-change-per-task cadence
+- current queued next task set to `S5.3a` (`/components/sidebar` visual parity desktop/mobile)
