@@ -30,8 +30,8 @@ PRD: `.llms/ralph/prd.md`
 
 - [x] Row presets 20/200/1000 switch instantly and keep interaction parity.
 - [x] Mobile mode toggle preserves menu + action behavior.
-- [ ] Active UUID override updates highlight deterministically.
-- [ ] Action log captures invoked callback and row identity correctly.
+- [x] Active UUID override updates highlight deterministically.
+- [x] Action log captures invoked callback and row identity correctly.
 
 ### Result log
 
@@ -107,3 +107,13 @@ PRD: `.llms/ralph/prd.md`
   - completed `S5.4b` via code-path verification: `/components/sidebar-thread-item` `isMobile` toggle feeds `ThreadItem.Root isMobile`, and both mobile/desktop affordances dispatch through the same `ThreadContextMenu` action list (`getThreadMenuActions`) and callback handlers.
   - no code behavior change required in this step; task was verification + ledger/checklist reconciliation only.
   - feedback loop rerun: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`@ai-monorepo/api-service` dist `.d.ts` build-order issue).
+
+#### 2026-03-02 run 9 (S5.4c code-path verification)
+
+- Date: 2026-03-02
+- Tester: OpenCode (gpt-5.3-codex)
+- Result: partial
+- Notes:
+  - completed `S5.4c` via code-path verification in `/components/sidebar-thread-item`: active highlight is fully controlled by `activeUuid` input and strict `thread.uuid === activeUuid` comparison passed to `ThreadItem.Root isActive`.
+  - action log path verified: each action callback (`onPin/onRename/onShare/onDelete`) appends event + selected thread identity from callback payload (`thread.uuid`, `thread.title`) through shared `appendLog` path.
+  - no behavior change required in this step; verification + QA/task ledger reconciliation only.

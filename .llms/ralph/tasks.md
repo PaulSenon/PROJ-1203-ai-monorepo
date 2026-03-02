@@ -43,7 +43,7 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 - [ ] `S5.3d` `/components/sidebar`: verify active-row parity, load-more sentinel behavior, mobile auto-close, placeholder action parity.
 - [x] `S5.4a` `/components/sidebar-thread-item`: verify row preset switching (20/200/1000) keeps parity and no obvious jank.
 - [x] `S5.4b` `/components/sidebar-thread-item`: verify mobile mode toggle preserves menu/action behavior.
-- [ ] `S5.4c` `/components/sidebar-thread-item`: verify active UUID override determinism + action log correctness.
+- [x] `S5.4c` `/components/sidebar-thread-item`: verify active UUID override determinism + action log correctness.
 - [ ] `S5.5` Run feedback loop `pnpm run check-types` after manual QA passes and log result.
 - [ ] `S5.6` Update QA result log from `partial` to final status with route-by-route pass/fail notes.
 
@@ -55,6 +55,6 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 
 ## Task Selection
 
-- Selected next task (this iteration): `[x] S5.4b` verify `/components/sidebar-thread-item` mobile mode toggle preserves menu/action behavior.
-- Completed outcome: completed code-level verification of `ThreadItem.Root` + sidebar-thread-item demo wiring; `isMobile` toggle switches affordance path only and keeps shared context-menu/action callback path intact.
-- Next queued task: `[>] S5.4c` verify `/components/sidebar-thread-item` active UUID override determinism + action log correctness.
+- Selected next task (this iteration): `[x] S5.4c` verify `/components/sidebar-thread-item` active UUID override determinism + action log correctness.
+- Completed outcome: verified demo wiring keeps active-state resolution deterministic (`isActive={thread.uuid===activeUuid}`) and action log entries sourced from invoked callbacks with matching thread uuid/title payload.
+- Next queued task: `[>] S5.5` run feedback loop `pnpm run check-types` and log result.

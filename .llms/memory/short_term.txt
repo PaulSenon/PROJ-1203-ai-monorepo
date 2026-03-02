@@ -166,3 +166,8 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - `isMobile` only swaps affordance rendering (mobile visible trigger vs desktop hover/focus actions) while action execution stays on shared context-menu action/callback path
 - updated `.llms/ralph/tasks.md` + `.llms/ralph/qa-checklist.md`; next queued task now `S5.4c`
 - feedback loop rerun unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 on `@ai-monorepo/api-service` dist `.d.ts` build-order mismatch
+
+2026-03-02: sidebar Step 5 S5.4c verification (RALPH)
+- verified `/components/sidebar-thread-item` active UUID override determinism from direct `activeUuid` control (`thread.uuid === activeUuid` -> `ThreadItem.Root isActive`)
+- verified action-log correctness path: all menu callbacks append event + selected thread identity via shared `appendLog` callback
+- updated `.llms/ralph/tasks.md` + `.llms/ralph/qa-checklist.md`; next queued task now `S5.5`
