@@ -302,7 +302,7 @@ export function ThreadItemRoot({
         <SidebarItem.Button asChild>
           <Link
             className={cn(
-              "-webkit-touch-callout-none group/link relative flex h-20 w-full items-center gap-0! overflow-hidden transition-background-color duration-500 ease-(--ease-default) md:h-9",
+              "-webkit-touch-callout-none group/link relative flex h-10 w-full items-center gap-0! overflow-hidden transition-background-color duration-500 ease-(--ease-default) md:h-9",
               "focus-visible:box-shadow-none focus-visible:bg-sidebar-accent focus-visible:ring-0!",
               "focus-within:box-shadow-none focus-within:bg-sidebar-accent",
               "group-data-[state=open]/cm:bg-sidebar-accent",
