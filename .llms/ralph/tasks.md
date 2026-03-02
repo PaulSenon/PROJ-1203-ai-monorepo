@@ -8,6 +8,7 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 
 - [x] `T0.1` Create smallest-unit task ledger for this PRD with done/pending status.
 - [x] `T0.2` Re-slice remaining Step 5 work into single-change micro-tasks.
+- [x] `T0.3` Capture new post-final user QA feedback in PRD and reseed remediation micro-task queue before code changes.
 
 ### Step 1 - L2 contracts + namespaces
 
@@ -53,8 +54,15 @@ Legend: `[x] done` `[>] next` `[ ] pending`
 - [x] `S5.3b.r1` Restore mobile accessibility path to thread options trigger (keyboard/assistive nav on row actions).
 - [x] `S5.3d.r1` Tune `/components/sidebar` load-more sentinel responsiveness to remove perceived delay.
 
+### QA remediation micro-tasks (post run-12 feedback)
+
+- [ ] `S5.3b.r2` Hide visible mobile three-dots affordance while preserving screenreader/keyboard path to thread options.
+- [ ] `S5.3a.r2` Remove perceptible header/footer backdrop edge-toggle delay in `/components/sidebar`.
+- [ ] `S5.3d.r2` Improve load-more trigger cadence for fast scroll so pagination keeps up without debounce feel.
+- [ ] `S5.3e.r1` Fix mobile context-menu action flow so non-navigation actions do not close sidebar.
+
 ## Task Selection
 
-- Selected next task (this iteration): `[x] S5.6` update QA result log from `partial` to final status with route-by-route pass/fail notes.
-- Completed outcome: finalized Step 5 QA result with explicit route verdicts from accumulated run evidence (`/components/sidebar-thread-item` pass; `/components/sidebar` fail pending remediated-behavior manual revalidation + known pre-existing mobile context-menu autoclose bug note); reran feedback loop, failure unchanged at pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch).
-- Next queued task: none in current PRD micro-task ledger.
+- Selected next task (this iteration): `[x] T0.3` capture new post-final QA feedback in PRD + reseed remediation queue before implementation.
+- Completed outcome: added explicit run-12 QA blockers to `.llms/ralph/prd.md` and queued four smallest remediation tasks (`S5.3b.r2`, `S5.3a.r2`, `S5.3d.r2`, `S5.3e.r1`) without behavior/code changes.
+- Next queued task: `[>] S5.3b.r2` hide visible mobile three-dots affordance while preserving screenreader/keyboard thread-options path.

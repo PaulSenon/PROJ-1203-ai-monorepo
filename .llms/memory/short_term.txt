@@ -181,3 +181,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - kept pre-existing notes explicit: mobile context-menu autoclose bug on `/components/sidebar` and non-blocking INP concern on `/components/sidebar-thread-item` long-list actions
 - reran feedback loop `pnpm run check-types`; unchanged pre-existing blocker `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
 - updated `.llms/ralph/tasks.md`: marked `S5.6` complete and set PRD micro-task ledger queue to none
+
+2026-03-02: sidebar run12 user QA blockers captured before remediation start (RALPH)
+- captured four explicit blockers into PRD + QA log: mobile visible three-dots should be hidden (SR/keyboard path only), backdrop edge toggle delay, load-more fast-scroll delay, mobile context-menu action still wrongly closes sidebar
+- reseeded micro-task queue for next implementation cuts: `S5.3b.r2`, `S5.3a.r2`, `S5.3d.r2`, `S5.3e.r1`

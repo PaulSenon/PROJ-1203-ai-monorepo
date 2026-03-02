@@ -142,3 +142,15 @@ PRD: `.llms/ralph/prd.md`
     - Known note: user-reported long-list INP concern on quick-action/context-menu clicks remains a non-blocking follow-up (likely demo action-log rerender coupling).
 - Feedback loop:
   - reran `pnpm run check-types`; still blocked by pre-existing `apps/server` `TS6305` (`packages/api-service/dist/src/service.d.ts` build-order mismatch).
+
+#### 2026-03-02 run 12 (new user QA blockers capture)
+
+- Date: 2026-03-02
+- Tester: user
+- Result: fail (remediation required)
+- Route notes (`/components/sidebar`):
+  - mobile: visible three-dots trigger should not be shown; options path should stay screenreader-navigation oriented.
+  - header/footer backdrop edge effect still feels delayed vs expected near-instant toggle.
+  - load-more trigger still feels delayed during fast scroll (debounce-like).
+  - bug still present: opening context menu then selecting action closes sidebar on mobile; should remain open for non-navigation actions.
+- Follow-up queue: `S5.3b.r2`, `S5.3a.r2`, `S5.3d.r2`, `S5.3e.r1`.

@@ -185,6 +185,13 @@ Define a list-render strategy boundary in L3 so future virtualization can replac
 - Main risk is subtle interaction regression in context menu/tooltip/focus behavior.
 - Mitigation is explicit parity checklist and dedicated demo pages focused on interaction states.
 
+### Post-final QA feedback to remediate before ship (2026-03-02)
+
+- Mobile options trigger visibility: on mobile, thread options trigger must remain available for keyboard/screenreader navigation but the visible three-dots affordance should not be shown by default touch UI.
+- Header/footer backdrop responsiveness: top/bottom backdrop edge effect should toggle immediately on probe state changes (no noticeable delay).
+- Load-more responsiveness: pagination trigger must keep up with fast scrolling near list bottom and avoid debounce-like perceived delay.
+- Mobile context-menu action bug: selecting a non-navigation context-menu action on mobile must not close the sidebar; auto-close remains navigation-only.
+
 ### Unresolved questions
 
 - None.
