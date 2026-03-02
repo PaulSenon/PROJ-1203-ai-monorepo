@@ -54,7 +54,6 @@ export function Sidebar({
     thread: Doc<"threads">;
     isActive: boolean;
     isMobile: boolean;
-    index: number;
   }) => React.ReactNode;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -138,17 +137,15 @@ const SidebarThreads = React.memo(
       thread: Doc<"threads">;
       isActive: boolean;
       isMobile: boolean;
-      index: number;
     }) => React.ReactNode;
   }) => (
     <SidebarMenu className="select-none gap-1.5">
-      {threads.map((thread, index) => {
+      {threads.map((thread) => {
         const isActive = thread.uuid === activeThreadId;
         const item = renderThreadItem?.({
           thread,
           isActive,
           isMobile,
-          index,
         }) ?? (
           <SidebarThreadItem
             isActive={isActive}
