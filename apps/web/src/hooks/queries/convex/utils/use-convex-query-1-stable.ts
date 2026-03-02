@@ -47,15 +47,17 @@ export function useCvxPaginatedQueryStable<
     stored.current = res.results;
   }
 
+  const stableResults = stored.current;
+
   return useMemo(
     () =>
       ({
         isLoading: res.isLoading,
         loadMore: res.loadMore,
-        results: stored.current,
+        results: stableResults,
         status: res.status,
         isPending: res.status === "LoadingFirstPage",
       }) as UsePaginatedQueryReturnType<Query> & { isPending: boolean },
-    [res.isLoading, res.loadMore, res.status]
+    [res.isLoading, res.loadMore, res.status, stableResults]
   );
 }
