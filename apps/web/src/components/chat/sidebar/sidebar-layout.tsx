@@ -16,7 +16,6 @@ import {
   useScrollEdges,
 } from "@/hooks/utils/use-scroll-edges";
 import { cn, useMergedRefs } from "@/lib/utils";
-import type { SidebarThreadsLoadMoreStatus } from "./_hooks/use-sidebar-threads";
 import { ThreadItem } from "./_parts/thread-item";
 
 type ThreadDoc = Doc<"threads">;
@@ -27,7 +26,6 @@ export function ChatSidebarLayout({
   threads,
   children,
   onLoadMore,
-  loadMoreStatus,
   onNewChat,
 }: {
   className?: string;
@@ -35,38 +33,24 @@ export function ChatSidebarLayout({
   threads: ThreadDoc[];
   children?: React.ReactNode;
   onLoadMore?: () => void;
-  loadMoreStatus?: SidebarThreadsLoadMoreStatus;
   onNewChat?: () => void;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const loadMoreCycleLockRef = useRef<number | null>(null);
   const isMobile = useIsMobile();
 
   const { isAtTop, isAtBottom, topRef, bottomRef } =
     useScrollEdges(scrollContainerRef);
 
   const handleLoadMore = useCallback(() => {
-    if (loadMoreStatus !== "CanLoadMore") return;
-    if (loadMoreCycleLockRef.current === threads.length) return;
-    loadMoreCycleLockRef.current = threads.length;
     onLoadMore?.();
-  }, [loadMoreStatus, onLoadMore, threads.length]);
+  }, [onLoadMore]);
 
-  const { inView: isLoadMoreInView, ref: loadMoreRef } =
-    useInView<HTMLDivElement>({
-      rootRef: scrollContainerRef,
-      rootMargin: "0px 0px 200% 0px",
-      continuous: true,
-      onEnter: handleLoadMore,
-      onLeave: () => {
-        loadMoreCycleLockRef.current = null;
-      },
-    });
-
-  React.useEffect(() => {
-    if (!isLoadMoreInView) return;
-    handleLoadMore();
-  }, [isLoadMoreInView, handleLoadMore, loadMoreStatus, threads.length]);
+  const { ref: loadMoreRef } = useInView<HTMLDivElement>({
+    rootRef: scrollContainerRef,
+    rootMargin: "0px 0px 200% 0px",
+    continuous: true,
+    onEnter: handleLoadMore,
+  });
 
   const mergedBottomRef = useMergedRefs<HTMLDivElement>(bottomRef, loadMoreRef);
   const deferredThreads = useDeferredValue(threads, []);

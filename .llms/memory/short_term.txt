@@ -209,9 +209,3 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - root cause: mobile sidebar uses `Sheet` (Dialog); context-menu content is portaled outside sheet subtree, so touch action selection was treated as dialog outside interaction and closed sheet
 - fix: mobile sidebar primitive now guards `SheetContent.onInteractOutside` and prevents close when target is inside `[data-slot="context-menu-content"]`
 - feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
-
-2026-03-02: sidebar S5.3d.r2 shipped (RALPH)
-- `useSidebarThreads` now exposes paginated `loadMoreStatus` from Convex history hook
-- `ChatSidebarLayout` load-more path now gates on `CanLoadMore`, locks duplicate calls per loaded-length cycle, and re-triggers while sentinel stays in view after page growth
-- intent: remove fast-scroll debounce feel and avoid duplicate same-cycle `loadMore` calls without changing product semantics
-- feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
