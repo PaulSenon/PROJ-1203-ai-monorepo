@@ -124,3 +124,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-02: sidebar-thread-item demo page added for PRD Step 5
 - new route `/components/sidebar-thread-item` exercises L3 `ThreadItem.Root` with 20/200/1000 row stress presets, active-row override, mobile-mode toggle, and action callback log
 - components index now links to sidebar-thread-item demo; route types wired in `apps/web/src/routeTree.gen.ts` so check-types stays green
+
+2026-03-02: sidebar refactor Step 5 manual QA checklist added
+- added `.llms/ralph/qa-checklist.md` mapping PRD polishing requirements to `/components/sidebar` and `/components/sidebar-thread-item`
+- checklist includes parity, a11y keyboard/touch flow, stress perf, demo coverage, and result log stub for repeatable manual validation
