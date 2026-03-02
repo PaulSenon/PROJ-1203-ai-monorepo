@@ -5,14 +5,14 @@ import { ThreadItem } from "./_parts/thread-item";
 
 type ThreadDoc = Doc<"threads">;
 
-type SidebarThreadRenderer = NonNullable<
-  React.ComponentProps<typeof Sidebar>["renderThreadItem"]
->;
-
-const renderThreadItem: SidebarThreadRenderer = ({
+const renderThreadItem = ({
   thread,
   isActive,
   isMobile,
+}: {
+  thread: ThreadDoc;
+  isActive: boolean;
+  isMobile: boolean;
 }) => (
   <ThreadItem.Root isActive={isActive} isMobile={isMobile} thread={thread} />
 );

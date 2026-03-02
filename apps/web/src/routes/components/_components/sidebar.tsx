@@ -7,6 +7,7 @@ import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import { createFileRoute } from "@tanstack/react-router";
 import type React from "react";
 import { useRef, useState } from "react";
+import { ThreadItem } from "@/components/chat/sidebar/_parts/thread-item";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { CollapsibleButtonGroup } from "@/components/ui-custom/button-group-collapsible";
@@ -130,7 +131,16 @@ function RouteComponent() {
 
   return (
     <ScrollToBottomProvider>
-      <Sidebar threads={_threads}>
+      <Sidebar
+        renderThreadItem={({ thread, isActive, isMobile }) => (
+          <ThreadItem.Root
+            isActive={isActive}
+            isMobile={isMobile}
+            thread={thread}
+          />
+        )}
+        threads={_threads}
+      >
         <Content />
       </Sidebar>
     </ScrollToBottomProvider>

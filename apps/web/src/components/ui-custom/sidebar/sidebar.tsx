@@ -29,7 +29,12 @@ import { Sidebar as BaseSidebar } from "./primitives/sidebar";
 import { SidebarFooter } from "./primitives/sidebar-footer";
 import { SidebarHeader } from "./primitives/sidebar-header";
 import { SidebarInset } from "./primitives/sidebar-inset";
-import { SidebarThreadItem } from "./primitives/sidebar-thread-item";
+
+type RenderThreadItem = (args: {
+  thread: Doc<"threads">;
+  isActive: boolean;
+  isMobile: boolean;
+}) => React.ReactNode;
 
 const SIDEBAR_STYLE = {
   "--duration-base": "200ms",
@@ -50,11 +55,7 @@ export function Sidebar({
   children: React.ReactNode;
   onNewChat?: () => void;
   onLoadMore?: () => void;
-  renderThreadItem?: (args: {
-    thread: Doc<"threads">;
-    isActive: boolean;
-    isMobile: boolean;
-  }) => React.ReactNode;
+  renderThreadItem: RenderThreadItem;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
@@ -133,26 +134,16 @@ const SidebarThreads = React.memo(
     threads: Doc<"threads">[];
     activeThreadId?: string;
     isMobile: boolean;
-    renderThreadItem?: (args: {
-      thread: Doc<"threads">;
-      isActive: boolean;
-      isMobile: boolean;
-    }) => React.ReactNode;
+    renderThreadItem: RenderThreadItem;
   }) => (
     <SidebarMenu className="select-none gap-1.5">
       {threads.map((thread) => {
         const isActive = thread.uuid === activeThreadId;
-        const item = renderThreadItem?.({
+        const item = renderThreadItem({
           thread,
           isActive,
           isMobile,
-        }) ?? (
-          <SidebarThreadItem
-            isActive={isActive}
-            isMobile={isMobile}
-            thread={thread}
-          />
-        );
+        });
 
         return <React.Fragment key={thread.uuid}>{item}</React.Fragment>;
       })}
