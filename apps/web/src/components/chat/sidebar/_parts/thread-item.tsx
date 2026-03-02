@@ -194,7 +194,6 @@ function ThreadContextMenu({
           className
         )}
         collisionPadding={4}
-        forceMount
         hideWhenDetached
         updatePositionStrategy="optimized"
       >
