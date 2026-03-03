@@ -124,6 +124,7 @@ export function SidebarVirtualThreadList({
       data={threads}
       drawDistance={180}
       estimatedItemSize={44}
+      extraData={activeThreadId ?? null}
       keyExtractor={(thread) => thread.uuid}
       ListFooterComponent={footer}
       ListHeaderComponent={header}
