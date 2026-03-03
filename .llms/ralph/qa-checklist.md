@@ -6,7 +6,7 @@ Source PRD: `.llms/ralph/prd.md`
 
 - owner: user/manual
 - scope: sidebar LegendList virtualization parity
-- run date: TODO
+- run date: 2026-03-03
 
 ## Preconditions
 
@@ -30,9 +30,16 @@ Use report fields exactly: `scenario`, `expected`, `observed`, `pass/fail`, `not
 | active thread switch from sidebar item | highlight + navigation parity unchanged | TODO | TODO | |
 | context menu + quick actions during rapid scroll | no stuck menu/tooltip/action artifacts | TODO | TODO | |
 | mobile open/close + autoclose on navigation | persisted mount + autoclose behavior unchanged | TODO | TODO | |
+| sidebar virtualization path log scan | no debug instrumentation/logging left in final patch | TODO | TODO | |
+
+## Feedback loop
+
+| scenario | expected | observed | pass/fail | notes |
+| --- | --- | --- | --- | --- |
+| `pnpm run check-types` | succeeds repo-wide | fails at `apps/server/src/index.ts(1,40)` with TS6305: `packages/api-service/dist/src/service.d.ts` build-order mismatch vs `packages/api-service/src/service.ts` | fail (blocked, pre-existing) | web also exits after upstream server failure |
 
 ## Result
 
 - verdict: TODO
-- blockers: TODO
+- blockers: pre-existing server TS6305 build-order mismatch blocks repo-wide check-types green
 - follow-up task id: TODO
