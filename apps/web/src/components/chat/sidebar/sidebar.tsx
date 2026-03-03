@@ -36,7 +36,9 @@ export function ChatSidebar({
   return (
     <ChatSidebarLayout
       activeThreadId={chatNav.id}
+      canLoadMore={sidebarThreads.canLoadMore}
       className={className}
+      isLoadingMore={sidebarThreads.isLoadingMore}
       onLoadMore={sidebarThreads.loadMore}
       onNewChat={handleNewChat}
       threads={sidebarThreads.threads}

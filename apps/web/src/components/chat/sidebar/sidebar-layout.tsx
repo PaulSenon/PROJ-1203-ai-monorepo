@@ -1,22 +1,13 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import type React from "react";
-import { useCallback, useDeferredValue, useMemo, useRef } from "react";
+import { useCallback, useState } from "react";
 import { Sidebar as SidebarShell } from "@/components/ui-custom/sidebar/sidebar-shell";
 import { ScrollbarZIndexHack } from "@/components/ui-custom/utils/scrollbar-z-index-hack";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useInView } from "@/hooks/utils/use-intersection-observer";
-import {
-  ScrollEdgeProbe,
-  useScrollEdges,
-} from "@/hooks/utils/use-scroll-edges";
-import { useMergedRefs } from "@/lib/utils";
 import { SidebarFloatingActions } from "./_parts/sidebar-floating-actions";
 import { SidebarFooter, SidebarFooterSpacer } from "./_parts/sidebar-footer";
 import { SidebarHeader, SidebarHeaderSpacer } from "./_parts/sidebar-header";
-import { SidebarThreadList } from "./_parts/sidebar-thread-list";
-import { ThreadItem } from "./_parts/thread-item";
-
-type ThreadDoc = Doc<"threads">;
+import { SidebarVirtualThreadList } from "./_parts/sidebar-virtual-thread-list";
 
 export function ChatSidebarLayout({
   className,
@@ -24,47 +15,44 @@ export function ChatSidebarLayout({
   threads,
   children,
   onLoadMore,
+  canLoadMore = false,
+  isLoadingMore = false,
   onNewChat,
 }: {
   className?: string;
   activeThreadId?: string;
-  threads: ThreadDoc[];
+  threads: Doc<"threads">[];
   children?: React.ReactNode;
   onLoadMore?: () => void;
+  canLoadMore?: boolean;
+  isLoadingMore?: boolean;
   onNewChat?: () => void;
 }) {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const [isAtTop, setIsAtTop] = useState(true);
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
-  const { isAtTop, isAtBottom, topRef, bottomRef } = useScrollEdges({
-    viewportRef: scrollContainerRef,
-  });
-
-  const handleLoadMore = useCallback(() => {
-    onLoadMore?.();
-  }, [onLoadMore]);
-
-  const { ref: loadMoreRef } = useInView<HTMLDivElement>({
-    rootRef: scrollContainerRef,
-    rootMargin: "0px 0px 200% 0px",
-    continuous: true,
-    onEnter: handleLoadMore,
-  });
-
-  const mergedBottomRef = useMergedRefs<HTMLDivElement>(bottomRef, loadMoreRef);
-  const deferredThreads = useDeferredValue(threads, []);
-  const threadRows = useMemo(
-    () =>
-      deferredThreads.map((thread) => (
-        <ThreadItem.Root
-          isActive={thread.uuid === activeThreadId}
-          isMobile={isMobile}
-          key={thread.uuid}
-          thread={thread}
-        />
-      )),
-    [deferredThreads, activeThreadId, isMobile]
+  const setEdgeState = useCallback(
+    (nextIsAtTop: boolean, nextIsAtBottom: boolean) => {
+      setIsAtTop((prev) => (prev === nextIsAtTop ? prev : nextIsAtTop));
+      setIsAtBottom((prev) =>
+        prev === nextIsAtBottom ? prev : nextIsAtBottom
+      );
+    },
+    []
   );
+
+  const listHeader = (
+    <>
+      <SidebarHeaderSpacer />
+      <ScrollbarZIndexHack zIndex={51} />
+      <div className="px-2 pt-2">
+        <SidebarShell.GroupLabel>Previous Chats</SidebarShell.GroupLabel>
+      </div>
+    </>
+  );
+
+  const listFooter = <SidebarFooterSpacer />;
 
   return (
     <SidebarShell.Provider>
@@ -74,14 +62,17 @@ export function ChatSidebarLayout({
           isOverflowing={!isAtTop}
           onNewChat={onNewChat}
         />
-        <SidebarShell.Content ref={scrollContainerRef}>
-          <ScrollEdgeProbe ref={topRef} />
-          <SidebarHeaderSpacer />
-          <ScrollbarZIndexHack zIndex={51} />
-          <SidebarThreadList>{threadRows}</SidebarThreadList>
-          <SidebarFooterSpacer />
-          <ScrollEdgeProbe ref={mergedBottomRef} />
-        </SidebarShell.Content>
+        <SidebarVirtualThreadList
+          activeThreadId={activeThreadId}
+          canLoadMore={canLoadMore}
+          footer={listFooter}
+          header={listHeader}
+          isLoadingMore={isLoadingMore}
+          isMobile={isMobile}
+          onEdgeStateChange={setEdgeState}
+          onLoadMore={onLoadMore}
+          threads={threads}
+        />
         <SidebarFooter
           className="absolute bottom-0 z-50 w-full"
           isOverflowing={!isAtBottom}

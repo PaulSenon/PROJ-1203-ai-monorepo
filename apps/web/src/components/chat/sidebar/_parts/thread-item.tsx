@@ -8,7 +8,6 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   useMemo,
-  useRef,
 } from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,10 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Pulse2Icon } from "@/components/ui/icons/svg-spinners-pulse-2";
-import { SidebarItem } from "@/components/ui-custom/sidebar/sidebar-item";
+import {
+  SidebarItem,
+  type SidebarItemRootProps,
+} from "@/components/ui-custom/sidebar/sidebar-item";
 import { Tooltip } from "@/components/ui-custom/tooltip";
 import { cn } from "@/lib/utils";
 import {
@@ -173,12 +175,10 @@ function ThreadContextMenu({
   actions,
   children,
   className,
-  onActionSelect,
 }: {
   actions: ThreadItemAction[];
   children: ReactNode;
   className?: string;
-  onActionSelect?: () => void;
 }) {
   return (
     <ContextMenu>
@@ -204,7 +204,6 @@ function ThreadContextMenu({
             key={item.id}
             onSelect={(event) => {
               event.stopPropagation();
-              onActionSelect?.();
               item.callback();
             }}
             variant={item.variant}
@@ -263,6 +262,7 @@ type ThreadItemRootProps = {
   thread: ThreadDoc;
   isActive?: boolean;
   className?: string;
+  as?: SidebarItemRootProps["as"];
   isMobile?: boolean;
   actionHandlers?: ThreadItemActionHandlers;
 };
@@ -271,10 +271,10 @@ function ThreadItemRootImpl({
   thread,
   isActive = false,
   className,
+  as = "li",
   isMobile = false,
   actionHandlers,
 }: ThreadItemRootProps) {
-  const suppressNavigationUntilRef = useRef(0);
   const { indicatorVariant, isLoading, tooltip } = useThreadItemState(thread);
 
   const quickActions = useMemo(
@@ -286,16 +286,9 @@ function ThreadItemRootImpl({
     [thread, actionHandlers]
   );
 
-  const handleContextMenuActionSelect = () => {
-    suppressNavigationUntilRef.current = Date.now() + 600;
-  };
-
   return (
-    <SidebarItem.Root className={className} isMobile={isMobile}>
-      <ThreadContextMenu
-        actions={menuActions}
-        onActionSelect={handleContextMenuActionSelect}
-      >
+    <SidebarItem.Root as={as} className={className}>
+      <ThreadContextMenu actions={menuActions}>
         <SidebarItem.Button asChild>
           <Link
             className={cn(
@@ -305,16 +298,6 @@ function ThreadItemRootImpl({
               "group-data-[state=open]/cm:bg-sidebar-accent",
               isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
             )}
-            onClick={(event) => {
-              if (!isMobile) {
-                return;
-              }
-              if (Date.now() >= suppressNavigationUntilRef.current) {
-                return;
-              }
-              event.preventDefault();
-              event.stopPropagation();
-            }}
             params={{ id: thread.uuid }}
             to="/chat/{-$id}"
           >
@@ -376,6 +359,7 @@ const ThreadItemRoot = memo(
   ThreadItemRootImpl,
   (previousProps, nextProps) =>
     previousProps.className === nextProps.className &&
+    previousProps.as === nextProps.as &&
     previousProps.isActive === nextProps.isActive &&
     previousProps.isMobile === nextProps.isMobile &&
     previousProps.actionHandlers === nextProps.actionHandlers &&
