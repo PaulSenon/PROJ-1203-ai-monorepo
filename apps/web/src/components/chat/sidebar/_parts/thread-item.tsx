@@ -20,7 +20,10 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Pulse2Icon } from "@/components/ui/icons/svg-spinners-pulse-2";
-import { SidebarItem } from "@/components/ui-custom/sidebar/sidebar-item";
+import {
+  SidebarItem,
+  type SidebarItemRootProps,
+} from "@/components/ui-custom/sidebar/sidebar-item";
 import { Tooltip } from "@/components/ui-custom/tooltip";
 import { cn } from "@/lib/utils";
 import {
@@ -263,6 +266,7 @@ type ThreadItemRootProps = {
   thread: ThreadDoc;
   isActive?: boolean;
   className?: string;
+  as?: SidebarItemRootProps["as"];
   isMobile?: boolean;
   actionHandlers?: ThreadItemActionHandlers;
 };
@@ -271,6 +275,7 @@ function ThreadItemRootImpl({
   thread,
   isActive = false,
   className,
+  as = "li",
   isMobile = false,
   actionHandlers,
 }: ThreadItemRootProps) {
@@ -291,7 +296,7 @@ function ThreadItemRootImpl({
   };
 
   return (
-    <SidebarItem.Root className={className} isMobile={isMobile}>
+    <SidebarItem.Root as={as} className={className}>
       <ThreadContextMenu
         actions={menuActions}
         onActionSelect={handleContextMenuActionSelect}
@@ -376,6 +381,7 @@ const ThreadItemRoot = memo(
   ThreadItemRootImpl,
   (previousProps, nextProps) =>
     previousProps.className === nextProps.className &&
+    previousProps.as === nextProps.as &&
     previousProps.isActive === nextProps.isActive &&
     previousProps.isMobile === nextProps.isMobile &&
     previousProps.actionHandlers === nextProps.actionHandlers &&

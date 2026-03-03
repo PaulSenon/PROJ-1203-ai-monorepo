@@ -36,6 +36,7 @@ export function SidebarVirtualThreadList({
   header?: ListSupplementalComponent;
   footer?: ListSupplementalComponent;
 }) {
+  const threadCount = threads.length;
   const { openMobile } = useSidebar();
   const listRef = useRef<LegendListRef | null>(null);
   const lastKnownScrollOffsetRef = useRef(0);
@@ -88,21 +89,20 @@ export function SidebarVirtualThreadList({
 
   const renderThreadItem = useCallback(
     ({ item: thread, index }: LegendListRenderItemProps<ThreadDoc>) => (
-      <div className={cn("px-4", index > 0 && "pt-1.5")}>
-        <ThreadItem.Root
-          className="list-none"
-          isActive={thread.uuid === activeThreadId}
-          isMobile={isMobile}
-          thread={thread}
-        />
-      </div>
+      <ThreadItem.Root
+        as="div"
+        className={cn("px-4", index > 0 && "pt-1.5")}
+        isActive={thread.uuid === activeThreadId}
+        isMobile={isMobile}
+        thread={thread}
+      />
     ),
     [activeThreadId, isMobile]
   );
 
   useLayoutEffect(() => {
     syncEdgeStateFromList();
-  }, [syncEdgeStateFromList]);
+  }, [syncEdgeStateFromList, threadCount]);
 
   useLayoutEffect(() => {
     if (!(isMobile && openMobile)) {
@@ -136,6 +136,7 @@ export function SidebarVirtualThreadList({
       recycleItems={false}
       ref={listRef}
       renderItem={renderThreadItem}
+      role="list"
     />
   );
 }
