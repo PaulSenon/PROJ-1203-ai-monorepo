@@ -19,8 +19,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ComponentsIndexRouteImport } from './routes/components/index'
 import { Route as ComponentsComponentsRouteImport } from './routes/components/_components'
 import { Route as ComponentsComponentsTextareaRouteImport } from './routes/components/_components/textarea'
-import { Route as ComponentsComponentsSidebarRouteImport } from './routes/components/_components/sidebar'
 import { Route as ComponentsComponentsSidebarThreadItemRouteImport } from './routes/components/_components/sidebar-thread-item'
+import { Route as ComponentsComponentsSidebarRouteImport } from './routes/components/_components/sidebar'
 import { Route as ComponentsComponentsMessagesRouteImport } from './routes/components/_components/messages'
 import { Route as ComponentsComponentsConversationRouteImport } from './routes/components/_components/conversation'
 import { Route as ComponentsComponentsButtonGroupRouteImport } from './routes/components/_components/button-group'
@@ -72,16 +72,16 @@ const ComponentsComponentsTextareaRoute =
     path: '/textarea',
     getParentRoute: () => ComponentsComponentsRoute,
   } as any)
-const ComponentsComponentsSidebarRoute =
-  ComponentsComponentsSidebarRouteImport.update({
-    id: '/sidebar',
-    path: '/sidebar',
-    getParentRoute: () => ComponentsComponentsRoute,
-  } as any)
 const ComponentsComponentsSidebarThreadItemRoute =
   ComponentsComponentsSidebarThreadItemRouteImport.update({
     id: '/sidebar-thread-item',
     path: '/sidebar-thread-item',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
+const ComponentsComponentsSidebarRoute =
+  ComponentsComponentsSidebarRouteImport.update({
+    id: '/sidebar',
+    path: '/sidebar',
     getParentRoute: () => ComponentsComponentsRoute,
   } as any)
 const ComponentsComponentsMessagesRoute =
@@ -301,18 +301,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComponentsComponentsTextareaRouteImport
       parentRoute: typeof ComponentsComponentsRoute
     }
-    '/components/_components/sidebar': {
-      id: '/components/_components/sidebar'
-      path: '/sidebar'
-      fullPath: '/components/sidebar'
-      preLoaderRoute: typeof ComponentsComponentsSidebarRouteImport
-      parentRoute: typeof ComponentsComponentsRoute
-    }
     '/components/_components/sidebar-thread-item': {
       id: '/components/_components/sidebar-thread-item'
       path: '/sidebar-thread-item'
       fullPath: '/components/sidebar-thread-item'
       preLoaderRoute: typeof ComponentsComponentsSidebarThreadItemRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
+    }
+    '/components/_components/sidebar': {
+      id: '/components/_components/sidebar'
+      path: '/sidebar'
+      fullPath: '/components/sidebar'
+      preLoaderRoute: typeof ComponentsComponentsSidebarRouteImport
       parentRoute: typeof ComponentsComponentsRoute
     }
     '/components/_components/messages': {
