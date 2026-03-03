@@ -13,6 +13,7 @@ import { useMergedRefs } from "@/lib/utils";
 import { SidebarFloatingActions } from "./_parts/sidebar-floating-actions";
 import { SidebarFooter, SidebarFooterSpacer } from "./_parts/sidebar-footer";
 import { SidebarHeader, SidebarHeaderSpacer } from "./_parts/sidebar-header";
+import { SidebarThreadList } from "./_parts/sidebar-thread-list";
 import { ThreadItem } from "./_parts/thread-item";
 
 type ThreadDoc = Doc<"threads">;
@@ -76,12 +77,7 @@ export function ChatSidebarLayout({
           <ScrollEdgeProbe ref={topRef} />
           <SidebarHeaderSpacer />
           <ScrollbarZIndexHack zIndex={51} />
-          <SidebarShell.Group>
-            <SidebarShell.GroupLabel>Previous Chats</SidebarShell.GroupLabel>
-            <SidebarShell.GroupContent>
-              <SidebarShell.Menu>{threadRows}</SidebarShell.Menu>
-            </SidebarShell.GroupContent>
-          </SidebarShell.Group>
+          <SidebarThreadList>{threadRows}</SidebarThreadList>
           <SidebarFooterSpacer />
           <ScrollEdgeProbe ref={mergedBottomRef} />
         </SidebarShell.Content>
