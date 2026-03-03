@@ -1,9 +1,8 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
-import React, { useCallback, useDeferredValue, useMemo, useRef } from "react";
-import { UserProfileButton } from "@/components/auth/user-avatar";
+import type React from "react";
+import { useCallback, useDeferredValue, useMemo, useRef } from "react";
 import { Sidebar as SidebarShell } from "@/components/ui-custom/sidebar/sidebar-shell";
 import { ScrollbarZIndexHack } from "@/components/ui-custom/utils/scrollbar-z-index-hack";
-import { SpacerFrom } from "@/components/ui-custom/utils/spacer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInView } from "@/hooks/utils/use-intersection-observer";
 import {
@@ -12,6 +11,7 @@ import {
 } from "@/hooks/utils/use-scroll-edges";
 import { useMergedRefs } from "@/lib/utils";
 import { SidebarFloatingActions } from "./_parts/sidebar-floating-actions";
+import { SidebarFooter, SidebarFooterSpacer } from "./_parts/sidebar-footer";
 import { SidebarHeader, SidebarHeaderSpacer } from "./_parts/sidebar-header";
 import { ThreadItem } from "./_parts/thread-item";
 
@@ -82,10 +82,10 @@ export function ChatSidebarLayout({
               <SidebarShell.Menu>{threadRows}</SidebarShell.Menu>
             </SidebarShell.GroupContent>
           </SidebarShell.Group>
-          <ChatSidebarFooterSpacer />
+          <SidebarFooterSpacer />
           <ScrollEdgeProbe ref={mergedBottomRef} />
         </SidebarShell.Content>
-        <ChatSidebarFooter
+        <SidebarFooter
           className="absolute bottom-0 z-50 w-full"
           isOverflowing={!isAtBottom}
         />
@@ -100,26 +100,3 @@ export function ChatSidebarLayout({
     </SidebarShell.Provider>
   );
 }
-
-function ChatSidebarFooter({
-  isOverflowing,
-  className,
-}: {
-  isOverflowing: boolean;
-  className?: string;
-}) {
-  return (
-    <SidebarShell.Footer className={className} isOverflowing={isOverflowing}>
-      <UserProfileButton className="z-50 px-4" />
-    </SidebarShell.Footer>
-  );
-}
-
-const ChatSidebarFooterSpacer = React.memo(
-  ({ className }: { className?: string }) => (
-    <SpacerFrom>
-      <ChatSidebarFooter className={className} isOverflowing={false} />
-    </SpacerFrom>
-  )
-);
-ChatSidebarFooterSpacer.displayName = "ChatSidebarFooterSpacer";
