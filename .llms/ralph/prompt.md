@@ -17,9 +17,7 @@ Pick the next task.
 Guardrails:
 
 - Pick only real implementation tasks that change product code/behavior (not checklist wording churn).
-- Never invent QA-doc-only subtasks once checklist scaffold exists.
-- If only remaining work is user/manual QA execution or external pre-existing infra/typecheck blocker, do not keep editing docs.
-- In that case, emit `<promise>ABORT</promise>` and ask user to run QA + provide report rows.
+- If only remaining work is user/manual QA execution or external pre-existing infra/typecheck blocker,  emit `<promise>ABORT</promise>` and ask user to run QA + provide instructions.
 
 If there are no more tasks, emit <promise>NO MORE TASKS</promise>.
 
