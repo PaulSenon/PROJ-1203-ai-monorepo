@@ -6,6 +6,7 @@ import {
 } from "@legendapp/list/react";
 import type React from "react";
 import { useCallback, useLayoutEffect, useRef } from "react";
+import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { ThreadItem } from "./thread-item";
 
@@ -35,7 +36,9 @@ export function SidebarVirtualThreadList({
   header?: ListSupplementalComponent;
   footer?: ListSupplementalComponent;
 }) {
+  const { openMobile } = useSidebar();
   const listRef = useRef<LegendListRef | null>(null);
+  const lastKnownScrollOffsetRef = useRef(0);
 
   const setEdgeState = useCallback(
     (isAtTop: boolean, isAtBottom: boolean) => {
@@ -77,6 +80,7 @@ export function SidebarVirtualThreadList({
       const contentHeight = event.nativeEvent.contentSize.height;
       const distanceFromEnd = contentHeight - (scrollY + viewportHeight);
 
+      lastKnownScrollOffsetRef.current = scrollY;
       setEdgeState(scrollY <= 1, distanceFromEnd <= 1);
     },
     [setEdgeState]
@@ -98,7 +102,21 @@ export function SidebarVirtualThreadList({
 
   useLayoutEffect(() => {
     syncEdgeStateFromList();
-  }, [syncEdgeStateFromList, threads]);
+  }, [syncEdgeStateFromList]);
+
+  useLayoutEffect(() => {
+    if (!(isMobile && openMobile)) {
+      return;
+    }
+
+    const stateScroll = listRef.current?.getState().scroll;
+    const targetOffset = stateScroll ?? lastKnownScrollOffsetRef.current;
+
+    listRef.current?.scrollToOffset({
+      animated: false,
+      offset: Math.max(0, targetOffset),
+    });
+  }, [isMobile, openMobile]);
 
   return (
     <LegendList<ThreadDoc>
