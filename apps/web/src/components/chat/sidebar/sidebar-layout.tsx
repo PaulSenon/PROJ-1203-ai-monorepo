@@ -1,8 +1,6 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
-import { PlusIcon } from "lucide-react";
 import React, { useCallback, useDeferredValue, useMemo, useRef } from "react";
 import { UserProfileButton } from "@/components/auth/user-avatar";
-import { Button } from "@/components/ui/button";
 import { Sidebar as SidebarShell } from "@/components/ui-custom/sidebar/sidebar-shell";
 import { ScrollbarZIndexHack } from "@/components/ui-custom/utils/scrollbar-z-index-hack";
 import { SpacerFrom } from "@/components/ui-custom/utils/spacer";
@@ -12,8 +10,9 @@ import {
   ScrollEdgeProbe,
   useScrollEdges,
 } from "@/hooks/utils/use-scroll-edges";
-import { cn, useMergedRefs } from "@/lib/utils";
+import { useMergedRefs } from "@/lib/utils";
 import { SidebarFloatingActions } from "./_parts/sidebar-floating-actions";
+import { SidebarHeader, SidebarHeaderSpacer } from "./_parts/sidebar-header";
 import { ThreadItem } from "./_parts/thread-item";
 
 type ThreadDoc = Doc<"threads">;
@@ -68,14 +67,14 @@ export function ChatSidebarLayout({
   return (
     <SidebarShell.Provider>
       <SidebarShell.Root className={className} variant="inset">
-        <ChatSidebarHeader
+        <SidebarHeader
           className="absolute top-0 z-50 w-full"
           isOverflowing={!isAtTop}
           onNewChat={onNewChat}
         />
         <SidebarShell.Content ref={scrollContainerRef}>
           <ScrollEdgeProbe ref={topRef} />
-          <ChatSidebarHeaderSpacer />
+          <SidebarHeaderSpacer />
           <ScrollbarZIndexHack zIndex={51} />
           <SidebarShell.Group>
             <SidebarShell.GroupLabel>Previous Chats</SidebarShell.GroupLabel>
@@ -101,50 +100,6 @@ export function ChatSidebarLayout({
     </SidebarShell.Provider>
   );
 }
-
-function ChatSidebarHeader({
-  isOverflowing,
-  className,
-  onNewChat,
-}: {
-  isOverflowing: boolean;
-  className?: string;
-  onNewChat?: () => void;
-}) {
-  return (
-    <SidebarShell.Header className={className} isOverflowing={isOverflowing}>
-      <h2 className="mt-0.5 h-full content-center text-center font-semibold text-lg">
-        Isaaac.chat
-      </h2>
-
-      <div
-        className={cn(
-          "absolute top-3 top-safe-offset-2 right-3",
-          "pointer-events-auto z-50 flex origin-left items-center gap-0.5 overflow-hidden rounded-sm p-1"
-        )}
-      >
-        <Button
-          className="size-8"
-          onClick={onNewChat}
-          size="icon"
-          variant="ghost"
-        >
-          <PlusIcon className="size-4" />
-          <span className="sr-only">New Chat</span>
-        </Button>
-      </div>
-    </SidebarShell.Header>
-  );
-}
-
-const ChatSidebarHeaderSpacer = React.memo(
-  ({ className }: { className?: string }) => (
-    <SpacerFrom>
-      <ChatSidebarHeader className={className} isOverflowing={false} />
-    </SpacerFrom>
-  )
-);
-ChatSidebarHeaderSpacer.displayName = "ChatSidebarHeaderSpacer";
 
 function ChatSidebarFooter({
   isOverflowing,
