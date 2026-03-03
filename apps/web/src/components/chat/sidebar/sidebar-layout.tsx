@@ -1,10 +1,18 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import {
   LegendList,
+  type LegendListRef,
   type LegendListRenderItemProps,
 } from "@legendapp/list/react";
 import type React from "react";
-import { useCallback, useDeferredValue, useMemo, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Sidebar as SidebarShell } from "@/components/ui-custom/sidebar/sidebar-shell";
 import { ScrollbarZIndexHack } from "@/components/ui-custom/utils/scrollbar-z-index-hack";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -36,8 +44,28 @@ export function ChatSidebarLayout({
   onNewChat?: () => void;
 }) {
   const isMobile = useIsMobile();
+  const listRef = useRef<LegendListRef | null>(null);
   const [isAtTop, setIsAtTop] = useState(true);
   const [isAtBottom, setIsAtBottom] = useState(true);
+
+  const setEdgeState = useCallback(
+    (nextIsAtTop: boolean, nextIsAtBottom: boolean) => {
+      setIsAtTop((prev) => (prev === nextIsAtTop ? prev : nextIsAtTop));
+      setIsAtBottom((prev) =>
+        prev === nextIsAtBottom ? prev : nextIsAtBottom
+      );
+    },
+    []
+  );
+
+  const syncEdgeStateFromList = useCallback(() => {
+    const listState = listRef.current?.getState();
+    if (!listState) {
+      return;
+    }
+
+    setEdgeState(listState.isAtStart, listState.isAtEnd);
+  }, [setEdgeState]);
 
   const handleLoadMore = useCallback(() => {
     if (!canLoadMore || isLoadingMore) {
@@ -59,10 +87,9 @@ export function ChatSidebarLayout({
       const contentHeight = event.nativeEvent.contentSize.height;
       const distanceFromEnd = contentHeight - (scrollY + viewportHeight);
 
-      setIsAtTop(scrollY <= 1);
-      setIsAtBottom(distanceFromEnd <= 1);
+      setEdgeState(scrollY <= 1, distanceFromEnd <= 1);
     },
-    []
+    [setEdgeState]
   );
 
   const deferredThreads = useDeferredValue(threads, []);
@@ -93,6 +120,10 @@ export function ChatSidebarLayout({
 
   const listFooter = useMemo(() => <SidebarFooterSpacer />, []);
 
+  useLayoutEffect(() => {
+    syncEdgeStateFromList();
+  }, [syncEdgeStateFromList, deferredThreads]);
+
   return (
     <SidebarShell.Provider>
       <SidebarShell.Root className={className} variant="inset">
@@ -111,8 +142,10 @@ export function ChatSidebarLayout({
           ListHeaderComponent={listHeader}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={1}
+          onLoad={syncEdgeStateFromList}
           onScroll={handleScroll}
           recycleItems={false}
+          ref={listRef}
           renderItem={renderThreadItem}
         />
         <SidebarFooter
