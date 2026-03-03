@@ -1,6 +1,6 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import type React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { Sidebar as SidebarShell } from "@/components/ui-custom/sidebar/sidebar-shell";
 import { ScrollbarZIndexHack } from "@/components/ui-custom/utils/scrollbar-z-index-hack";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -42,20 +42,17 @@ export function ChatSidebarLayout({
     []
   );
 
-  const listHeader = useMemo(
-    () => (
-      <>
-        <SidebarHeaderSpacer />
-        <ScrollbarZIndexHack zIndex={51} />
-        <div className="px-2 pt-2">
-          <SidebarShell.GroupLabel>Previous Chats</SidebarShell.GroupLabel>
-        </div>
-      </>
-    ),
-    []
+  const listHeader = (
+    <>
+      <SidebarHeaderSpacer />
+      <ScrollbarZIndexHack zIndex={51} />
+      <div className="px-2 pt-2">
+        <SidebarShell.GroupLabel>Previous Chats</SidebarShell.GroupLabel>
+      </div>
+    </>
   );
 
-  const listFooter = useMemo(() => <SidebarFooterSpacer />, []);
+  const listFooter = <SidebarFooterSpacer />;
 
   return (
     <SidebarShell.Provider>

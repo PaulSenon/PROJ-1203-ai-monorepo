@@ -38,6 +38,7 @@ import {
 } from "./thread-item-actions";
 
 type ThreadDoc = Doc<"threads">;
+const CONTEXT_MENU_NAVIGATION_SUPPRESS_MS = 600;
 
 function LiveStateIndicatorIcon({
   className,
@@ -292,7 +293,8 @@ function ThreadItemRootImpl({
   );
 
   const handleContextMenuActionSelect = () => {
-    suppressNavigationUntilRef.current = Date.now() + 600;
+    suppressNavigationUntilRef.current =
+      Date.now() + CONTEXT_MENU_NAVIGATION_SUPPRESS_MS;
   };
 
   return (

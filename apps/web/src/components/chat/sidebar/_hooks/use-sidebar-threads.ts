@@ -52,7 +52,6 @@ export function useSidebarThreads() {
     canLoadMore,
     isLoadingMore,
     loadMore,
-    loadMoreStatus,
     threads,
   };
 }
