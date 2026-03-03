@@ -1,21 +1,13 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
-import {
-  LegendList,
-  type LegendListRef,
-  type LegendListRenderItemProps,
-} from "@legendapp/list/react";
 import type React from "react";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Sidebar as SidebarShell } from "@/components/ui-custom/sidebar/sidebar-shell";
 import { ScrollbarZIndexHack } from "@/components/ui-custom/utils/scrollbar-z-index-hack";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 import { SidebarFloatingActions } from "./_parts/sidebar-floating-actions";
 import { SidebarFooter, SidebarFooterSpacer } from "./_parts/sidebar-footer";
 import { SidebarHeader, SidebarHeaderSpacer } from "./_parts/sidebar-header";
-import { ThreadItem } from "./_parts/thread-item";
-
-type ThreadDoc = Doc<"threads">;
+import { SidebarVirtualThreadList } from "./_parts/sidebar-virtual-thread-list";
 
 export function ChatSidebarLayout({
   className,
@@ -29,7 +21,7 @@ export function ChatSidebarLayout({
 }: {
   className?: string;
   activeThreadId?: string;
-  threads: ThreadDoc[];
+  threads: Doc<"threads">[];
   children?: React.ReactNode;
   onLoadMore?: () => void;
   canLoadMore?: boolean;
@@ -37,7 +29,6 @@ export function ChatSidebarLayout({
   onNewChat?: () => void;
 }) {
   const isMobile = useIsMobile();
-  const listRef = useRef<LegendListRef | null>(null);
   const [isAtTop, setIsAtTop] = useState(true);
   const [isAtBottom, setIsAtBottom] = useState(true);
 
@@ -51,56 +42,6 @@ export function ChatSidebarLayout({
     []
   );
 
-  const syncEdgeStateFromList = useCallback(() => {
-    const listState = listRef.current?.getState();
-    if (!listState) {
-      return;
-    }
-
-    setEdgeState(listState.isAtStart, listState.isAtEnd);
-  }, [setEdgeState]);
-
-  const handleLoadMore = useCallback(() => {
-    if (!canLoadMore || isLoadingMore) {
-      return;
-    }
-    onLoadMore?.();
-  }, [canLoadMore, isLoadingMore, onLoadMore]);
-
-  const handleListLayout = useCallback(() => {
-    syncEdgeStateFromList();
-  }, [syncEdgeStateFromList]);
-
-  const handleScroll = useCallback(
-    (event: {
-      nativeEvent: {
-        contentOffset: { y: number };
-        contentSize: { height: number };
-        layoutMeasurement: { height: number };
-      };
-    }) => {
-      const scrollY = event.nativeEvent.contentOffset.y;
-      const viewportHeight = event.nativeEvent.layoutMeasurement.height;
-      const contentHeight = event.nativeEvent.contentSize.height;
-      const distanceFromEnd = contentHeight - (scrollY + viewportHeight);
-
-      setEdgeState(scrollY <= 1, distanceFromEnd <= 1);
-    },
-    [setEdgeState]
-  );
-
-  const renderThreadItem = useCallback(
-    ({ item: thread, index }: LegendListRenderItemProps<ThreadDoc>) => (
-      <div className={cn("px-4", index > 0 && "pt-1.5")}>
-        <ThreadItem.Root
-          isActive={thread.uuid === activeThreadId}
-          isMobile={isMobile}
-          thread={thread}
-        />
-      </div>
-    ),
-    [activeThreadId, isMobile]
-  );
   const listHeader = useMemo(
     () => (
       <>
@@ -116,10 +57,6 @@ export function ChatSidebarLayout({
 
   const listFooter = useMemo(() => <SidebarFooterSpacer />, []);
 
-  useLayoutEffect(() => {
-    syncEdgeStateFromList();
-  }, [syncEdgeStateFromList, threads]);
-
   return (
     <SidebarShell.Provider>
       <SidebarShell.Root className={className} variant="inset">
@@ -128,22 +65,16 @@ export function ChatSidebarLayout({
           isOverflowing={!isAtTop}
           onNewChat={onNewChat}
         />
-        <LegendList<ThreadDoc>
-          className="flex min-h-0 flex-1 flex-col gap-0 overscroll-contain p-0"
-          data={threads}
-          drawDistance={180}
-          estimatedItemSize={44}
-          keyExtractor={(thread) => thread.uuid}
-          ListFooterComponent={listFooter}
-          ListHeaderComponent={listHeader}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={1}
-          onLayout={handleListLayout}
-          onLoad={syncEdgeStateFromList}
-          onScroll={handleScroll}
-          recycleItems={false}
-          ref={listRef}
-          renderItem={renderThreadItem}
+        <SidebarVirtualThreadList
+          activeThreadId={activeThreadId}
+          canLoadMore={canLoadMore}
+          footer={listFooter}
+          header={listHeader}
+          isLoadingMore={isLoadingMore}
+          isMobile={isMobile}
+          onEdgeStateChange={setEdgeState}
+          onLoadMore={onLoadMore}
+          threads={threads}
         />
         <SidebarFooter
           className="absolute bottom-0 z-50 w-full"
