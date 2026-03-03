@@ -74,6 +74,10 @@ export function ChatSidebarLayout({
     onLoadMore?.();
   }, [canLoadMore, isLoadingMore, onLoadMore]);
 
+  const handleListLayout = useCallback(() => {
+    syncEdgeStateFromList();
+  }, [syncEdgeStateFromList]);
+
   const handleScroll = useCallback(
     (event: {
       nativeEvent: {
@@ -142,6 +146,7 @@ export function ChatSidebarLayout({
           ListHeaderComponent={listHeader}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={1}
+          onLayout={handleListLayout}
           onLoad={syncEdgeStateFromList}
           onScroll={handleScroll}
           recycleItems={false}
