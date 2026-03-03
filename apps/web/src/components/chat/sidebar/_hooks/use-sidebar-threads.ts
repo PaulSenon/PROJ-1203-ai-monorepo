@@ -9,6 +9,8 @@ export function useSidebarThreads() {
   const hasRequestedInCurrentCanLoadMoreStateRef = useRef(false);
 
   const loadMoreStatus = history.status;
+  const canLoadMore = loadMoreStatus === "CanLoadMore";
+  const isLoadingMore = loadMoreStatus === "LoadingMore";
 
   const loadMore = useCallback(() => {
     if (loadMoreStatus === "LoadingMore") {
@@ -47,7 +49,10 @@ export function useSidebarThreads() {
 
   return {
     isPending: history.isPending,
+    canLoadMore,
+    isLoadingMore,
     loadMore,
+    loadMoreStatus,
     threads,
   };
 }

@@ -244,3 +244,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - A/B check confirmed `useCvxPaginatedQueryAuthCached` reacts, while `useCvxPaginatedQueryStable` dropped updates after loadMore
 - fix in `apps/web/src/hooks/queries/convex/utils/use-convex-query-1-stable.ts`: memo output now tracks stable `results` ref (`stableResults`) in deps
 - no API change; hooks still wired to auth+cached query layer
+
+2026-03-03: sidebar virtualization prep slice (RALPH)
+- `useSidebarThreads` now exposes `loadMoreStatus`, `canLoadMore`, `isLoadingMore` in addition to existing `loadMore` + `threads`
+- purpose: let upcoming LegendList `onEndReached` wiring gate pagination with explicit hook status while keeping current dedupe queue behavior unchanged
