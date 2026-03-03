@@ -86,6 +86,7 @@ export function SidebarVirtualThreadList({
     ({ item: thread, index }: LegendListRenderItemProps<ThreadDoc>) => (
       <div className={cn("px-4", index > 0 && "pt-1.5")}>
         <ThreadItem.Root
+          className="list-none"
           isActive={thread.uuid === activeThreadId}
           isMobile={isMobile}
           thread={thread}

@@ -33,7 +33,7 @@ export function ScrollbarZIndexHack({ zIndex }: { zIndex: number }) {
   return (
     <div
       aria-hidden="true"
-      className={cn("pointer-events-none h-0 opacity-0")}
+      className={cn("pointer-events-none relative h-0 opacity-0")}
       style={{ zIndex }}
     />
   );
