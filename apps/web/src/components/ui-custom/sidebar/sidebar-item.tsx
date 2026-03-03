@@ -9,7 +9,7 @@ export type SidebarItemRootProps = ComponentProps<typeof SidebarMenuItem> & {
 function SidebarItemRoot({
   className,
   style,
-  isMobile = false,
+  isMobile: _isMobile = false,
   ...props
 }: SidebarItemRootProps) {
   return (
@@ -17,8 +17,6 @@ function SidebarItemRoot({
       className={cn("min-h-10 select-none md:min-h-9", className)}
       style={{
         contain: "layout style",
-        contentVisibility: "auto",
-        containIntrinsicBlockSize: `auto ${isMobile ? "40px" : "36px"}`,
         ...style,
       }}
       {...props}
