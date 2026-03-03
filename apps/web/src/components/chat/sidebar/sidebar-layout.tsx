@@ -5,14 +5,7 @@ import {
   type LegendListRenderItemProps,
 } from "@legendapp/list/react";
 import type React from "react";
-import {
-  useCallback,
-  useDeferredValue,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Sidebar as SidebarShell } from "@/components/ui-custom/sidebar/sidebar-shell";
 import { ScrollbarZIndexHack } from "@/components/ui-custom/utils/scrollbar-z-index-hack";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -96,7 +89,6 @@ export function ChatSidebarLayout({
     [setEdgeState]
   );
 
-  const deferredThreads = useDeferredValue(threads, []);
   const renderThreadItem = useCallback(
     ({ item: thread, index }: LegendListRenderItemProps<ThreadDoc>) => (
       <div className={cn("px-4", index > 0 && "pt-1.5")}>
@@ -126,7 +118,7 @@ export function ChatSidebarLayout({
 
   useLayoutEffect(() => {
     syncEdgeStateFromList();
-  }, [syncEdgeStateFromList, deferredThreads]);
+  }, [syncEdgeStateFromList, threads]);
 
   return (
     <SidebarShell.Provider>
@@ -138,7 +130,7 @@ export function ChatSidebarLayout({
         />
         <LegendList<ThreadDoc>
           className="flex min-h-0 flex-1 flex-col gap-0 overscroll-contain p-0"
-          data={deferredThreads}
+          data={threads}
           drawDistance={180}
           estimatedItemSize={44}
           keyExtractor={(thread) => thread.uuid}
