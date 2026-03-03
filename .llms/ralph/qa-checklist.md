@@ -40,6 +40,6 @@ Use report fields exactly: `scenario`, `expected`, `observed`, `pass/fail`, `not
 
 ## Result
 
-- verdict: blocked (awaiting user/manual QA execution + server TS6305 pre-existing failure)
-- blockers: manual QA scenarios still TODO (user-owned); pre-existing server TS6305 build-order mismatch blocks repo-wide check-types green
-- follow-up task id: S5.4-manual-qa-run-and-report
+- verdict: TODO
+- blockers: pre-existing server TS6305 build-order mismatch blocks repo-wide check-types green
+- follow-up task id: TODO
