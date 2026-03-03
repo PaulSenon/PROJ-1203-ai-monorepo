@@ -248,3 +248,10 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-03: sidebar virtualization prep slice (RALPH)
 - `useSidebarThreads` now exposes `loadMoreStatus`, `canLoadMore`, `isLoadingMore` in addition to existing `loadMore` + `threads`
 - purpose: let upcoming LegendList `onEndReached` wiring gate pagination with explicit hook status while keeping current dedupe queue behavior unchanged
+
+2026-03-03: sidebar virtualization S1.2 LegendList baseline + end-reached wiring (RALPH)
+- `ChatSidebarLayout` now renders sidebar threads with `LegendList` (`estimatedItemSize=44`, `drawDistance=180`, `recycleItems=false`, explicit `onEndReachedThreshold=1`)
+- load-more trigger moved from bottom observer sentinel to `LegendList.onEndReached`, gated by `canLoadMore` + `isLoadingMore`
+- overlay blur edge state now derives from list scroll metrics (`isAtTop`/`isAtBottom`) instead of probe refs
+- `ChatSidebar` now passes pagination gating flags into layout (`canLoadMore`, `isLoadingMore`)
+- feedback loop status unchanged: workspace `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305; `pnpm run check-types -F web` still blocked by pre-existing `messages-list.tsx` unused local `setMargin`

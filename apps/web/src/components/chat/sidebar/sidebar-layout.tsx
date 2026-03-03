@@ -1,19 +1,17 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
+import {
+  LegendList,
+  type LegendListRenderItemProps,
+} from "@legendapp/list/react";
 import type React from "react";
-import { useCallback, useDeferredValue, useMemo, useRef } from "react";
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { Sidebar as SidebarShell } from "@/components/ui-custom/sidebar/sidebar-shell";
 import { ScrollbarZIndexHack } from "@/components/ui-custom/utils/scrollbar-z-index-hack";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useInView } from "@/hooks/utils/use-intersection-observer";
-import {
-  ScrollEdgeProbe,
-  useScrollEdges,
-} from "@/hooks/utils/use-scroll-edges";
-import { useMergedRefs } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { SidebarFloatingActions } from "./_parts/sidebar-floating-actions";
 import { SidebarFooter, SidebarFooterSpacer } from "./_parts/sidebar-footer";
 import { SidebarHeader, SidebarHeaderSpacer } from "./_parts/sidebar-header";
-import { SidebarThreadList } from "./_parts/sidebar-thread-list";
 import { ThreadItem } from "./_parts/thread-item";
 
 type ThreadDoc = Doc<"threads">;
@@ -24,6 +22,8 @@ export function ChatSidebarLayout({
   threads,
   children,
   onLoadMore,
+  canLoadMore = false,
+  isLoadingMore = false,
   onNewChat,
 }: {
   className?: string;
@@ -31,40 +31,67 @@ export function ChatSidebarLayout({
   threads: ThreadDoc[];
   children?: React.ReactNode;
   onLoadMore?: () => void;
+  canLoadMore?: boolean;
+  isLoadingMore?: boolean;
   onNewChat?: () => void;
 }) {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-
-  const { isAtTop, isAtBottom, topRef, bottomRef } = useScrollEdges({
-    viewportRef: scrollContainerRef,
-  });
+  const [isAtTop, setIsAtTop] = useState(true);
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
   const handleLoadMore = useCallback(() => {
+    if (!canLoadMore || isLoadingMore) {
+      return;
+    }
     onLoadMore?.();
-  }, [onLoadMore]);
+  }, [canLoadMore, isLoadingMore, onLoadMore]);
 
-  const { ref: loadMoreRef } = useInView<HTMLDivElement>({
-    rootRef: scrollContainerRef,
-    rootMargin: "0px 0px 200% 0px",
-    continuous: true,
-    onEnter: handleLoadMore,
-  });
+  const handleScroll = useCallback(
+    (event: {
+      nativeEvent: {
+        contentOffset: { y: number };
+        contentSize: { height: number };
+        layoutMeasurement: { height: number };
+      };
+    }) => {
+      const scrollY = event.nativeEvent.contentOffset.y;
+      const viewportHeight = event.nativeEvent.layoutMeasurement.height;
+      const contentHeight = event.nativeEvent.contentSize.height;
+      const distanceFromEnd = contentHeight - (scrollY + viewportHeight);
 
-  const mergedBottomRef = useMergedRefs<HTMLDivElement>(bottomRef, loadMoreRef);
+      setIsAtTop(scrollY <= 1);
+      setIsAtBottom(distanceFromEnd <= 1);
+    },
+    []
+  );
+
   const deferredThreads = useDeferredValue(threads, []);
-  const threadRows = useMemo(
-    () =>
-      deferredThreads.map((thread) => (
+  const renderThreadItem = useCallback(
+    ({ item: thread, index }: LegendListRenderItemProps<ThreadDoc>) => (
+      <div className={cn("px-4", index > 0 && "pt-1.5")}>
         <ThreadItem.Root
           isActive={thread.uuid === activeThreadId}
           isMobile={isMobile}
-          key={thread.uuid}
           thread={thread}
         />
-      )),
-    [deferredThreads, activeThreadId, isMobile]
+      </div>
+    ),
+    [activeThreadId, isMobile]
   );
+  const listHeader = useMemo(
+    () => (
+      <>
+        <SidebarHeaderSpacer />
+        <ScrollbarZIndexHack zIndex={51} />
+        <div className="px-2 pt-2">
+          <SidebarShell.GroupLabel>Previous Chats</SidebarShell.GroupLabel>
+        </div>
+      </>
+    ),
+    []
+  );
+
+  const listFooter = useMemo(() => <SidebarFooterSpacer />, []);
 
   return (
     <SidebarShell.Provider>
@@ -74,14 +101,20 @@ export function ChatSidebarLayout({
           isOverflowing={!isAtTop}
           onNewChat={onNewChat}
         />
-        <SidebarShell.Content ref={scrollContainerRef}>
-          <ScrollEdgeProbe ref={topRef} />
-          <SidebarHeaderSpacer />
-          <ScrollbarZIndexHack zIndex={51} />
-          <SidebarThreadList>{threadRows}</SidebarThreadList>
-          <SidebarFooterSpacer />
-          <ScrollEdgeProbe ref={mergedBottomRef} />
-        </SidebarShell.Content>
+        <LegendList<ThreadDoc>
+          className="flex min-h-0 flex-1 flex-col gap-0 overscroll-contain p-0"
+          data={deferredThreads}
+          drawDistance={180}
+          estimatedItemSize={44}
+          keyExtractor={(thread) => thread.uuid}
+          ListFooterComponent={listFooter}
+          ListHeaderComponent={listHeader}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={1}
+          onScroll={handleScroll}
+          recycleItems={false}
+          renderItem={renderThreadItem}
+        />
         <SidebarFooter
           className="absolute bottom-0 z-50 w-full"
           isOverflowing={!isAtBottom}
