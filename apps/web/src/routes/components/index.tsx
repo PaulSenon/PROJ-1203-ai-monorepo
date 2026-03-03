@@ -11,6 +11,10 @@ const components = [
     path: "/components/sidebar",
   },
   {
+    name: "Sidebar Thread Item",
+    path: "/components/sidebar-thread-item",
+  },
+  {
     name: "Button Group",
     path: "/components/button-group",
   },
