@@ -8,7 +8,6 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   useMemo,
-  useRef,
 } from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,6 @@ import {
 } from "./thread-item-actions";
 
 type ThreadDoc = Doc<"threads">;
-const CONTEXT_MENU_NAVIGATION_SUPPRESS_MS = 600;
 
 function LiveStateIndicatorIcon({
   className,
@@ -177,12 +175,10 @@ function ThreadContextMenu({
   actions,
   children,
   className,
-  onActionSelect,
 }: {
   actions: ThreadItemAction[];
   children: ReactNode;
   className?: string;
-  onActionSelect?: () => void;
 }) {
   return (
     <ContextMenu>
@@ -208,7 +204,6 @@ function ThreadContextMenu({
             key={item.id}
             onSelect={(event) => {
               event.stopPropagation();
-              onActionSelect?.();
               item.callback();
             }}
             variant={item.variant}
@@ -280,7 +275,6 @@ function ThreadItemRootImpl({
   isMobile = false,
   actionHandlers,
 }: ThreadItemRootProps) {
-  const suppressNavigationUntilRef = useRef(0);
   const { indicatorVariant, isLoading, tooltip } = useThreadItemState(thread);
 
   const quickActions = useMemo(
@@ -292,17 +286,9 @@ function ThreadItemRootImpl({
     [thread, actionHandlers]
   );
 
-  const handleContextMenuActionSelect = () => {
-    suppressNavigationUntilRef.current =
-      Date.now() + CONTEXT_MENU_NAVIGATION_SUPPRESS_MS;
-  };
-
   return (
     <SidebarItem.Root as={as} className={className}>
-      <ThreadContextMenu
-        actions={menuActions}
-        onActionSelect={handleContextMenuActionSelect}
-      >
+      <ThreadContextMenu actions={menuActions}>
         <SidebarItem.Button asChild>
           <Link
             className={cn(
@@ -312,16 +298,6 @@ function ThreadItemRootImpl({
               "group-data-[state=open]/cm:bg-sidebar-accent",
               isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
             )}
-            onClick={(event) => {
-              if (!isMobile) {
-                return;
-              }
-              if (Date.now() >= suppressNavigationUntilRef.current) {
-                return;
-              }
-              event.preventDefault();
-              event.stopPropagation();
-            }}
             params={{ id: thread.uuid }}
             to="/chat/{-$id}"
           >
