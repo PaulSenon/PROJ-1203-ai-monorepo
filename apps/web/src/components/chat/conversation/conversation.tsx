@@ -7,7 +7,7 @@ import { useActiveThreadUIReady } from "./_hooks/use-active-thread-ui-ready";
 import { useConversationDisplayMessages } from "./_hooks/use-conversation-display-messages";
 import { ChatConversationLayout } from "./conversation-layout";
 
-const LOAD_OLDER_PAGE_SIZE = 10;
+const LOAD_OLDER_PAGE_SIZE = 20;
 
 export function ChatConversation() {
   const { uuid, isThreadSettled, isDataPending, pendingAutoScrollMessageId } =
@@ -29,7 +29,6 @@ export function ChatConversation() {
 
   return (
     <ChatConversationLayout
-      hasMoreContent={olderHistoryStatusRef.current !== "Exhausted"}
       isThreadSettled={isThreadSettled}
       key={uuid}
       messages={messages}

@@ -14,7 +14,6 @@ import {
 
 export type ChatConversationLayoutProps = {
   messages: MyUIMessage[];
-  hasMoreContent?: boolean;
   isThreadSettled: boolean;
   pendingAutoScrollMessageId: string | undefined;
   onStartReached?: () => void;
@@ -24,12 +23,12 @@ export function ChatConversationLayout({
   messages,
   isThreadSettled,
   pendingAutoScrollMessageId,
-  hasMoreContent,
   onStartReached,
 }: ChatConversationLayoutProps) {
+  const listRef = useRef<EnrichedLegendListRef | null>(null);
   const { bottomRef } = useScrollToBottomState();
   const { scrollToBottom } = useScrollToBottomActions();
-  const listRef = useRef<EnrichedLegendListRef | null>(null);
+
   const shouldReserveLastAssistantSpace = useShouldReserveLastAssistantSpace({
     isThreadSettled,
   });
@@ -49,8 +48,7 @@ export function ChatConversationLayout({
   return (
     <Conversation.Root
       className={cn(
-        "relative mx-auto mb-[130px] w-full max-w-3xl flex-1 p-6 md:mb-0",
-        hasMoreContent && "mt-[300vh]"
+        "relative mx-auto mb-[130px] w-full max-w-3xl flex-1 p-6 md:mb-0"
       )}
     >
       <Conversation.List>

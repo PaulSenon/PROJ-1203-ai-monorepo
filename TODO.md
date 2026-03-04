@@ -41,7 +41,7 @@ Problems:
 - [ ] sidebar plug delete thread feature
 - [x] sidebar when open mobile, shouldn't set first item active.
 - [x] sidebar fix reactive update (when thread state changes, it does not reflect on UI) (weird, it get fixed when reactive update from convex dashboard, then it work, but broken while never "fixed" by toggling liveStatus from convex dashboard.... Really weird behavior. Need to investigate more.)
-    => root cause found: stale memo deps in `useCvxPaginatedQueryStable` (`use-convex-query-1-stable.ts`) dropped paginated `results` updates when `status/isLoading` unchanged after loadMore.
+      => root cause found: stale memo deps in `useCvxPaginatedQueryStable` (`use-convex-query-1-stable.ts`) dropped paginated `results` updates when `status/isLoading` unchanged after loadMore.
 - [~] sidebar close on link click ( const { setOpenMobile } = useSidebar(); setOpenMobile(false);)
 - [ ] message footer, aligned start (even for infos)
 - [ ] message thinking arrow should be right after thinking text, not aligned end.
@@ -80,4 +80,9 @@ Problems:
       => stream-resume regression root cause identified: stale resumed-stream local state leaked across skip<->active toggle in same mount (not message merge-by-id logic) FIXED
 
 - [x] bug on `const paginatedMessages = usePersistedMessages(threadUuid);` in `useMessages()`, when we loadMore once, then it no longer react to tail update. e.g. to reproduce: we load a chat conversation (load last 10 items) then we trigger loadmore at least once (otherwise no bug), then we submit a new message, that should reactively update the query result with assistant shell and user message, then later update the assistant when completed, but here this does not trigger reactive update. The issue might come from paginate query implementation on convex backend ? or some convex bug ? (try upgrade both backend version and react hook), it does not seam to be some problem in convexHotCached paginated query lib as I tried to skip this and bug was still there. This bug might be linked to the "sidebar reactive update" issue above.
-    => same root cause as sidebar: `useCvxPaginatedQueryStable` memoized return object without tracking `results` ref changes.
+      => same root cause as sidebar: `useCvxPaginatedQueryStable` memoized return object without tracking `results` ref changes.
+
+conversation issues:
+
+- [ ] flickers when new items added and remove slection. I think this is because messages are not refentially stable. We should investigrate use-messages hook to find a way to keep existing message refs and just replacing props (if that's even legal)
+- [ ] virtualization (legendlist) doesn't handle big message added (e.g. this convo: http://localhost:3001/chat/wiBC1jsjB8yYgUSbkSirN) is shifts content.

@@ -4,14 +4,7 @@ import {
   type LegendListRef,
   type LegendListRenderItemProps,
 } from "@legendapp/list/react";
-import {
-  type RefObject,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { type RefObject, useCallback, useEffect, useRef } from "react";
 import { ChatMessage } from "@/components/chat/message/message";
 import {
   ScrollEdgeProbe,
@@ -29,27 +22,34 @@ export type ConversationMessagesListProps = {
   listRef: RefObject<EnrichedLegendListRef | null>;
   onStartReached?: () => void;
   onEndReached?: () => void;
-  // startDetectionOffsetPx?: number;
-  // endDetectionOffsetPx?: number;
 };
-
-// const ESTIMATED_MESSAGE_ITEM_SIZE = 160;
-// const MESSAGE_VIRTUAL_DRAW_DISTANCE = 140;
 
 export function ConversationMessagesList({
   messages,
   shouldReserveLastAssistantSpace,
-  listRef,
   onStartReached,
   onEndReached,
-  // startDetectionOffsetPx = 0,
-  // endDetectionOffsetPx = 0,
+  listRef,
 }: ConversationMessagesListProps) {
+  const isReady = useRef(false);
+  // const listRef = useRef<EnrichedLegendListRef | null>(null);
   const messagesRef = useRef(messages);
+  const handleStartReached = useCallback(() => {
+    if (!isReady.current) return;
+    onStartReached?.();
+  }, [onStartReached]);
+  const handleEndReached = useCallback(() => {
+    if (!isReady.current) return;
+    onEndReached?.();
+  }, [onEndReached]);
+  const { topRef, bottomRef } = useScrollEdges({
+    onBottomReached: handleEndReached,
+    onTopReached: handleStartReached,
+    rootMargin: "100%",
+  });
+
   messagesRef.current = messages;
-  const [isReady, setIsReady] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [_, rerender] = useState(0);
+
   // TODO wire onStart and onEnd observers
   const observers = useRef<Map<string, ((id: string) => void)[]>>(null);
   if (observers.current === null) {
@@ -87,34 +87,24 @@ export function ConversationMessagesList({
     });
   }, [listRef.current]);
 
-  const scrollToEnd = useCallback(
-    (options?: { animated?: boolean; viewOffset?: number }): Promise<void> => {
-      // biome-ignore lint/suspicious/noTsIgnore: temporary
-      // @ts-ignore Wrongly typed from source
-      // return listRef.current?.getNativeScrollRef().scrollToEnd(options);
-      return window.scrollTo({
-        top: document.documentElement.scrollHeight,
-        behavior: options?.animated ? "smooth" : "instant",
-      });
-    },
-    []
-  );
-
+  /**
+   * Two little hacks here.
+   * - we want initial scroll to be as window end, not list end
+   * - we should only do that on "first layout but only when state is ready"
+   */
   const handleLayout = useCallback(() => {
-    if (!isReady) rerender(Date.now());
-  }, [isReady]);
+    // skip if internal list state not ready (meaning window height ready)
+    if (listRef.current?.getState() === undefined) return;
+    // skip if we already did our initial scroll once
+    if (isReady.current === true) return;
+    isReady.current = true;
 
-  useLayoutEffect(() => {
-    if (!isLoaded) return;
-    if (isReady) return;
-    scrollToEnd({ animated: false });
-    // setMargin(`${window.document.documentElement.scrollHeight * 0.5}px`);
-    // Reaveal on next frame to avoid flicker
-    const raf = requestAnimationFrame(() => setIsReady(true));
-    return () => {
-      cancelAnimationFrame(raf);
-    };
-  });
+    // perform real window end scroll
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: "instant",
+    });
+  }, [listRef.current?.getState]);
 
   const renderItem = useCallback(
     ({ item, index }: LegendListRenderItemProps<MyUIMessage>) => {
@@ -138,53 +128,26 @@ export function ConversationMessagesList({
     [shouldReserveLastAssistantSpace]
   );
 
-  const [margin, setMargin] = useState("2000px");
-  const handleStartReached = useCallback(() => {
-    if (!isReady) return;
-    onStartReached?.();
-  }, [onStartReached, isReady]);
-  const handleEndReached = useCallback(() => {
-    if (!isReady) return;
-    onEndReached?.();
-  }, [onEndReached, isReady]);
-
-  const { topRef, bottomRef } = useScrollEdges({
-    onBottomReached: handleEndReached,
-    onTopReached: handleStartReached,
-    rootMargin: margin,
-  });
+  if (messages.length === 0) return null;
 
   return (
-    <div
-      // HACK to prevent jumping scrollbar
-      className={cn(
-        "transition-opacity duration-200 ease-snappy will-change-opacity",
-        isReady // HACK to hide flickering
-          ? "opacity-100"
-          : "opacity-0"
-      )}
-      data-loading-window-scrollbar={isReady ? undefined : true}
-    >
+    <>
       <ScrollEdgeProbe ref={topRef} />
       <LegendList<MyUIMessage>
         alignItemsAtEnd
         data={messages}
         initialScrollAtEnd
-        keyExtractor={(message) => message.id} // broken for now. DO NOT USE
+        keyExtractor={(message) => message.id}
         maintainVisibleContentPosition={true}
         onLayout={handleLayout}
-        onLoad={() => setIsLoaded(true)}
+        recycleItems
         ref={listRef}
-        // onScroll={handleScroll}
-        // onEndReached={onEndReached} // broken for now. DO NOT USE
-        // onEndReachedThreshold={endDetectionOffsetPx} // broken for now. DO NOT USE
-        // onStartReached={handleStartReached} // broken for now. DO NOT USE
-        // onStartReachedThreshold={0.2} // broken for now. DO NOT USE
-        // recycleItems
         renderItem={renderItem}
+        suggestEstimatedItemSize
         useWindowScroll
+        waitForInitialLayout={true}
       />
       <ScrollEdgeProbe ref={bottomRef} />
-    </div>
+    </>
   );
 }
