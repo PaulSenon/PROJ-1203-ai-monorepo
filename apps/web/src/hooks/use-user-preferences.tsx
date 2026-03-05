@@ -7,7 +7,6 @@ import {
 import {
   createContext,
   type ReactNode,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -16,7 +15,7 @@ import {
 import type { Prettify } from "@/lib/utils";
 import { useActiveThreadQuery } from "./queries/use-chat-active-queries";
 import { useUserPreferencesQuery } from "./queries/use-user-preferences-queries";
-import { ChatNavRerenderTrigger, useChatNav } from "./use-chat-nav";
+import { useChatNav } from "./use-chat-nav";
 
 type ModelSelectorState = {
   selectedModelId?: AllowedModelIds;
@@ -61,6 +60,13 @@ function INTERNAL_ModelSelectorProvider({ children }: { children: ReactNode }) {
    */
   const modelToPickForNewThread =
     userPreferences.data?.modelToPickForNewThread ?? "lastUsed";
+
+  const threadIdentity = isNew ? "__new__" : chatNav.id;
+
+  useEffect(() => {
+    setSelectedModelId(undefined);
+  }, [threadIdentity]);
+
   useEffect(() => {
     if (selectedModelId) return;
     const selectedModelIdFromDb = (() => {
@@ -133,13 +139,7 @@ export function ModelSelectorProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const Outlet = useCallback(
-    () => (
-      <INTERNAL_ModelSelectorProvider>
-        {children}
-      </INTERNAL_ModelSelectorProvider>
-    ),
-    [children]
+  return (
+    <INTERNAL_ModelSelectorProvider>{children}</INTERNAL_ModelSelectorProvider>
   );
-  return <ChatNavRerenderTrigger Outlet={Outlet} />;
 }
