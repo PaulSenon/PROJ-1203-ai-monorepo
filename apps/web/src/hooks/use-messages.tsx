@@ -72,6 +72,8 @@ type MergeOptions = {
 };
 
 const RALPH_REFERENTIAL_DEBUG_STORAGE_KEY = "ralph:referential-debug";
+const RALPH_REFERENTIAL_STABILITY_DISABLE_STORAGE_KEY =
+  "ralph:referential-stability-disable";
 
 type ReferentialDebugReport = {
   renderPass: number;
@@ -87,9 +89,22 @@ type ReferentialDebugReport = {
 function isReferentialDebugEnabled() {
   if (!import.meta.env.DEV) return false;
   if (typeof window === "undefined") return false;
-  return (
-    window.localStorage.getItem(RALPH_REFERENTIAL_DEBUG_STORAGE_KEY) === "1"
+  return isLocalStorageFlagEnabled(RALPH_REFERENTIAL_DEBUG_STORAGE_KEY);
+}
+
+function isReferentialStabilityDisabled() {
+  if (typeof window === "undefined") return false;
+  return isLocalStorageFlagEnabled(
+    RALPH_REFERENTIAL_STABILITY_DISABLE_STORAGE_KEY
   );
+}
+
+function isLocalStorageFlagEnabled(key: string) {
+  try {
+    return window.localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -613,14 +628,21 @@ export function useMessages({
     [baseLayer, resumedLayer, httpLayer]
   );
 
+  const referentialStabilityDisabled = isReferentialStabilityDisabled();
+
   const stableMessages = useMemo(() => {
+    if (referentialStabilityDisabled) {
+      previousMessagesRef.current = messages;
+      return messages;
+    }
+
     const reconciled = reconcileMessageReferences(
       previousMessagesRef.current,
       messages
     );
     previousMessagesRef.current = reconciled;
     return reconciled;
-  }, [messages]);
+  }, [messages, referentialStabilityDisabled]);
 
   const isQueryPending = isSkip
     ? false
