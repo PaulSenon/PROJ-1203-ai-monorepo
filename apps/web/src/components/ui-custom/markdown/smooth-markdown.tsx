@@ -4,6 +4,7 @@ import { useSmoothText } from "@convex-dev/agent/react";
 import { cjk } from "@streamdown/cjk";
 import { createMathPlugin } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
+import { type ComponentProps, useCallback, useMemo } from "react";
 import { Streamdown } from "streamdown";
 import { DEFAULT_TRUSTED_DOMAINS, resolveLinkKind } from "./link-policy";
 import { LinkSafetyModal } from "./link-safety-modal";
@@ -21,6 +22,34 @@ const streamdownPluginsWithCode = {
   ...streamdownBasePlugins,
   code: workerCodePlugin,
 };
+
+const STREAMDOWN_ANIMATED = {
+  animation: "slideUp",
+  duration: 200,
+  easing: "ease-out",
+  sep: "word",
+} as const;
+
+const STREAMDOWN_CONTROLS = {
+  table: true,
+  code: true,
+  mermaid: {
+    download: true,
+    copy: true,
+    fullscreen: true,
+    panZoom: true,
+  },
+} as const;
+
+const STREAMDOWN_REMEND = {
+  linkMode: "text-only",
+} as const;
+
+type StreamdownLinkSafety = NonNullable<
+  ComponentProps<typeof Streamdown>["linkSafety"]
+>;
+type StreamdownLinkCheck = NonNullable<StreamdownLinkSafety["onLinkCheck"]>;
+type StreamdownRenderModal = NonNullable<StreamdownLinkSafety["renderModal"]>;
 
 export type SmoothMarkdownLinkPolicy = {
   trustedDomains?: string[];
@@ -52,49 +81,46 @@ export function SmoothMarkdown({
 
   const trustedDomains = linkPolicy?.trustedDomains ?? DEFAULT_TRUSTED_DOMAINS;
 
+  const onLinkCheck = useCallback<StreamdownLinkCheck>(
+    (url) => {
+      if (typeof window === "undefined") return false;
+      return (
+        resolveLinkKind(url, window.location.origin, trustedDomains) ===
+        "in_app"
+      );
+    },
+    [trustedDomains]
+  );
+
+  const renderModal = useCallback<StreamdownRenderModal>(
+    (props) => <LinkSafetyModal {...props} trustedDomains={trustedDomains} />,
+    [trustedDomains]
+  );
+
+  const linkSafety = useMemo<StreamdownLinkSafety>(
+    () => ({
+      enabled: true,
+      onLinkCheck,
+      renderModal,
+    }),
+    [onLinkCheck, renderModal]
+  );
+
   return (
     <Streamdown
-      animated={{
-        animation: "slideUp",
-        duration: 200,
-        easing: "ease-out",
-        sep: "word",
-      }}
+      animated={STREAMDOWN_ANIMATED}
       caret="circle"
       className={className}
-      controls={{
-        table: true, // Show table download button
-        code: true, // Show code copy button
-        mermaid: {
-          download: true, // Show mermaid download button
-          copy: true, // Show mermaid copy button
-          fullscreen: true, // Show mermaid fullscreen button
-          panZoom: true, // Show mermaid pan/zoom controls
-        },
-      }}
+      controls={STREAMDOWN_CONTROLS}
       isAnimating={Boolean(isStreaming)}
-      linkSafety={{
-        enabled: true,
-        onLinkCheck: (url) => {
-          if (typeof window === "undefined") return false;
-          return (
-            resolveLinkKind(url, window.location.origin, trustedDomains) ===
-            "in_app"
-          );
-        },
-        renderModal: (props) => (
-          <LinkSafetyModal {...props} trustedDomains={trustedDomains} />
-        ),
-      }}
+      linkSafety={linkSafety}
       mode={consolidate ? "static" : "streaming"}
       plugins={
         enableCodeHighlighting
           ? streamdownPluginsWithCode
           : streamdownBasePlugins
       }
-      remend={{
-        linkMode: "text-only",
-      }}
+      remend={STREAMDOWN_REMEND}
     >
       {text}
     </Streamdown>
