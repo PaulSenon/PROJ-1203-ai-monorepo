@@ -1,12 +1,11 @@
 import { useRouter } from "@tanstack/react-router";
 import { nanoid } from "nanoid";
-import React, {
+import {
   createContext,
   type ReactNode,
   useCallback,
   useContext,
   useMemo,
-  useRef,
 } from "react";
 import { Route as ChatRoute } from "../routes/_chat/chat.{-$id}";
 
@@ -78,40 +77,4 @@ export function useChatNav() {
     throw new Error("useChatNav must be used within ChatNavProvider");
   }
   return context;
-}
-
-/**
- * Anything passed as an Outlet component will be re-rendered when the chat nav
- * changes.
- *
- * Perhaps there is a better way to handle this....
- */
-export function ChatNavRerenderTrigger({
-  Outlet,
-}: {
-  Outlet: React.ComponentType;
-}) {
-  const chatNav = useChatNav();
-  const previousChatNavRef = useRef<typeof chatNav>(chatNav);
-
-  const key = useMemo(() => {
-    let res: string;
-    // stable id when staying on the isNew page
-    if (
-      chatNav.isNew === true &&
-      chatNav.isNew === previousChatNavRef.current.isNew
-    ) {
-      res = previousChatNavRef.current.id;
-    } else {
-      res = chatNav.id;
-    }
-    previousChatNavRef.current = { ...chatNav };
-    return res;
-  }, [chatNav]);
-
-  return (
-    <React.Fragment key={key}>
-      <Outlet />
-    </React.Fragment>
-  );
 }
