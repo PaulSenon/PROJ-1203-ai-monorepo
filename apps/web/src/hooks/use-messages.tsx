@@ -317,6 +317,7 @@ export function useMessages({
   const [optimisticPatchesArray, setOptimisticPatchesArray] = useState<
     MyUIMessage[][]
   >([]);
+  const previousThreadIdentityRef = useRef(threadUuid);
 
   const applyOptimisticPatch = useCallback(
     (patch: MyUIMessage[] | MyUIMessage): PatchId => {
@@ -333,6 +334,13 @@ export function useMessages({
     optimisticPatches.current.delete(patchId);
     setOptimisticPatchesArray(Array.from(optimisticPatches.current.values()));
   }, []);
+
+  useEffect(() => {
+    if (previousThreadIdentityRef.current === threadUuid) return;
+    previousThreadIdentityRef.current = threadUuid;
+    optimisticPatches.current.clear();
+    setOptimisticPatchesArray([]);
+  }, [threadUuid]);
 
   const cacheKey = useMemo(() => createCacheKey(threadUuid), [threadUuid]);
   const cache = useUserCacheEntryOnce<MyUIMessage[]>(cacheKey);
