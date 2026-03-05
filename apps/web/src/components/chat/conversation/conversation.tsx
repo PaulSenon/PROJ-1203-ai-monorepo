@@ -45,10 +45,7 @@ export function ChatConversation() {
   }
 
   return (
-    <div
-      className="fade-in-0 animate-in duration-150 ease-out"
-      key={deferredThreadKey}
-    >
+    <div className="fade-in-0 animate-in duration-150 ease-out">
       <ChatConversationLayout
         isThreadSettled={isThreadSettled}
         messages={messages}
