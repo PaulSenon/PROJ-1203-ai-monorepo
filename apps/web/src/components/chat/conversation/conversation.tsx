@@ -36,10 +36,10 @@ export function ChatConversation() {
     return (
       <ChatConversationLayout
         isThreadSettled={isThreadSettled}
-        key={deferredThreadKey}
         messages={[]}
         onStartReached={handleStartReached}
         pendingAutoScrollMessageId={pendingAutoScrollMessageId}
+        threadIdentity={deferredThreadKey}
       />
     );
   }
@@ -51,10 +51,10 @@ export function ChatConversation() {
     >
       <ChatConversationLayout
         isThreadSettled={isThreadSettled}
-        key={deferredThreadKey}
         messages={messages}
         onStartReached={handleStartReached}
         pendingAutoScrollMessageId={pendingAutoScrollMessageId}
+        threadIdentity={deferredThreadKey}
       />
     </div>
   );
