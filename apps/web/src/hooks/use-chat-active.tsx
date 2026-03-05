@@ -9,6 +9,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -179,6 +180,12 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const [pendingAutoScrollMessageId, setPendingAutoScrollMessageId] = useState<
     string | undefined
   >();
+  const threadIdentity = chatNav.isNew ? "__new__" : chatNav.id;
+
+  useEffect(() => {
+    _setMessagesQueue([]);
+    setPendingAutoScrollMessageId(undefined);
+  }, [threadIdentity]);
 
   // Requests data status (pending -> stale -> fresh)
   const isDataPending = isSkip
