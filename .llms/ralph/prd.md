@@ -1,178 +1,155 @@
-# PRD - LegendList Virtualization (Sidebar First, Conversation Second)
+# PRD - Chat Message Referential Stability and Selection Preservation
 
 ## Problem Statement
 
-Chat MVP needs invisible virtualization quality, but current list strategy is split and fragile:
+When a conversation loads from cache first and then fresh persisted data arrives, message rendering currently flickers for a frame and active text selections are dropped.
 
-- Sidebar uses pseudo-virtualization (`content-visibility` + React `Activity`) instead of true range virtualization.
-- Conversation renders full message list in window scroll; older-message pagination is available in data layer but not wired to UI boundary triggers.
-- Scroll behavior has strict UX constraints (open behavior, submit auto-scroll, streaming growth, prepend stability) that must remain deterministic.
+From user perspective this is severe UX breakage:
 
-If we keep current approach as list sizes grow, we risk INP regressions, missed pagination triggers, and visible scroll instability.
+- Selecting/copying text is unreliable during load transitions.
+- Visual trust is reduced because message content appears to repaint even when semantic content should be unchanged.
+- Reading flow breaks exactly at stale-to-fresh handoff.
+
+Observed behavior indicates same logical messages are being replaced as new render objects, causing downstream markdown/render trees to re-render or rebuild.
+
+Hard product requirement: stale-to-fresh transition must keep text selection intact and avoid visible flicker.
 
 ## Solution
 
-Adopt LegendList in 2 phases with strict anti-feature-creep scope:
+Introduce deterministic structural sharing in message reconciliation so unchanged logical messages preserve object references across layer transitions.
 
-1. **Phase A: Sidebar**
-   - Replace pseudo-virtualization with true LegendList virtualization in existing sidebar scroll container.
-   - Keep existing sidebar UX shell (header/footer overlays, mobile persisted mount behavior, deferred thread input).
-   - Preserve stable behavior for active row, context menu interactions, and top insertions.
+Core strategy:
 
-2. **Phase B: Conversation**
-   - Replace plain message mapping with LegendList window-scroll virtualization.
-   - Keep current business UX rules (optimistic assistant shell, reserve-space latch).
-   - Add reliable top-boundary load-more for older messages.
-   - Keep deterministic submit-to-bottom and stable viewport during prepend/append/stream growth.
+1. Build a stable message reconciler that reuses prior message objects by id when semantic payload is unchanged.
+2. Keep message metadata ownership model intact (including debug dataSource in metadata), but allow deferred non-critical debug updates if needed to preserve render stability.
+3. Stabilize markdown renderer inputs so unchanged content does not trigger avoidable rerenders.
+4. Add acceptance instrumentation and QA protocol proving no selection loss during stale-to-fresh replacement.
 
-> IMPORTANT: we skip phase A for now. We only want to do phase B (conversation virtualization.)
+Outcome expected by users:
 
-Library truth source for this work: local reverse-engineered LegendList source/docs already captured in project planning docs.
+- No visible one-frame repaint for unchanged messages.
+- Existing text selection survives cache-to-persisted handoff.
+- Message order/content correctness preserved.
 
 ## User Stories
 
-1. As a chat user, I want sidebar scrolling to stay smooth with long history, so navigation feels instant.
-2. As a chat user, I want thread list pagination to always trigger at the bottom boundary, so history never gets stuck.
-3. As a chat user, I want no blank holes or jump artifacts while scrolling sidebar, so UI feels native.
-4. As a chat user, I want active thread highlighting and selection behavior unchanged after virtualization.
-5. As a chat user, I want mobile drawer/sheet behavior unchanged, so touch UX stays consistent.
-6. As a chat user, I want conversation open behavior deterministic, so I resume context immediately.
-7. As a chat user, I want submit to always bring me to latest exchange, so I can follow answer flow.
-8. As a chat user, I want no autonomous viewport movement when I scroll away from bottom during streaming.
-9. As a chat user, I want streaming growth to avoid visual jitter, so reading stays comfortable.
-10. As a chat user, I want older messages to load reliably when reaching top boundary, so full history is reachable.
-11. As a chat user, I want prepend loading to preserve my current viewport position, so context does not shift.
-12. As a chat user, I want scroll-to-bottom affordance behavior unchanged in intent, so controls stay predictable.
-13. As a developer, I want one clear virtualization source of truth per surface, so list behavior is maintainable.
-14. As a developer, I want deterministic load-more gating, so fast scroll cannot miss or spam requests.
-15. As a developer, I want no RAF/timeout correction loops for core scroll behavior, so architecture stays clean.
-16. As a maintainer, I want phased rollout with hard QA gates, so risk is controlled.
+1. As a chat user, I want selected text to stay selected while conversation data refreshes, so I can copy reliably.
+2. As a chat user, I want no flash/repaint for unchanged messages during initial load, so reading feels stable.
+3. As a chat user, I want stale-to-fresh transition to feel seamless, so chat appears native quality.
+4. As a chat user, I want message order to remain correct while stabilization logic runs, so conversation meaning is preserved.
+5. As a chat user, I want no additional delay before seeing persisted data, so responsiveness is not degraded.
+6. As a chat user, I want streaming behavior to remain smooth after this change, so ongoing responses still feel real-time.
+7. As a chat user, I want selection behavior to remain stable on desktop and mobile browsers, so copy workflows are consistent.
+8. As a chat user, I want markdown formatting to remain unchanged, so presentation fidelity is preserved.
+9. As a developer, I want reconciliation to be deterministic and explicit, so regressions are easy to reason about.
+10. As a developer, I want unchanged messages to keep references, so memoization can work as intended.
+11. As a developer, I want changed messages to still update correctly, so data correctness is never traded for stability.
+12. As a developer, I want metadata handling to remain compatible with server-provided metadata, so contracts stay coherent.
+13. As a developer, I want debug dataSource to stay available in message metadata, so diagnostics remain usable.
+14. As a developer, I want optional delay of debug-only metadata changes, so UI stability can be prioritized safely.
+15. As a maintainer, I want behavior-focused acceptance criteria for selection persistence, so releases can be validated objectively.
+16. As a maintainer, I want implementation scoped to message/render stability only, so MVP work does not drift.
+17. As a maintainer, I want clear non-goals documented, so follow-up work can be sequenced cleanly.
+18. As a QA reviewer, I want deterministic repro steps for stale-to-fresh transition, so pass/fail is unambiguous.
+19. As a QA reviewer, I want verification that unchanged messages do not remount/repaint, so root issue is truly fixed.
+20. As a product owner, I want strict acceptance that selection never drops on stale-to-fresh, so UX quality bar is explicit.
 
 ## 'Polishing' Requirements
 
-1. No visible virtualization artifacts (blank, flash, jump-correction feel).
-2. Sidebar and conversation interaction smoothness at least equal to current baseline.
-3. Open/submit/stream/prepend feel deterministic on desktop and mobile.
-4. Existing visual polish (header/footer overlays, sticky input, spacing rhythm) preserved.
-5. Keyboard/focus/context-menu semantics unchanged.
-6. Debug logs and temporary instrumentation removed before merge.
+1. No visible flicker for unchanged messages during cache-to-persisted takeover.
+2. Selection persistence verified repeatedly with long and short selections.
+3. Debug metadata visibility preserved (even if minor delay is introduced).
+4. Console/debug instrumentation removed or gated behind explicit debug flag before merge.
+5. No regression in message ordering, optimistic shell behavior, or stream status affordances.
+6. Loading experience remains smooth on both low-end and high-end devices.
 
 ## Implementation Decisions
 
-1. **Phased execution (hard gate)**
-   - Phase A sidebar shipped and QA-signed before Phase B conversation starts.
+1. **Reconciliation architecture**
+   - Introduce a dedicated deep reconciliation module responsible for merging layered message sources using immutable structural sharing.
+   - Module guarantees: unchanged logical message returns previous object reference; changed logical message returns new object.
 
-2. **Dependency decision**
-   - Add LegendList web package usage and retire current virtualization placeholder dependency for this surface.
+2. **Semantic equality contract**
+   - Define explicit equality boundary for “unchanged logical message” including id, role, parts content/shape, lifecycle fields, live status, error payload, and metadata fields that affect UI.
+   - Exclude purely diagnostic fields from forcing immediate object replacement when safe.
 
-3. **Sidebar virtualization module design**
-   - Introduce a sidebar virtual list controller that owns:
-     - LegendList props configuration,
-     - key extraction policy,
-     - bottom boundary load-more callback,
-     - request dedupe/in-flight guard,
-     - top-insert stability policy.
-   - Keep existing sidebar composition shell unchanged (provider, overlays, mobile persisted behavior).
+3. **Metadata policy**
+   - Keep debug `dataSource` in message metadata (not side-map) to remain consistent with possible server-origin metadata.
+   - Permit delayed propagation of debug-only metadata updates when immediate propagation would break render stability and user-facing content is unchanged.
 
-4. **Sidebar row rendering policy**
-   - Keep existing thread row component and interaction logic.
-   - Remove pseudo-virtual row mechanics from row path (`content-visibility` event gating and React `Activity` row hiding).
-   - Keep non-conflicting lightweight CSS containment where beneficial.
+4. **Message merge ordering policy**
+   - Preserve existing merge precedence across cache, persisted, optimistic, resumed-stream, and http-stream layers.
+   - Stabilize ordering comparator behavior for ties and missing values so merges are deterministic and do not introduce incidental reordering.
 
-5. **Sidebar boundary trigger policy**
-   - Use LegendList end-threshold callback as primary trigger.
-   - Add app-level gating to enforce: one in-flight load per boundary cycle, no duplicate bursts, no missed retry after settle.
+5. **Renderer input stability policy**
+   - Ensure markdown renderer receives stable prop identities whenever message content is unchanged.
+   - Memoize/hoist non-content config objects and callbacks passed into markdown rendering path.
 
-6. **Conversation virtualization module design**
-   - Introduce a conversation window-virtual controller that owns:
-     - LegendList window-scroll config,
-     - list imperative handle integration,
-     - bottom-state signal derivation,
-     - prepend/append/stream anchor policy,
-     - top-boundary pagination trigger policy.
-   - Keep conversation L3 adapter/layout split; virtualization lives in layout boundary.
+6. **No mutation rule**
+   - Do not mutate existing message objects in place.
+   - Use immutable updates with structural sharing to remain React-safe and predictable.
 
-7. **Conversation behavior policy (LegendList)**
-   - Use window scroll mode with end alignment.
-   - Use initial end positioning strategy from list config (not manual probe scroll).
-   - Use maintain-at-end behavior for append/stream updates only when user is near end.
-   - Use maintain-visible-content-position with data+size stability for prepend and size changes.
+7. **Acceptance instrumentation policy**
+   - Add temporary diagnostics for message identity retention, render counts, and stale-to-fresh transition boundaries.
+   - Instrumentation must be removable or strictly gated.
 
-8. **Submit/open scroll policy**
-   - Submit intent continues to trigger explicit programmatic scroll-to-end once intent message is committed.
-   - Initial open uses list initial positioning; no RAF/timeout settle loops.
-   - If initial convergence still shows one-frame instability, allow explicit short stabilization-hidden state with deterministic reveal condition (no timer fallback).
+8. **Performance guardrails**
+   - Reconciliation work must avoid quadratic scans on hot paths.
+   - Use keyed maps/indexes to preserve current performance profile for large conversations.
 
-9. **Conversation pagination wiring decision**
-   - Wire real top-boundary load-more to existing paginated messages source now (not mocked callback).
-   - Extend active-thread message state contract to expose older-history pagination controls/status required by UI.
+9. **Compatibility constraints**
+   - Maintain current external hook API shape for conversation consumers.
+   - Keep existing UX rules for optimistic assistant shell and stream status transitions.
 
-10. **Bottom-state source migration**
-    - Replace probe-based bottom visibility as primary source for conversation controls with virtualizer-aware state derived from list handle/state.
-    - Keep user-facing behavior equivalent.
-
-11. **Data and key invariants**
-    - Message/thread item keys remain stable UUIDs.
-    - No index keys.
-    - If any in-place array mutation is introduced later, explicit data-version invalidation is required.
-
-12. **Risk management**
-    - No broad refactor of chat data-layer shape in this PRD.
-    - No redesign of message/sidebar UI structure.
-    - Keep changes concentrated in list rendering + pagination control boundaries.
+10. **Rollback lever**
+    - Ship behind a quick-disable runtime flag so behavior can revert to current merge path immediately if critical regressions appear during rollout.
 
 ## Testing Decisions
 
 1. **Test quality bar**
-   - Validate external behavior, not implementation internals.
-   - Focus on user-visible stability and pagination correctness.
+   - Validate externally observable behavior (selection persistence, visual stability, data correctness), not private implementation details.
 
-2. **Automated checks in scope**
-   - Run `pnpm run check-types` after each phase.
+2. **Primary behavior checks**
+   - Stale-to-fresh transition with selected text in visible message: selection must persist.
+   - Repeated stale-to-fresh transitions: no intermittent flicker.
+   - Changed-message path: updates still render correctly when content truly changes.
 
-3. **Manual QA ownership**
-   - User runs manual QA; implementation handoff must include explicit scenario checklist and pass criteria.
+3. **Comparator/reconciliation behavior checks**
+   - Unchanged message payload returns same reference.
+   - Changed payload returns new reference.
+   - Ordering remains deterministic under equal timestamps and partial metadata.
 
-4. **Sidebar QA checklist**
-   - Long history fast scroll down/up; confirm no blank/jump artifacts.
-   - Repeated bottom reaches; confirm load-more always fires when needed.
-   - Confirm duplicate call prevention while load in-flight.
-   - Validate active row + context menu + desktop/mobile sidebar behaviors unchanged.
+4. **Markdown stability checks**
+   - Unchanged markdown input does not trigger avoidable full re-render behavior from parent updates.
+   - Streaming mode transitions still behave correctly.
 
-5. **Conversation QA checklist**
-   - Open long thread; confirm deterministic initial anchor behavior.
-   - Submit repeatedly; confirm each submit reaches end deterministically.
-   - Scroll away from end during streaming; confirm no autonomous movement.
-   - Reach top repeatedly; confirm older-history load-more reliability.
-   - During prepend loads, confirm viewport pixel-stable (no visible jump).
-   - Validate scroll-to-bottom control behavior parity.
+5. **Regression checks**
+   - Optimistic patches still apply/revert correctly.
+   - Stream resumed/http stream layering still takes precedence as designed.
+   - Pagination load-more behavior unchanged.
 
-6. **QA report format required from user**
-   - scenario, expected, observed, pass/fail, notes (optionally video).
+6. **Command policy**
+   - Automated verification command in this repo context: `pnpm run check-types`.
+
+7. **Manual QA checklist required for signoff**
+   - Select text before persisted handoff and verify selection survives after handoff.
+   - Observe transition frame-by-frame (video acceptable) and confirm no flash of unchanged message blocks.
+   - Repeat on at least one Chromium-based browser and one WebKit-based browser.
+
+8. **Hard acceptance gate**
+   - `0` selection drops across `20` consecutive stale-to-fresh transition runs on unchanged message content.
 
 ## Out of Scope
 
-1. Full scroll restoration across route/app reload.
-2. Virtualization rollout to other surfaces.
-3. Full chat architecture/data pipeline rewrite.
-4. Visual redesign of sidebar/message components.
-5. New non-virtualization features.
+1. Full redesign of conversation UI or markdown renderer feature set.
+2. Re-architecture of streaming transport or backend message schema.
+3. Broad virtualization refactor unrelated to stale-to-fresh stability.
+4. New user-visible debug UI beyond existing metadata behavior.
+5. Additional non-critical performance projects not tied to this defect.
 
 ## Further Notes
 
-1. This PRD intentionally keeps scope tight to MVP-critical virtualization correctness.
-2. LegendList defaults/behaviors must follow local reverse-engineered documentation already produced for this repo context.
-3. If any rule here conflicts with MVP anchor policy decisions, anchor policy must be resolved first before coding conversation phase.
-
-## Unresolved Questions
-
-- Initial open anchor final rule: force end always, or restore alternate anchor (last-read / last-user) when available?
-  - => for now, force end always.
-- If alternate anchor is desired later, should this PRD still ship force-end now as MVP baseline?
-  - => force-end.
-
-## Resources
-
-- You must always read this documentation first: @.llms/plan/virtualization/0-legendlist-documentation.md
-- If adhoc need of specific deeper answers, you must then ask a sub-agent to browser source code at: @.llms/git-references/legendlist for legendlist source code and examples and git history (browse with sub-agent) (N.B. the react web part is not documented and is the only part we care about (the lib cas initially designed for react native))
-- DO NOT use web or context7 for legendlist related question. The library is in beta and undocumented yet.
+1. Acceptance is strict: selection must not drop during stale-to-fresh handoff for unchanged message content.
+2. If a tradeoff is required, prioritize user-visible stability over immediate debug metadata repaint.
+3. This PRD intentionally limits scope to defect elimination and reliability hardening, not feature expansion.
+4. Clarification: when semantic message content genuinely changes, rerender is allowed; guarantee targets unchanged-content takeover path.
