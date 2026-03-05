@@ -2,7 +2,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -153,7 +152,6 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
       async (data: string) => {
         // skip if draft is already the same
         if (draft === data) return;
-        console.log("saving draft", { id, data, isNew });
         setSaveStatus("saving");
         try {
           if (isNew) {
@@ -165,7 +163,6 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
             });
           }
           setSaveStatus("saved");
-          console.log("draft saved", { id, data, isNew });
         } catch (error) {
           setSaveStatus("error");
           console.error("Save draft failed", { id, error, data, isNew });
@@ -189,7 +186,6 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
     async () => {
       setDeleteStatus("deleting");
       abortController.abort();
-      console.log("delDraft", { id, isNew });
       try {
         if (isNew) {
           await newChatDraft.delDraft();
@@ -200,7 +196,6 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
           });
         }
         setDeleteStatus("deleted");
-        console.log("draft deleted", { id, isNew });
       } catch (error) {
         setDeleteStatus("error");
         console.error("Delete draft failed", { id, error, isNew });
@@ -256,10 +251,6 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
     }),
     [commitSetDraft, setDraft, delDraft]
   ) satisfies DraftActions;
-
-  useEffect(() => {
-    console.log("draft status changed", { status, id });
-  }, [status, id]);
 
   return (
     <DraftActionsContext.Provider value={actions}>

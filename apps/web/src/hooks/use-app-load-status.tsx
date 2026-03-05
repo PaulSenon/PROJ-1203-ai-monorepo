@@ -41,7 +41,6 @@ export function AppLoadStatusProvider({ children }: { children: ReactNode }) {
     isSidebarUIReady &&
     isActiveThreadUIReady
   ) {
-    console.log("====================== APP READY =========================");
     isInitialUIStateReady.current = true;
   }
 

@@ -5,7 +5,6 @@ import React, {
   type ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
 } from "react";
@@ -27,10 +26,6 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
   const params = ChatRoute.useParams();
   const isNew = params.id === undefined;
   const id = params.id ?? nanoid();
-
-  useEffect(() => {
-    console.log("DEBUG123: NAV chat nav id", id);
-  }, [id]);
 
   const persistNewChatIdToUrl = useCallback(() => {
     if (!isNew) return;
@@ -113,10 +108,6 @@ export function ChatNavRerenderTrigger({
     previousChatNavRef.current = { ...chatNav };
     return res;
   }, [chatNav]);
-
-  useEffect(() => {
-    console.log("DEBUG123: ChatNavRerenderer: key changed !", { key });
-  }, [key]);
 
   return (
     <React.Fragment key={key}>

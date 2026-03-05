@@ -9,7 +9,6 @@ import {
   type ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -220,7 +219,6 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       if (chatNav.isNew) chatNav.persistNewChatIdToUrl();
       // TODO: save cleared input to restore in case of error
       inputActions.clear();
-      console.log("TOTO123: UPSERTING THREAD...");
       const upsertPromise = upsertThread({
         threadUuid: chatNav.id,
         patch: {
@@ -229,12 +227,9 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         },
       });
       let patchId: string | undefined;
-      console.log("DEBUG123: __sendMessageInternal", chatNav.id);
       try {
-        console.log("TOTO123: APPLIED OPTIMISTIC PATCH", uiMessage);
         patchId = applyOptimisticPatch(uiMessage);
         setPendingAutoScrollMessageId(uiMessage.id);
-        console.log("TOTO123: SDK SET SDK MESSAGES []");
         sdkSetMessages([]);
         markOwned();
         await sdkSendMessage(uiMessage);
@@ -255,15 +250,12 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
           console.error("error while upserting thread", _error);
         }
       } finally {
-        console.log("TOTO123: REVERTING OPTIMISTIC PATCH", patchId);
         if (patchId) revertOptimisticPatch(patchId);
         sdkSetMessages([]);
         // upsertThread might throw if not allowed (because already streaming)
         await upsertPromise.catch((error) => {
           console.error("error while upserting thread", error);
         });
-
-        console.log("TOTO123: UPSERTED THREAD");
       }
     },
     [
@@ -310,7 +302,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   );
 
   const cancel = useCallback(async () => {
-    console.log("TODO: cancel");
+    return;
   }, []);
 
   const regenerate = useCallback(
@@ -443,14 +435,6 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       pendingAutoScrollMessageId,
     ]
   );
-
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    console.log("DEBUG: use-chat-active state", {
-      state,
-      messages: messages.slice(-4),
-    });
-  }, [state, messages]);
 
   const messagesState = useMemo(
     () =>

@@ -202,12 +202,6 @@ function useStreamingUiMessageChunks(threadUuid: string | "skip") {
     }
     if (result.delta.end <= cursor) return;
 
-    console.log("TOTO123: RECEIVED DELTA", {
-      cursor,
-      streamId: result.streamId,
-      delta: structuredClone(result.delta),
-    });
-
     setUiMessageChunks((prev) =>
       result.delta ? prev.concat(result.delta.chunks) : prev
     );

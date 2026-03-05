@@ -313,26 +313,6 @@ export function useMessages(threadUuid: string | "skip") {
 
   const staleMessages = isStale ? (cache.snapshot ?? []) : messages;
 
-  useEffect(() => {
-    console.log("TOTO123: SDLFKSKDJFLKSDJF", {
-      isQueryPending,
-      isPending,
-      isLoading,
-      isStale,
-      isStreaming,
-      messages,
-      staleMessages,
-    });
-  }, [
-    isQueryPending,
-    isPending,
-    isLoading,
-    isStale,
-    isStreaming,
-    messages,
-    staleMessages,
-  ]);
-
   return useMemo(
     () => ({
       messages: staleMessages,
@@ -614,11 +594,6 @@ export function UseChatProvider({ children }: { children: ReactNode }) {
     onError: handleError,
     onToolCall: handleToolCall,
   });
-
-  useEffect(() => {
-    console.log("DEBUG123: chatOutput id", chatOutput.id);
-    console.log("DEBUG123: chat nav id", chatNav.id);
-  }, [chatOutput.id, chatNav.id]);
 
   const throttledSdkMessages = useFpsThrottledValue(chatOutput.messages, {
     maxFps: 5,

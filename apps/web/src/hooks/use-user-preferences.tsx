@@ -44,9 +44,6 @@ function INTERNAL_ModelSelectorProvider({ children }: { children: ReactNode }) {
 
   // always pick from user preferences
   const userPreferences = useUserPreferencesQuery();
-  useEffect(() => {
-    console.log("userPreferences", userPreferences);
-  }, [userPreferences]);
 
   // if not new pick from thread config
   const thread = useActiveThreadQuery({ skip: isNew });

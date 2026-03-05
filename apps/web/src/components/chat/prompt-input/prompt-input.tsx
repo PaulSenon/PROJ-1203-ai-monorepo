@@ -23,10 +23,8 @@ export function ChatInput() {
   const inputActions = useChatInputActions();
   const { sendMessage } = useActiveThreadActions();
   const { selectedModelId } = useModelSelectorState();
-  const handleSubmit: PromptInputProps["onSubmit"] = (message, event) => {
+  const handleSubmit: PromptInputProps["onSubmit"] = (message) => {
     if (!message.text || message.text.trim() === "") return;
-
-    console.log("ChatInput: handleSubmit", { message, event });
     sendMessage({
       text: message.text,
       options: {
