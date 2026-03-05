@@ -93,17 +93,17 @@ export function ConversationMessagesList({
    * - we should only do that on "first layout but only when state is ready"
    */
   const handleLayout = useCallback(() => {
-    // skip if internal list state not ready (meaning window height ready)
-    if (listRef.current?.getState() === undefined) return;
     // skip if we already did our initial scroll once
     if (isReady.current === true) return;
-    isReady.current = true;
+    // skip if internal list state not ready (meaning window height ready)
+    if (listRef.current?.getState() === undefined) return;
 
     // perform real window end scroll
     window.scrollTo({
       top: document.documentElement.scrollHeight,
       behavior: "instant",
     });
+    isReady.current = true;
   }, [listRef.current?.getState]);
 
   const renderItem = useCallback(
