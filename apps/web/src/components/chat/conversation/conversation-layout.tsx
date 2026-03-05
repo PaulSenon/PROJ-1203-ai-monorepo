@@ -1,5 +1,5 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { Conversation } from "@/components/ui-custom/chat/conversation";
 import {
   useScrollToBottomActions,
@@ -80,16 +80,13 @@ function useShouldReserveLastAssistantSpace({
 }: {
   isThreadSettled: boolean;
 }) {
-  const shouldSeedReserveLatch = !isThreadSettled;
+  const hasReserveLatchInThreadSessionRef = useRef(!isThreadSettled);
 
-  const [hasReserveLatchInThreadSession, setHasReserveLatchInThreadSession] =
-    useState<boolean>(shouldSeedReserveLatch);
-
-  if (!hasReserveLatchInThreadSession && shouldSeedReserveLatch) {
-    setHasReserveLatchInThreadSession(true);
+  if (!isThreadSettled) {
+    hasReserveLatchInThreadSessionRef.current = true;
   }
 
-  return shouldSeedReserveLatch || hasReserveLatchInThreadSession;
+  return !isThreadSettled || hasReserveLatchInThreadSessionRef.current;
 }
 
 /**
