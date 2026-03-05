@@ -36,6 +36,7 @@ export function AppLoadStatusProvider({ children }: { children: ReactNode }) {
 
   // compound initial load states
   const isInitialUIStateReady = useRef(false);
+  const hasResolvedInitialAppLoadPromise = useRef(false);
   if (
     !isInitialUIStateReady.current &&
     isSidebarUIReady &&
@@ -48,12 +49,16 @@ export function AppLoadStatusProvider({ children }: { children: ReactNode }) {
   // 1. initial load
   // 2. active thread + input
   if (
+    !hasResolvedInitialAppLoadPromise.current &&
     isInitialUIStateReady.current &&
     isActiveThreadUIReady &&
     isInputUIReady
   ) {
+    hasResolvedInitialAppLoadPromise.current = true;
     appLoadPromise.resolve();
-  } else {
+  }
+
+  if (!hasResolvedInitialAppLoadPromise.current) {
     appLoadPromise.suspend();
   }
 
