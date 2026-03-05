@@ -42,7 +42,7 @@ type ScrollState = {
 };
 
 type ScrollActions = {
-  /** Scroll to the end of the active scroll container */
+  /** Scroll to make the bottom probe visible at top of viewport */
   scrollToBottom: (behavior?: ScrollBehaviorMode) => void;
   /** Scroll to make the checkpoint probe visible at top of viewport */
   scrollToCheckpoint: (behavior?: ScrollBehaviorMode) => void;
@@ -150,34 +150,6 @@ function scrollProbeToTop(
   });
 }
 
-function scrollContainerToEnd(
-  container: Element | null,
-  behavior: ScrollBehaviorMode
-) {
-  if (!container) return;
-
-  const scrollBehavior = behavior === "instant" ? "auto" : "smooth";
-
-  if (
-    container === document.scrollingElement ||
-    container === document.documentElement
-  ) {
-    const maxScrollTop = Math.max(
-      0,
-      document.documentElement.scrollHeight - window.innerHeight
-    );
-    window.scrollTo({ top: maxScrollTop, behavior: scrollBehavior });
-    return;
-  }
-
-  const scrollable = container as HTMLElement;
-  const maxScrollTop = Math.max(
-    0,
-    scrollable.scrollHeight - scrollable.clientHeight
-  );
-  scrollable.scrollTo({ top: maxScrollTop, behavior: scrollBehavior });
-}
-
 // ============================================================================
 // Context
 // ============================================================================
@@ -264,10 +236,12 @@ export function ScrollToBottomProvider({
 
   const scrollToBottom = useCallback(
     (behavior: ScrollBehaviorMode = "smooth") => {
+      const el = bottomElRef.current;
+      if (!el) return;
       const container = getScrollContainer(containerRef);
-      scrollContainerToEnd(container, behavior);
+      scrollProbeToTop(el, container, behavior, topPadding);
     },
-    [containerRef]
+    [containerRef, topPadding]
   );
 
   const scrollToCheckpoint = useCallback(
@@ -389,7 +363,7 @@ type UseScrollToBottomReturn = {
 export function useScrollToBottom(
   opts: UseScrollToBottomOptions = {}
 ): UseScrollToBottomReturn {
-  const { containerRef } = opts;
+  const { containerRef, topPadding = 0 } = opts;
 
   const [bottomEl, setBottomEl] = useState<HTMLElement | null>(null);
   const bottomElRef = useRef<HTMLElement | null>(null);
@@ -434,10 +408,12 @@ export function useScrollToBottom(
 
   const scrollToBottom = useCallback(
     (behavior: ScrollBehaviorMode = "smooth") => {
+      const el = bottomElRef.current;
+      if (!el) return;
       const container = getScrollContainer(containerRef);
-      scrollContainerToEnd(container, behavior);
+      scrollProbeToTop(el, container, behavior, topPadding);
     },
-    [containerRef]
+    [containerRef, topPadding]
   );
 
   return { isAtBottom, bottomRef, scrollToBottom, isProbeVisible };
