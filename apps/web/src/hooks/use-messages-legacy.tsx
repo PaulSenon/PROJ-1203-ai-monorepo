@@ -714,23 +714,27 @@ export const useChatContext = (
   onToolCallRef.current = onToolCall;
 
   useEffect(() => {
-    if (!onFinishRef.current) return;
-    const unsubscribe = subscribeOnFinish(onFinishRef.current);
+    const unsubscribe = subscribeOnFinish((event) => {
+      onFinishRef.current?.(event);
+    });
     return unsubscribe;
   }, [subscribeOnFinish]); // <--- This dependency is now stable!
   useEffect(() => {
-    if (!onDataRef.current) return;
-    const unsubscribe = subscribeOnData(onDataRef.current);
+    const unsubscribe = subscribeOnData((event) => {
+      onDataRef.current?.(event);
+    });
     return unsubscribe;
   }, [subscribeOnData]); // <--- This dependency is now stable!
   useEffect(() => {
-    if (!onErrorRef.current) return;
-    const unsubscribe = subscribeOnError(onErrorRef.current);
+    const unsubscribe = subscribeOnError((event) => {
+      onErrorRef.current?.(event);
+    });
     return unsubscribe;
   }, [subscribeOnError]); // <--- This dependency is now stable!
   useEffect(() => {
-    if (!onToolCallRef.current) return;
-    const unsubscribe = subscribeOnToolCall(onToolCallRef.current);
+    const unsubscribe = subscribeOnToolCall((event) => {
+      onToolCallRef.current?.(event);
+    });
     return unsubscribe;
   }, [subscribeOnToolCall]); // <--- This dependency is now stable!
 
