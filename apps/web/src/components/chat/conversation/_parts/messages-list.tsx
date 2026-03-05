@@ -24,6 +24,9 @@ export type ConversationMessagesListProps = {
   onEndReached?: () => void;
 };
 
+const areMessagesEqual = (previous: MyUIMessage, next: MyUIMessage) =>
+  previous === next;
+
 export function ConversationMessagesList({
   messages,
   shouldReserveLastAssistantSpace,
@@ -137,6 +140,7 @@ export function ConversationMessagesList({
         alignItemsAtEnd
         data={messages}
         initialScrollAtEnd
+        itemsAreEqual={areMessagesEqual}
         keyExtractor={(message) => message.id}
         maintainVisibleContentPosition={true}
         onLayout={handleLayout}
