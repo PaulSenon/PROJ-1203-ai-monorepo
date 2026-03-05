@@ -533,8 +533,14 @@ export function useMessages({
 }
 
 function compareMessages(a: MyUIMessage, b: MyUIMessage) {
-  return (
-    (a.metadata?.createdAt ?? Date.now()) -
-    (b.metadata?.createdAt ?? Date.now())
-  );
+  const createdAtA = a.metadata?.createdAt ?? 0;
+  const createdAtB = b.metadata?.createdAt ?? 0;
+  if (createdAtA !== createdAtB) return createdAtA - createdAtB;
+
+  const updatedAtA = a.metadata?.updatedAt ?? 0;
+  const updatedAtB = b.metadata?.updatedAt ?? 0;
+  if (updatedAtA !== updatedAtB) return updatedAtA - updatedAtB;
+
+  if (a.id === b.id) return 0;
+  return a.id < b.id ? -1 : 1;
 }
