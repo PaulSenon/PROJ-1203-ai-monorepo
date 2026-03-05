@@ -71,6 +71,27 @@ type MergeOptions = {
   sort?: boolean;
 };
 
+const RALPH_REFERENTIAL_DEBUG_STORAGE_KEY = "ralph:referential-debug";
+
+type ReferentialDebugReport = {
+  renderPass: number;
+  totalMessages: number;
+  reusedReferences: number;
+  replacedReferences: number;
+  addedMessages: number;
+  removedMessages: number;
+  staleToFreshBoundary: boolean;
+  selectedTextLength: number;
+};
+
+function isReferentialDebugEnabled() {
+  if (!import.meta.env.DEV) return false;
+  if (typeof window === "undefined") return false;
+  return (
+    window.localStorage.getItem(RALPH_REFERENTIAL_DEBUG_STORAGE_KEY) === "1"
+  );
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -438,6 +459,9 @@ export function useMessages({
   const cacheKey = useMemo(() => createCacheKey(threadUuid), [threadUuid]);
   const cache = useUserCacheEntryOnce<MyUIMessage[]>(cacheKey);
   const previousMessagesRef = useRef<MyUIMessage[]>([]);
+  const debugPreviousMessagesRef = useRef<MyUIMessage[]>([]);
+  const debugRenderPassRef = useRef(0);
+  const debugPreviousStaleRef = useRef(false);
 
   const cacheLayerRaw = useMemo(
     () => normalizeMessages(cache.snapshot ?? [], { debugLabel: "cache" }),
@@ -605,6 +629,65 @@ export function useMessages({
   const isStale = isSkip ? false : !cache.isPending && isQueryPending;
   const isLoading = isSkip ? false : paginatedMessages.isLoading;
   const paginatedStatus = paginatedMessages.status;
+
+  useEffect(() => {
+    if (!isReferentialDebugEnabled()) return;
+
+    const previousMessages = debugPreviousMessagesRef.current;
+    const previousById = new Map(previousMessages.map((msg) => [msg.id, msg]));
+    const nextById = new Map(stableMessages.map((msg) => [msg.id, msg]));
+
+    let reusedReferences = 0;
+    let replacedReferences = 0;
+
+    for (const message of stableMessages) {
+      const previous = previousById.get(message.id);
+      if (!previous) continue;
+      if (previous === message) {
+        reusedReferences += 1;
+      } else {
+        replacedReferences += 1;
+      }
+    }
+
+    let addedMessages = 0;
+    for (const message of stableMessages) {
+      if (!previousById.has(message.id)) addedMessages += 1;
+    }
+
+    let removedMessages = 0;
+    for (const previous of previousMessages) {
+      if (!nextById.has(previous.id)) removedMessages += 1;
+    }
+
+    debugRenderPassRef.current += 1;
+    const staleToFreshBoundary = debugPreviousStaleRef.current && !isStale;
+    const selectedTextLength =
+      typeof window === "undefined"
+        ? 0
+        : (window.getSelection()?.toString().length ?? 0);
+
+    const report: ReferentialDebugReport = {
+      renderPass: debugRenderPassRef.current,
+      totalMessages: stableMessages.length,
+      reusedReferences,
+      replacedReferences,
+      addedMessages,
+      removedMessages,
+      staleToFreshBoundary,
+      selectedTextLength,
+    };
+
+    const debugWindow = window as Window & {
+      __RALPH_REFERENTIAL_DEBUG_LAST__?: ReferentialDebugReport;
+    };
+    debugWindow.__RALPH_REFERENTIAL_DEBUG_LAST__ = report;
+
+    console.info("[RALPH][useMessages]", report);
+
+    debugPreviousMessagesRef.current = stableMessages;
+    debugPreviousStaleRef.current = isStale;
+  }, [stableMessages, isStale]);
 
   useEffect(() => {
     if (isSkip) return;
