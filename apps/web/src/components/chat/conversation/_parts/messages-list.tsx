@@ -140,7 +140,6 @@ export function ConversationMessagesList({
         keyExtractor={(message) => message.id}
         maintainVisibleContentPosition={true}
         onLayout={handleLayout}
-        recycleItems
         ref={listRef}
         renderItem={renderItem}
         suggestEstimatedItemSize
