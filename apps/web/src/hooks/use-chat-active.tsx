@@ -11,6 +11,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { cvx } from "@/lib/convex/queries";
@@ -181,6 +182,8 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     string | undefined
   >();
   const threadIdentity = chatNav.isNew ? "__new__" : chatNav.id;
+  const currentThreadIdRef = useRef(chatNav.id);
+  currentThreadIdRef.current = chatNav.id;
 
   useEffect(() => {
     _setMessagesQueue([]);
@@ -223,11 +226,14 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
 
   const __sendMessageInternal = useCallback(
     async (uiMessage: MyUIMessage) => {
+      const requestThreadId = chatNav.id;
+      const isCurrentRequestThread = () =>
+        currentThreadIdRef.current === requestThreadId;
       if (chatNav.isNew) chatNav.persistNewChatIdToUrl();
       // TODO: save cleared input to restore in case of error
       inputActions.clear();
       const upsertPromise = upsertThread({
-        threadUuid: chatNav.id,
+        threadUuid: requestThreadId,
         patch: {
           liveStatus: "pending",
           lastUsedModelId: uiMessage?.metadata?.modelId,
@@ -241,14 +247,16 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         markOwned();
         await sdkSendMessage(uiMessage);
       } catch (error) {
-        clearOwnership();
+        if (isCurrentRequestThread()) {
+          clearOwnership();
+        }
         console.error("error while sending message", error);
 
         // upsertThread might throw if not allowed (because already streaming)
         try {
           await upsertPromise;
           await upsertThread({
-            threadUuid: chatNav.id,
+            threadUuid: requestThreadId,
             patch: {
               liveStatus: "error",
             },
@@ -258,7 +266,9 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         }
       } finally {
         if (patchId) revertOptimisticPatch(patchId);
-        sdkSetMessages([]);
+        if (isCurrentRequestThread()) {
+          sdkSetMessages([]);
+        }
         // upsertThread might throw if not allowed (because already streaming)
         await upsertPromise.catch((error) => {
           console.error("error while upserting thread", error);
@@ -314,8 +324,11 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
 
   const regenerate = useCallback(
     async (messageId: string, options?: RegenerateMessageOptions) => {
+      const requestThreadId = chatNav.id;
+      const isCurrentRequestThread = () =>
+        currentThreadIdRef.current === requestThreadId;
       const upsertPromise = upsertThread({
-        threadUuid: chatNav.id,
+        threadUuid: requestThreadId,
         patch: {
           liveStatus: "pending",
           lastUsedModelId: options?.selectedModelId,
@@ -375,18 +388,22 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
           },
         });
       } catch (error) {
-        clearOwnership();
+        if (isCurrentRequestThread()) {
+          clearOwnership();
+        }
         console.error("error while regenerating message", error);
         await upsertPromise;
         await upsertThread({
-          threadUuid: chatNav.id,
+          threadUuid: requestThreadId,
           patch: {
             liveStatus: "error",
           },
         });
       } finally {
         if (patchId) revertOptimisticPatch(patchId);
-        sdkSetMessages([]); // TODO if we keep this we might remove the one in catch below
+        if (isCurrentRequestThread()) {
+          sdkSetMessages([]); // TODO if we keep this we might remove the one in catch below
+        }
         await upsertPromise.catch((error) => {
           console.error("error while upserting thread", error);
         });
