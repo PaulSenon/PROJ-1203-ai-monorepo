@@ -255,3 +255,9 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - overlay blur edge state now derives from list scroll metrics (`isAtTop`/`isAtBottom`) instead of probe refs
 - `ChatSidebar` now passes pagination gating flags into layout (`canLoadMore`, `isLoadingMore`)
 - feedback loop status unchanged: workspace `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305; `pnpm run check-types -F web` still blocked by pre-existing `messages-list.tsx` unused local `setMargin`
+
+2026-03-06: chat referential stability regression fixes applied
+- `ConversationMessagesList` now uses tail-aware `itemsAreEqual` to force rerender on last two rows only, preventing stale last-assistant reserve min-height from sticking on non-last rows
+- `use-scroll-to-bottom` now scrolls to true container end for `scrollToBottom` (provider + standalone), checkpoint behavior unchanged
+- scroll triggers switched to `instant` for reliability: chat bottom button + submit auto-scroll callback in conversation layout
+- verification: `pnpm run check-types -F web` pass

@@ -1,5 +1,5 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import { useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import { Conversation } from "@/components/ui-custom/chat/conversation";
 import {
   useScrollToBottomActions,
@@ -28,6 +28,10 @@ export function ChatConversationLayout({
   const listRef = useRef<EnrichedLegendListRef | null>(null);
   const { bottomRef } = useScrollToBottomState();
   const { scrollToBottom } = useScrollToBottomActions();
+  const scrollToBottomInstant = useCallback(
+    () => scrollToBottom("instant"),
+    [scrollToBottom]
+  );
 
   const shouldReserveLastAssistantSpace = useShouldReserveLastAssistantSpace({
     isThreadSettled,
@@ -42,7 +46,7 @@ export function ChatConversationLayout({
       new Promise((resolve) => {
         listRef.current?.onceLastItemKey(id, resolve);
       }),
-    callback: scrollToBottom,
+    callback: scrollToBottomInstant,
   });
 
   return (

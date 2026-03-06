@@ -24,8 +24,21 @@ export type ConversationMessagesListProps = {
   onEndReached?: () => void;
 };
 
-const areMessagesEqual = (previous: MyUIMessage, next: MyUIMessage) =>
-  previous === next;
+const TAIL_SENSITIVE_COUNT = 2;
+
+const areMessagesEqual = (
+  previous: MyUIMessage,
+  next: MyUIMessage,
+  index: number,
+  data: readonly MyUIMessage[]
+) => {
+  if (previous !== next) return false;
+
+  const tailStartIndex = Math.max(0, data.length - TAIL_SENSITIVE_COUNT);
+  if (index >= tailStartIndex) return false;
+
+  return true;
+};
 
 export function ConversationMessagesList({
   messages,
