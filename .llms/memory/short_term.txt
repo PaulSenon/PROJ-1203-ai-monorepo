@@ -261,3 +261,9 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - `use-scroll-to-bottom` now scrolls to true container end for `scrollToBottom` (provider + standalone), checkpoint behavior unchanged
 - scroll triggers switched to `instant` for reliability: chat bottom button + submit auto-scroll callback in conversation layout
 - verification: `pnpm run check-types -F web` pass
+
+2026-03-06: follow-up QA fixes for ghost reserve + submit scroll timing
+- removed `onceLastItemKey` virtualizer callback hack from conversation submit scroll path
+- submit auto-scroll now triggers when pending submitted message id is present within last 2 rendered messages (layout effect + one-shot intent guard)
+- strengthened list equality policy: force rerender for previous last message id plus current tail window, keeping structural-sharing wins elsewhere
+- verification: `pnpm run check-types -F web` pass

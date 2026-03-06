@@ -12,33 +12,15 @@ import {
 } from "@/hooks/utils/use-scroll-edges";
 import { cn } from "@/lib/utils";
 
-export type EnrichedLegendListRef = LegendListRef & {
-  onceLastItemKey: (key: string, callback: () => unknown) => void;
-};
-
 export type ConversationMessagesListProps = {
   messages: MyUIMessage[];
   shouldReserveLastAssistantSpace: boolean;
-  listRef: RefObject<EnrichedLegendListRef | null>;
+  listRef: RefObject<LegendListRef | null>;
   onStartReached?: () => void;
   onEndReached?: () => void;
 };
 
 const TAIL_SENSITIVE_COUNT = 2;
-
-const areMessagesEqual = (
-  previous: MyUIMessage,
-  next: MyUIMessage,
-  index: number,
-  data: readonly MyUIMessage[]
-) => {
-  if (previous !== next) return false;
-
-  const tailStartIndex = Math.max(0, data.length - TAIL_SENSITIVE_COUNT);
-  if (index >= tailStartIndex) return false;
-
-  return true;
-};
 
 export function ConversationMessagesList({
   messages,
@@ -48,8 +30,8 @@ export function ConversationMessagesList({
   listRef,
 }: ConversationMessagesListProps) {
   const isReady = useRef(false);
-  // const listRef = useRef<EnrichedLegendListRef | null>(null);
   const messagesRef = useRef(messages);
+  const previousLastMessageIdRef = useRef<string | undefined>(undefined);
   const handleStartReached = useCallback(() => {
     if (!isReady.current) return;
     onStartReached?.();
@@ -65,38 +47,28 @@ export function ConversationMessagesList({
   });
 
   messagesRef.current = messages;
-
-  // TODO wire onStart and onEnd observers
-  const observers = useRef<Map<string, ((id: string) => void)[]>>(null);
-  if (observers.current === null) {
-    observers.current = new Map();
-  }
-
   useEffect(() => {
-    if (listRef.current === null) return;
-    listRef.current.onceLastItemKey = (
-      key: string,
-      callback: () => unknown
-    ) => {
-      // if already present, trigger callback without subscribing
-      if (messagesRef.current.findLastIndex((m) => m.id === key) !== -1) {
-        callback();
-        return;
-      }
-      if (observers.current === null) return;
-      const obsForKey = observers.current.get(key) ?? [];
+    previousLastMessageIdRef.current = messages.at(-1)?.id;
+  }, [messages]);
 
-      observers.current.set(key, [...obsForKey, callback]);
-    };
-    listRef.current.getState().listen("lastItemKeys", (keys) => {
-      for (const key of keys) {
-        for (const obs of observers.current?.get(key) ?? []) {
-          obs(key);
-          observers.current?.delete(key);
-        }
-      }
-    });
-  }, [listRef.current]);
+  const areMessagesEqual = useCallback(
+    (
+      previous: MyUIMessage,
+      next: MyUIMessage,
+      index: number,
+      data: readonly MyUIMessage[]
+    ) => {
+      if (previous !== next) return false;
+
+      if (previous.id === previousLastMessageIdRef.current) return false;
+
+      const tailStartIndex = Math.max(0, data.length - TAIL_SENSITIVE_COUNT);
+      if (index >= tailStartIndex) return false;
+
+      return true;
+    },
+    []
+  );
 
   /**
    * Two little hacks here.
