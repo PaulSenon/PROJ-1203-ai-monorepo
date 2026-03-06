@@ -8,7 +8,10 @@ import {
   useAppLoadStatus,
   useAppLoadStatusActions,
 } from "@/hooks/use-app-load-status";
-import { useActiveThreadActions } from "@/hooks/use-chat-active";
+import {
+  useActiveThreadActions,
+  useActiveThreadState,
+} from "@/hooks/use-chat-active";
 import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
 import { useChatNav } from "@/hooks/use-chat-nav";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -24,12 +27,15 @@ export function ChatInput() {
   const inputState = useChatInputState();
   const inputActions = useChatInputActions();
   const { sendMessage } = useActiveThreadActions();
+  const { isDataPending, isDataStale } = useActiveThreadState();
   const { selectedModelId } = useModelSelectorState();
   const activeThreadKey = chatNav.isNew ? "__new__" : chatNav.id;
   const deferredThreadKey = useDeferredValue(activeThreadKey);
   const isSwitching = activeThreadKey !== deferredThreadKey;
   const wasSwitchingRef = useRef(false);
-  const isComposerDisabled = inputState.disabled || isSwitching;
+  const isThreadReady = !(isDataPending || isDataStale);
+  const isComposerDisabled =
+    inputState.disabled || isSwitching || !isThreadReady;
 
   useEffect(() => {
     if (!wasSwitchingRef.current && isSwitching) {

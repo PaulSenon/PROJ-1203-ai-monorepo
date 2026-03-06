@@ -12,8 +12,12 @@ const LOAD_OLDER_PAGE_SIZE = 20;
 
 export function ChatConversation() {
   const chatNav = useChatNav();
-  const { isThreadSettled, isDataPending, pendingAutoScrollMessageId } =
-    useActiveThreadState();
+  const {
+    isThreadSettled,
+    isDataPending,
+    isDataStale,
+    pendingAutoScrollMessageId,
+  } = useActiveThreadState();
   const { loadOlder, olderHistoryStatus } = useActiveThreadMessages();
 
   const olderHistoryStatusRef = useRef(olderHistoryStatus);
@@ -23,8 +27,9 @@ export function ChatConversation() {
   const activeThreadKey = chatNav.isNew ? "__new__" : chatNav.id;
   const deferredThreadKey = useDeferredValue(activeThreadKey);
   const isSwitching = activeThreadKey !== deferredThreadKey;
+  const isDeferredThreadReady = !(isSwitching || isDataPending || isDataStale);
 
-  useActiveThreadUIReady(isDataPending);
+  useActiveThreadUIReady(isDataPending || isDataStale);
 
   const handleStartReached = useCallback(() => {
     if (olderHistoryStatusRef.current !== "CanLoadMore") return;
@@ -32,7 +37,7 @@ export function ChatConversation() {
     loadOlder(LOAD_OLDER_PAGE_SIZE);
   }, [loadOlder]);
 
-  if (isSwitching) {
+  if (!isDeferredThreadReady) {
     return (
       <ChatConversationLayout
         isThreadSettled={isThreadSettled}

@@ -5,13 +5,17 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
+  useState,
 } from "react";
 import { Route as ChatRoute } from "../routes/_chat/chat.{-$id}";
 
 type ChatNavState = {
   isNew: boolean;
   id: string;
+  setThreadIntent: (id: string | undefined) => void;
   persistNewChatIdToUrl: () => void;
   openNewChat: () => void;
   openExistingChat: (id: string) => void;
@@ -23,33 +27,56 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   // this will throw an error if used outside of /chat/{-$id} route:
   const params = ChatRoute.useParams();
-  const isNew = params.id === undefined;
-  const id = params.id ?? nanoid();
+  const routeThreadId = params.id;
+  const routeThreadIntent = routeThreadId ?? "__new__";
+
+  const newChatIdRef = useRef<string>(nanoid());
+  const [threadIntent, setThreadIntentState] =
+    useState<string>(routeThreadIntent);
+
+  useEffect(() => {
+    setThreadIntentState((current) =>
+      current === routeThreadIntent ? current : routeThreadIntent
+    );
+  }, [routeThreadIntent]);
+
+  const setThreadIntent = useCallback((id: string | undefined) => {
+    const nextThreadIntent = id ?? "__new__";
+    setThreadIntentState((current) =>
+      current === nextThreadIntent ? current : nextThreadIntent
+    );
+  }, []);
+
+  const isNew = threadIntent === "__new__";
+  const id = isNew ? newChatIdRef.current : threadIntent;
 
   const persistNewChatIdToUrl = useCallback(() => {
-    if (!isNew) return;
+    if (routeThreadId !== undefined) return;
     router.navigate({
       replace: true,
       to: "/chat/{-$id}",
       params: { id },
     });
-  }, [isNew, id, router]);
+  }, [routeThreadId, id, router]);
 
   const openNewChat = useCallback(() => {
+    newChatIdRef.current = nanoid();
+    setThreadIntent(undefined);
     router.navigate({
       to: "/chat/{-$id}",
       params: { id: undefined },
     });
-  }, [router]);
+  }, [setThreadIntent, router]);
 
   const openExistingChat = useCallback(
     (targetId: string) => {
+      setThreadIntent(targetId);
       router.navigate({
         to: "/chat/{-$id}",
         params: { id: targetId },
       });
     },
-    [router]
+    [setThreadIntent, router]
   );
 
   const value = useMemo(
@@ -57,11 +84,19 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
       ({
         isNew,
         id,
+        setThreadIntent,
         persistNewChatIdToUrl,
         openNewChat,
         openExistingChat,
       }) satisfies ChatNavState,
-    [isNew, id, persistNewChatIdToUrl, openNewChat, openExistingChat]
+    [
+      isNew,
+      id,
+      setThreadIntent,
+      persistNewChatIdToUrl,
+      openNewChat,
+      openExistingChat,
+    ]
   );
   return (
     <ChatNavContext.Provider value={value}>{children}</ChatNavContext.Provider>

@@ -1,166 +1,145 @@
-# PRD - Phase 1 Instant Navigation Feedback (Blank Transition)
+# PRD - Phase 1 Instant Thread Navigation Feedback
 
 ## Problem Statement
 
-Thread navigation feedback is not instant.
+Thread switch feedback is too slow because navigation intent and heavy conversation rendering run in the same critical path.
 
-Today, selecting a thread in sidebar triggers expensive chat subtree rerenders/remounts immediately in the same critical path as navigation intent. Result: URL + selected item update are coupled with heavy render cost, hurting INP and perceived responsiveness.
+Current behavior couples click -> route change -> expensive subtree reset/remount. This delays immediate user feedback and harms perceived responsiveness.
 
-From user perspective, expected behavior is:
+Expected behavior:
 
-- click thread
-- URL updates immediately
-- sidebar selected state updates immediately
-- conversation area instantly switches to blank transition state
-- heavy conversation render resolves after, then appears
-
-Current architecture blocks that UX due to global provider scope, forced rerender triggers, and keyed remount patterns tied directly to navigation id.
+1. Click thread.
+2. URL and sidebar selected state update immediately.
+3. Conversation area immediately transitions to blank state.
+4. New conversation appears when heavy render completes.
 
 ## Solution
 
-Refactor chat navigation/rendering boundaries so navigation intent and heavy conversation rendering are decoupled.
+Implement a two-layer navigation/render model:
 
-Phase 1 delivers only instant navigation feedback pattern:
+- Immediate layer: owns routing and selected-thread intent, updates synchronously.
+- Deferred layer: consumes selected thread through deferred value and renders heavy thread-scoped tree.
 
-1. Keep navigation state immediate (route and selected thread update now).
-2. Defer heavy thread-scoped render consumption (deferred thread id).
-3. While deferred render is catching up, show blank conversation transition state (not stale content, not data loading placeholder).
-4. Render thread-scoped heavy tree only on deferred id.
+During deferred catch-up:
 
-Important scope rule:
+- Conversation panel is blank.
+- Input stays visible, is reset, and fully disabled.
+- Transition timing: instant blank-out (no fade-out), then subtle fade-in only when new content is ready.
 
-- No Activity pool in Phase 1.
-- No return-visit DOM/state caching in Phase 1.
-- No render-cost optimization of conversation internals in Phase 1.
+When deferred render is ready:
+
+- Conversation appears.
+- Input re-enables with thread-correct state.
 
 ## User Stories
 
-1. As a chat user, I want thread click feedback to feel instant, so app feels responsive.
-2. As a chat user, I want sidebar selected thread to update immediately on click, so my intent is acknowledged instantly.
-3. As a chat user, I want URL to change immediately when I select a thread, so navigation state is always in sync.
-4. As a chat user, I want conversation panel to clear immediately during thread switch, so I never see old thread pretending to be current.
-5. As a chat user, I want the new conversation to appear once ready, so transition is predictable.
-6. As a chat user, I want rapid multi-click thread switching to still feel instant, so I can scan threads quickly.
-7. As a chat user, I want latest click to win during rapid switching, so wrong thread does not flash.
-8. As a chat user, I want no stale thread content shown during transition, so mental model stays correct.
-9. As a chat user, I want keyboard and pointer navigation behavior unchanged, so interaction remains familiar.
-10. As a chat user, I want mobile and desktop behavior parity for instant feedback, so UX stays consistent.
-11. As a chat user, I want new chat navigation to follow same instant pattern, so behavior is consistent across entry points.
-12. As a chat user, I want deletion/navigation edge cases not to break transition behavior, so UI feels reliable.
-13. As a developer, I want navigation coordinator to own only routing intent, so architecture is simple.
-14. As a developer, I want thread-scoped providers to receive thread identity via explicit props, so state boundaries are deterministic.
-15. As a developer, I want to remove forced remount trigger hacks, so concurrency features can work as intended.
-16. As a developer, I want clear render boundary between immediate shell and deferred heavy tree, so future tuning is safe.
-17. As a maintainer, I want Phase 1 to be independent from Activity pool, so risk is reduced.
-18. As a maintainer, I want model-selection behavior preserved (UI global, value per thread), so no product regression.
-19. As a maintainer, I want app-load readiness signals to remain coherent after refactor, so startup UX does not regress.
-20. As a maintainer, I want explicit non-goals documented, so scope stays tight and avoids feature creep.
+1. As a user, I want thread clicks to acknowledge instantly, so app feels fast.
+2. As a user, I want sidebar active row to update immediately, so I trust my click landed.
+3. As a user, I want URL to update immediately, so navigation state stays reliable.
+4. As a user, I want conversation content to clear instantly during switch, so stale thread content never appears as current.
+5. As a user, I want subtle transition polish, so switch feels intentional.
+6. As a user, I want input to stay visible during switch, so layout feels stable.
+7. As a user, I want input reset + disabled during switch, so I cannot submit against wrong thread.
+8. As a user, I want latest-click-wins behavior during fast switching, so UI tracks my newest intent.
+9. As a user, I want keyboard and pointer navigation parity, so behavior is consistent.
+10. As a user, I want mobile and desktop parity, so switch behavior is predictable everywhere.
+11. As a user, I want new-chat flow to follow same instant switch contract, so behavior is coherent.
+12. As a maintainer, I want migration without hidden regressions in thread reset semantics, so existing hooks remain correct.
+13. As a maintainer, I want explicit contracts for thread-scoped state ownership, so reset behavior is deterministic.
+14. As a maintainer, I want phased migration with safety checkpoints, so architecture change stays low-risk.
 
 ## 'Polishing' Requirements
 
-1. Thread click feels immediate even on heavy conversations.
-2. No stale conversation flash during switch.
-3. Blank transition state is visually clean and stable (no jump/flicker).
-4. Sidebar interactions (hover, context menu, keyboard) unchanged.
-5. New chat and existing chat flows both respect instant-feedback pattern.
-6. Dev-only logs/debug instrumentation removed.
-7. Transition behavior consistent on desktop + mobile.
+1. No stale content flash.
+2. Fade is subtle (no heavy animation).
+3. No layout jump when entering blank state.
+4. Input visibility remains constant across switch.
+5. Disabled-state affordance is clear and consistent.
+6. No debug logs left in shipped flow.
 
 ## Implementation Decisions
 
-1. **Navigation Coordinator (Immediate Layer)**
-   - Keep a slim navigation state module responsible only for route-driven selection intent.
-   - Ensure stable new-chat id semantics (no per-render random id churn).
-   - Expose `selectedId`, `isNew`, and open/persist navigation actions.
+1. **Immediate vs Deferred Boundaries**
+   - Keep route/navigation state synchronous.
+   - Introduce deferred selected-thread value for heavy render boundary.
+   - Compute `isSwitching` from immediate vs deferred selected id.
 
-2. **Deferred Render Gate (Heavy Layer Boundary)**
-   - Introduce a dedicated boundary module that computes deferred thread id from immediate selected id.
-   - Derive `isSwitching = selectedId !== deferredSelectedId`.
-   - During `isSwitching`, render blank conversation transition state.
+2. **Transition Surface Contract**
+   - On `isSwitching`, show blank conversation surface.
+   - Disappear path: no fade, instant blank-out.
+   - Appear path: subtle opacity fade-in only after deferred content is ready.
+   - Keep composer visible at all times.
 
-3. **Thread Surface Composition**
-   - Heavy thread surface (conversation + thread-scoped providers + thread-scoped input state) renders from deferred id only.
-   - Immediate navigation shell (sidebar selection + URL) stays outside heavy boundary.
-   - Maintain latest-intent-wins behavior during rapid switches.
+3. **Composer Contract During Switch**
+   - On switch start, reset composer value.
+   - Disable composer interactions fully until deferred thread is active.
+   - No queued submit while disabled.
 
-4. **Provider Scope Refactor**
-   - Convert thread-sensitive providers to explicit thread-scoped contracts (thread id / isNew) instead of implicit nav reads.
-   - Remove forced rerender wrapper pattern around providers.
-   - Keep provider responsibilities unchanged in Phase 1 (scope migration only).
+4. **Thread Reset Contract (Critical Risk Area)**
+   - Replace implicit reset-by-remount assumptions with explicit thread-scoped contracts.
+   - Every thread-sensitive provider/hook receives explicit thread identity input (id/isNew where required).
+   - Reset semantics must be keyed by thread identity contract, not incidental remount side effects.
 
-5. **Removal of Forced Remount Mechanisms**
-   - Remove key-driven rerender trigger abstraction used to reset subtree on nav changes.
-   - Remove redundant key-based remounting on conversation root where it conflicts with deferred boundary behavior.
+5. **Migration Strategy to Avoid Regression**
+   - Do not do big-bang router redesign.
+   - Keep existing route topology stable during phase 1.
+   - Migrate in checkpoints:
+     1) Introduce deferred boundary + blank transition shell.
+     2) Move thread-sensitive state to explicit thread-scoped inputs.
+     3) Remove forced rerender/remount trigger mechanisms only after parity checks pass.
+   - At each checkpoint, verify parity on send/regenerate/draft/input/model flows.
 
-6. **Route/Layout Responsibility Split**
-   - Keep route for URL state and route ownership.
-   - Move primary heavy thread rendering responsibility to a persistent chat surface boundary compatible with deferred rendering.
-   - Keep secondary routed content behavior unchanged if present.
+6. **Compatibility Matrix Requirement**
+   - Build a thread-reset dependency matrix before refactor:
+     - Which modules currently rely on remount for reset.
+     - Target explicit reset trigger per module.
+     - Expected behavior before vs after.
+   - Refactor accepted only when every module has mapped replacement reset trigger.
 
-7. **Blank Transition UX Policy**
-   - Blank state is a transition shell, not data loading skeleton.
-   - Do not show stale thread content during transition.
-   - Do not introduce Activity or hidden pre-render in this phase.
+7. **Model Selection Contract**
+   - Keep selector UI globally placed.
+   - Keep selected model state per thread.
+   - Resolve selected model against deferred-active thread boundary to prevent cross-thread leakage during switch.
 
-8. **Model Selection Contract**
-   - Preserve global selector UI placement.
-   - Preserve per-thread selected model value semantics.
-   - Ensure model value resolves against deferred active thread to avoid cross-thread bleed.
+8. **Readiness / App Status Contract**
+   - Preserve startup readiness behavior.
+   - Transition periods must not incorrectly regress global app-ready state after initial load.
 
-9. **App Readiness Signals**
-   - Preserve startup readiness semantics while adapting active-thread readiness to new boundary.
-   - Ensure transition periods do not incorrectly mark app as blocked after initial readiness.
-
-10. **Architecture Readiness for Phase 2**
-    - Phase 1 intentionally lays boundaries needed for later Activity pool.
-    - Do not implement pooling/caching infra now.
+9. **Rapid Navigation Concurrency Contract**
+   - Latest intent wins.
+   - Intermediate heavy renders can be interrupted/discarded safely.
+   - No stale completion should overwrite latest selected thread view.
 
 ## Testing Decisions
 
-1. **Test quality bar**
-   - Verify external behavior (navigation feedback + visual state changes), not internal implementation details.
-   - Success criteria prioritize perceived responsiveness and correctness of state transitions.
+1. **Quality bar**
+   - Test external behavior only (what user sees/can do), not internals.
+   - Focus on switch responsiveness and correctness under rapid interaction.
 
-2. **Automated checks in scope**
+2. **Required automated check**
    - Run `pnpm run check-types`.
 
-3. **Manual QA scenarios (required)**
-   - click thread A -> B: URL + selected item change immediately; conversation clears immediately; B appears later.
-   - click A -> B -> C quickly: selected + URL track latest click instantly; only latest thread renders.
-   - new chat navigation: instant transition behavior consistent.
-   - switch across heavy and light threads: no stale flash, no lockup.
-   - keyboard navigation in sidebar: same semantics + instant feedback.
-   - mobile drawer flow: thread switch feedback remains instant.
+3. **Manual QA scenarios (must pass)**
+   - Existing thread A -> B: URL/selection immediate, conversation blanks immediately (no fade-out), input visible+reset+disabled, B appears with subtle fade-in, then input enabled.
+   - Rapid A -> B -> C clicks: only C ends visible, no stale overwrite.
+   - New chat -> existing thread -> new chat: same transition contract each hop.
+   - Keyboard selection in sidebar: same contract as pointer.
+   - Mobile sidebar selection: same contract as desktop.
+   - During switch, submit blocked in all paths.
 
-4. **Regression checks**
-   - send/regenerate flow still works after provider scope migration.
-   - draft and input lifecycle remain coherent per thread.
-   - model selection semantics remain per-thread.
-
-5. **Definition of done (phase 1)**
-   - Instant acknowledgment on thread click is achieved.
-   - Blank transition behavior is stable and deterministic.
-   - No Activity pool behavior present.
+4. **Regression matrix (must pass)**
+   - Draft lifecycle remains correct per thread.
+   - Send/regenerate actions target correct thread after rapid switches.
+   - Model selection remains thread-correct.
+   - Any auth/internal hook that depended on remount still behaves correctly via explicit thread contract.
 
 ## Out of Scope
 
-1. Activity pool implementation.
-2. Return-visit instant DOM/state restore.
-3. Conversation render-performance optimization internals (markdown, virtualization, list refactors).
-4. Data prefetch/prewarm strategy.
-5. New visual redesign of chat surfaces.
-6. Sidebar architecture rewrite unrelated to nav feedback.
-7. Additional product features outside thread-switch UX.
+1. Conversation render-performance optimization internals.
+2. Data prefetch/prewarm strategies.
+3. New product features unrelated to switch-feedback contract.
 
 ## Further Notes
 
-1. This PRD is Phase 1 only by explicit product decision.
-2. It creates the concurrency-safe architecture foundation required for later pooling, without shipping pooling now.
-3. Any attempt to add Activity in this phase is considered scope creep and must be rejected.
-4. If transition UX conflicts with legacy reset hacks, remove hacks in favor of explicit boundary contracts.
-
-## Unresolved Questions
-
-1. Blank transition surface should hide input too, or keep input frame visible but inert?
-2. During switch, should submit controls be disabled hard, or remain interactive and queue intent?
-3. Should transition shell include subtle motion/fade, or remain fully static for minimal latency signal?
+1. Main risk is hidden reliance on remount side effects. This PRD explicitly replaces that with formal thread-scoped contracts.
+2. If parity fails for any thread-sensitive module, stop and patch contract mapping before further migration.

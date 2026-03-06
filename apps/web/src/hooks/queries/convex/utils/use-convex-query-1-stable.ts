@@ -16,12 +16,23 @@ import {
   useCvxQueryAuthCached,
 } from "./use-convex-query-0-auth";
 
+function toStableKey(value: unknown) {
+  return JSON.stringify(value);
+}
+
 export function useCvxQueryStable<Query extends FunctionReference<"query">>(
   query: Query,
   ...queryArgs: OptionalRestArgsOrSkip<Query>
 ): FunctionReturnType<Query> | undefined {
   const result = useCvxQueryAuthCached(query, ...queryArgs);
   const stored = useRef(result);
+  const argsKeyRef = useRef(toStableKey(queryArgs));
+  const nextArgsKey = toStableKey(queryArgs);
+
+  if (argsKeyRef.current !== nextArgsKey) {
+    argsKeyRef.current = nextArgsKey;
+    stored.current = undefined;
+  }
 
   if (result !== undefined) {
     stored.current = result;
@@ -42,6 +53,13 @@ export function useCvxPaginatedQueryStable<
   const res = useCvxPaginatedQueryAuthCached(query, args, options);
 
   const stored = useRef(res.results);
+  const argsKeyRef = useRef(toStableKey(args));
+  const nextArgsKey = toStableKey(args);
+
+  if (argsKeyRef.current !== nextArgsKey) {
+    argsKeyRef.current = nextArgsKey;
+    stored.current = [];
+  }
 
   if (res.status !== "LoadingFirstPage") {
     stored.current = res.results;

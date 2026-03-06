@@ -24,6 +24,7 @@ import {
   type SidebarItemRootProps,
 } from "@/components/ui-custom/sidebar/sidebar-item";
 import { Tooltip } from "@/components/ui-custom/tooltip";
+import { useChatNav } from "@/hooks/use-chat-nav";
 import { cn } from "@/lib/utils";
 import {
   type LiveStateIndicatorVariant,
@@ -275,6 +276,7 @@ function ThreadItemRootImpl({
   isMobile = false,
   actionHandlers,
 }: ThreadItemRootProps) {
+  const chatNav = useChatNav();
   const { indicatorVariant, isLoading, tooltip } = useThreadItemState(thread);
 
   const quickActions = useMemo(
@@ -298,6 +300,18 @@ function ThreadItemRootImpl({
               "group-data-[state=open]/cm:bg-sidebar-accent",
               isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
             )}
+            onClick={(event) => {
+              if (event.button !== 0) return;
+              if (
+                event.metaKey ||
+                event.ctrlKey ||
+                event.altKey ||
+                event.shiftKey
+              ) {
+                return;
+              }
+              chatNav.setThreadIntent(thread.uuid);
+            }}
             params={{ id: thread.uuid }}
             to="/chat/{-$id}"
           >
