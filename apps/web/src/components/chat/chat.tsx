@@ -28,7 +28,7 @@ function ScrollToBottom() {
           >
             <ScrollToBottomButton
               className="pointer-events-auto mx-auto"
-              onClick={() => scrollToBottom("smooth")}
+              onClick={() => scrollToBottom("instant")}
             />
           </motion.div>
         )}

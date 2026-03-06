@@ -71,6 +71,119 @@ type MergeOptions = {
   sort?: boolean;
 };
 
+const RALPH_REFERENTIAL_STABILITY_DISABLE_STORAGE_KEY =
+  "ralph:referential-stability-disable";
+
+function isReferentialStabilityDisabled() {
+  if (typeof window === "undefined") return false;
+  return isLocalStorageFlagEnabled(
+    RALPH_REFERENTIAL_STABILITY_DISABLE_STORAGE_KEY
+  );
+}
+
+function isLocalStorageFlagEnabled(key: string) {
+  try {
+    return window.localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!deepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  if (!(isRecord(a) && isRecord(b))) return false;
+
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+
+  for (const key of keysA) {
+    if (!(key in b)) return false;
+    if (!deepEqual(a[key], b[key])) return false;
+  }
+
+  return true;
+}
+
+function isSemanticMetadataEqual(
+  a: MyUIMessageMetadata | undefined,
+  b: MyUIMessageMetadata | undefined
+) {
+  if (a === b) return true;
+  if (!(a && b)) return false;
+
+  if (a.modelId !== b.modelId) return false;
+  if (a.updatedAt !== b.updatedAt) return false;
+  if (a.createdAt !== b.createdAt) return false;
+  if (a.liveStatus !== b.liveStatus) return false;
+  if (a.lifecycleState !== b.lifecycleState) return false;
+
+  if (!deepEqual(a.error, b.error)) return false;
+  if (!deepEqual(a.timing, b.timing)) return false;
+  if (!deepEqual(a.usage, b.usage)) return false;
+
+  const debugA = a.debug;
+  const debugB = b.debug;
+  if (debugA === debugB) return true;
+  if (!(debugA || debugB)) return true;
+  if (!(debugA && debugB)) return false;
+
+  const { dataSource: _debugDataSourceA, ...restA } = debugA;
+  const { dataSource: _debugDataSourceB, ...restB } = debugB;
+  return deepEqual(restA, restB);
+}
+
+function isSemanticMessageEqual(a: MyUIMessage, b: MyUIMessage) {
+  if (a === b) return true;
+  if (a.id !== b.id) return false;
+  if (a.role !== b.role) return false;
+  if (!deepEqual(a.parts, b.parts)) return false;
+
+  return isSemanticMetadataEqual(a.metadata, b.metadata);
+}
+
+function reconcileMessageReferences(
+  previousMessages: MyUIMessage[],
+  nextMessages: MyUIMessage[]
+) {
+  if (previousMessages.length === 0 || nextMessages.length === 0) {
+    return nextMessages;
+  }
+
+  const previousById = new Map(previousMessages.map((msg) => [msg.id, msg]));
+  const reconciled = nextMessages.map((msg) => {
+    const previous = previousById.get(msg.id);
+    if (!previous) return msg;
+    return isSemanticMessageEqual(previous, msg) ? previous : msg;
+  });
+
+  if (reconciled.length === previousMessages.length) {
+    let sameOrder = true;
+    for (let i = 0; i < reconciled.length; i++) {
+      if (reconciled[i] !== previousMessages[i]) {
+        sameOrder = false;
+        break;
+      }
+    }
+    if (sameOrder) return previousMessages;
+  }
+
+  return reconciled;
+}
+
 function mergeMessageLayers(
   layers: MessageLayer[],
   options: MergeOptions = {}
@@ -201,12 +314,6 @@ function useStreamingUiMessageChunks(threadUuid: string | "skip") {
       );
     }
     if (result.delta.end <= cursor) return;
-
-    console.log("TOTO123: RECEIVED DELTA", {
-      cursor,
-      streamId: result.streamId,
-      delta: structuredClone(result.delta),
-    });
 
     setUiMessageChunks((prev) =>
       result.delta ? prev.concat(result.delta.chunks) : prev
@@ -342,6 +449,7 @@ export function useMessages({
 
   const cacheKey = useMemo(() => createCacheKey(threadUuid), [threadUuid]);
   const cache = useUserCacheEntryOnce<MyUIMessage[]>(cacheKey);
+  const previousMessagesRef = useRef<MyUIMessage[]>([]);
 
   const cacheLayerRaw = useMemo(
     () => normalizeMessages(cache.snapshot ?? [], { debugLabel: "cache" }),
@@ -493,6 +601,22 @@ export function useMessages({
     [baseLayer, resumedLayer, httpLayer]
   );
 
+  const referentialStabilityDisabled = isReferentialStabilityDisabled();
+
+  const stableMessages = useMemo(() => {
+    if (referentialStabilityDisabled) {
+      previousMessagesRef.current = messages;
+      return messages;
+    }
+
+    const reconciled = reconcileMessageReferences(
+      previousMessagesRef.current,
+      messages
+    );
+    previousMessagesRef.current = reconciled;
+    return reconciled;
+  }, [messages, referentialStabilityDisabled]);
+
   const isQueryPending = isSkip
     ? false
     : paginatedMessages.isPending || resumedMessages.isPending;
@@ -503,12 +627,12 @@ export function useMessages({
 
   useEffect(() => {
     if (isSkip) return;
-    cache.set(messages.slice(-10));
-  }, [isSkip, messages, cache.set]);
+    cache.set(stableMessages.slice(-10));
+  }, [isSkip, stableMessages, cache.set]);
 
   return useMemo(
     () => ({
-      messages,
+      messages: stableMessages,
       isPending,
       isLoading,
       isStale,
@@ -519,7 +643,7 @@ export function useMessages({
       revertOptimisticPatch,
     }),
     [
-      messages,
+      stableMessages,
       isPending,
       isLoading,
       isStale,
@@ -533,8 +657,14 @@ export function useMessages({
 }
 
 function compareMessages(a: MyUIMessage, b: MyUIMessage) {
-  return (
-    (a.metadata?.createdAt ?? Date.now()) -
-    (b.metadata?.createdAt ?? Date.now())
-  );
+  const createdAtA = a.metadata?.createdAt ?? 0;
+  const createdAtB = b.metadata?.createdAt ?? 0;
+  if (createdAtA !== createdAtB) return createdAtA - createdAtB;
+
+  const updatedAtA = a.metadata?.updatedAt ?? 0;
+  const updatedAtB = b.metadata?.updatedAt ?? 0;
+  if (updatedAtA !== updatedAtB) return updatedAtA - updatedAtB;
+
+  if (a.id === b.id) return 0;
+  return a.id < b.id ? -1 : 1;
 }

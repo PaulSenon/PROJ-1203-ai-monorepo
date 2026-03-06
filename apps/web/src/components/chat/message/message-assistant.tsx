@@ -1,8 +1,5 @@
-import type {
-  MyUIMessage,
-  MyUIMessageMetadata,
-} from "@ai-monorepo/ai/types/uiMessage";
-import { type ComponentProps, useMemo } from "react";
+import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
+import type { ComponentProps } from "react";
 import { Message } from "@/components/ui-custom/chat/message";
 import { cn } from "@/lib/utils";
 import { useMessageActions } from "./_hooks/use-message-actions";
@@ -53,21 +50,6 @@ function shouldShowThinking(message: MyUIMessage) {
   return true;
 }
 
-function useMessageDatasourceDebugger(metadata?: MyUIMessageMetadata) {
-  const dataSource = metadata?.debug?.dataSource;
-
-  const className = useMemo(() => {
-    if (dataSource === "cache") return "border-l border-yellow-500 p-2";
-    if (dataSource === "convex-persisted")
-      return "border-l border-orange-500 p-2";
-    if (dataSource === "optimistic") return "border-l border-purple-500 p-2";
-    if (dataSource === "http-stream") return "border-l border-green-500 p-2";
-    if (dataSource === "convex-stream") return "border-l border-blue-500 p-2";
-  }, [dataSource]);
-
-  return className;
-}
-
 export function ChatMessageAssistant({
   message,
   reasoningPreviewLines,
@@ -87,9 +69,6 @@ export function ChatMessageAssistant({
     message.metadata?.liveStatus === "pending" ||
     message.metadata?.liveStatus === "streaming";
 
-  // TODO: for debug purpose only, hide behind flag
-  const debugClass = useMessageDatasourceDebugger(message.metadata);
-
   return (
     <div
       className={cn(
@@ -100,7 +79,7 @@ export function ChatMessageAssistant({
       {...props}
     >
       <Message.Root className="w-full max-w-full" from="assistant">
-        <Message.Content className={cn(debugClass)} variant="assistant">
+        <Message.Content variant="assistant">
           {showThinking ? <Message.Thinking /> : null}
           <MessageContentParts
             consolidate={consolidate}

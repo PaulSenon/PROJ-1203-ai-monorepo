@@ -1,178 +1,154 @@
-# PRD - LegendList Virtualization (Sidebar First, Conversation Second)
+# PRD - Chat Referential Stability + Tail-Aware Virtualization + Bottom Scroll Reliability
 
 ## Problem Statement
 
-Chat MVP needs invisible virtualization quality, but current list strategy is split and fragile:
+Current work solved core stale-to-fresh flicker/selection risk, but introduced 2 regressions:
 
-- Sidebar uses pseudo-virtualization (`content-visibility` + React `Activity`) instead of true range virtualization.
-- Conversation renders full message list in window scroll; older-message pagination is available in data layer but not wired to UI boundary triggers.
-- Scroll behavior has strict UX constraints (open behavior, submit auto-scroll, streaming growth, prepend stability) that must remain deterministic.
+1. **Reserve-space stickiness bug**
+   - `itemsAreEqual` uses strict ref equality only.
+   - Last-row UI depends on `index` + list length.
+   - When old last assistant moves out of last position but object ref is reused, row may not re-render and keeps reserve min-height incorrectly.
 
-If we keep current approach as list sizes grow, we risk INP regressions, missed pagination triggers, and visible scroll instability.
+2. **Scroll-to-bottom reliability bug**
+   - Scroll action currently aligns bottom probe to top viewport, not true container end.
+   - With dynamic tail spacing + virtualization, button and submit auto-scroll can land short of bottom or feel broken.
 
-## Solution
+These regressions conflict with MVP UX goals and acceptance around deterministic chat behavior.
 
-Adopt LegendList in 2 phases with strict anti-feature-creep scope:
+## Goals
 
-1. **Phase A: Sidebar**
-   - Replace pseudo-virtualization with true LegendList virtualization in existing sidebar scroll container.
-   - Keep existing sidebar UX shell (header/footer overlays, mobile persisted mount behavior, deferred thread input).
-   - Preserve stable behavior for active row, context menu interactions, and top insertions.
+1. Keep stale-to-fresh referential stability and selection preservation.
+2. Guarantee reserve-space only applies to current last assistant row.
+3. Guarantee "scroll to bottom" reaches real bottom of active scroll container.
+4. Keep implementation minimal and scoped (no data-layer redesign).
 
-2. **Phase B: Conversation**
-   - Replace plain message mapping with LegendList window-scroll virtualization.
-   - Keep current business UX rules (optimistic assistant shell, reserve-space latch).
-   - Add reliable top-boundary load-more for older messages.
-   - Keep deterministic submit-to-bottom and stable viewport during prepend/append/stream growth.
+## Non-Goals
 
-> IMPORTANT: we skip phase A for now. We only want to do phase B (conversation virtualization.)
+1. New anchor strategies (last-read, semantic anchor restore).
+2. Full conversation virtualization redesign.
+3. New debug UI features.
+4. Broad interaction redesign.
 
-Library truth source for this work: local reverse-engineered LegendList source/docs already captured in project planning docs.
+## Decisions
 
-## User Stories
+1. **Tail-aware `itemsAreEqual` (required)**
+   - Keep structural-sharing optimization for most rows.
+   - Force re-render for tail-sensitive indices where UI depends on index/length.
+   - Tail-sensitive window size: `2` rows (old-last + new-last).
 
-1. As a chat user, I want sidebar scrolling to stay smooth with long history, so navigation feels instant.
-2. As a chat user, I want thread list pagination to always trigger at the bottom boundary, so history never gets stuck.
-3. As a chat user, I want no blank holes or jump artifacts while scrolling sidebar, so UI feels native.
-4. As a chat user, I want active thread highlighting and selection behavior unchanged after virtualization.
-5. As a chat user, I want mobile drawer/sheet behavior unchanged, so touch UX stays consistent.
-6. As a chat user, I want conversation open behavior deterministic, so I resume context immediately.
-7. As a chat user, I want submit to always bring me to latest exchange, so I can follow answer flow.
-8. As a chat user, I want no autonomous viewport movement when I scroll away from bottom during streaming.
-9. As a chat user, I want streaming growth to avoid visual jitter, so reading stays comfortable.
-10. As a chat user, I want older messages to load reliably when reaching top boundary, so full history is reachable.
-11. As a chat user, I want prepend loading to preserve my current viewport position, so context does not shift.
-12. As a chat user, I want scroll-to-bottom affordance behavior unchanged in intent, so controls stay predictable.
-13. As a developer, I want one clear virtualization source of truth per surface, so list behavior is maintainable.
-14. As a developer, I want deterministic load-more gating, so fast scroll cannot miss or spam requests.
-15. As a developer, I want no RAF/timeout correction loops for core scroll behavior, so architecture stays clean.
-16. As a maintainer, I want phased rollout with hard QA gates, so risk is controlled.
+   Comparator contract:
 
-## 'Polishing' Requirements
+   ```ts
+   const TAIL_SENSITIVE_COUNT = 2;
 
-1. No visible virtualization artifacts (blank, flash, jump-correction feel).
-2. Sidebar and conversation interaction smoothness at least equal to current baseline.
-3. Open/submit/stream/prepend feel deterministic on desktop and mobile.
-4. Existing visual polish (header/footer overlays, sticky input, spacing rhythm) preserved.
-5. Keyboard/focus/context-menu semantics unchanged.
-6. Debug logs and temporary instrumentation removed before merge.
+   function areMessagesEqual(prev, next, index, data) {
+     if (prev !== next) return false;
+     const tailStart = Math.max(0, data.length - TAIL_SENSITIVE_COUNT);
+     if (index >= tailStart) return false; // force refresh tail rows
+     return true;
+   }
+   ```
 
-## Implementation Decisions
+2. **Reserve latch policy unchanged**
+   - Keep ref-backed one-way latch in thread session.
+   - Reset only by thread remount key.
+   - No new state machine.
 
-1. **Phased execution (hard gate)**
-   - Phase A sidebar shipped and QA-signed before Phase B conversation starts.
+3. **Bottom scroll semantic: true end**
+   - `scrollToBottom` must scroll to container max offset (document/custom container), not probe-top alignment.
+   - Keep `scrollToCheckpoint` unchanged.
+   - Use `instant` on submit auto-scroll and bottom button for reliability first.
 
-2. **Dependency decision**
-   - Add LegendList web package usage and retire current virtualization placeholder dependency for this surface.
+4. **Submit auto-scroll timing**
+   - Keep existing "wait until last item rendered" pipeline.
+   - Only change final action target/behavior (`scrollToBottom("instant")`).
 
-3. **Sidebar virtualization module design**
-   - Introduce a sidebar virtual list controller that owns:
-     - LegendList props configuration,
-     - key extraction policy,
-     - bottom boundary load-more callback,
-     - request dedupe/in-flight guard,
-     - top-insert stability policy.
-   - Keep existing sidebar composition shell unchanged (provider, overlays, mobile persisted behavior).
+## Implementation Plan
 
-4. **Sidebar row rendering policy**
-   - Keep existing thread row component and interaction logic.
-   - Remove pseudo-virtual row mechanics from row path (`content-visibility` event gating and React `Activity` row hiding).
-   - Keep non-conflicting lightweight CSS containment where beneficial.
+### 1) Fix tail stale-row rendering
 
-5. **Sidebar boundary trigger policy**
-   - Use LegendList end-threshold callback as primary trigger.
-   - Add app-level gating to enforce: one in-flight load per boundary cycle, no duplicate bursts, no missed retry after settle.
+File: `apps/web/src/components/chat/conversation/_parts/messages-list.tsx`
 
-6. **Conversation virtualization module design**
-   - Introduce a conversation window-virtual controller that owns:
-     - LegendList window-scroll config,
-     - list imperative handle integration,
-     - bottom-state signal derivation,
-     - prepend/append/stream anchor policy,
-     - top-boundary pagination trigger policy.
-   - Keep conversation L3 adapter/layout split; virtualization lives in layout boundary.
+- Replace current 2-arg comparator with 4-arg tail-aware comparator.
+- Keep `itemsAreEqual` enabled.
+- Do not change keyExtractor or list identity model.
+- Keep reserve class logic unchanged; rely on guaranteed tail re-render to recompute.
 
-7. **Conversation behavior policy (LegendList)**
-   - Use window scroll mode with end alignment.
-   - Use initial end positioning strategy from list config (not manual probe scroll).
-   - Use maintain-at-end behavior for append/stream updates only when user is near end.
-   - Use maintain-visible-content-position with data+size stability for prepend and size changes.
+### 2) Fix bottom scroll behavior
 
-8. **Submit/open scroll policy**
-   - Submit intent continues to trigger explicit programmatic scroll-to-end once intent message is committed.
-   - Initial open uses list initial positioning; no RAF/timeout settle loops.
-   - If initial convergence still shows one-frame instability, allow explicit short stabilization-hidden state with deterministic reveal condition (no timer fallback).
+File: `apps/web/src/components/ui-custom/chat/hooks/use-scroll-to-bottom.tsx`
 
-9. **Conversation pagination wiring decision**
-   - Wire real top-boundary load-more to existing paginated messages source now (not mocked callback).
-   - Extend active-thread message state contract to expose older-history pagination controls/status required by UI.
+- Reintroduce/implement `scrollContainerToEnd(container, behavior)`.
+- Update provider `scrollToBottom` to call container-end function.
+- Update standalone hook `scrollToBottom` similarly.
+- Keep checkpoint flow using probe alignment API.
 
-10. **Bottom-state source migration**
-    - Replace probe-based bottom visibility as primary source for conversation controls with virtualizer-aware state derived from list handle/state.
-    - Keep user-facing behavior equivalent.
+### 3) Apply instant behavior on user-facing triggers
 
-11. **Data and key invariants**
-    - Message/thread item keys remain stable UUIDs.
-    - No index keys.
-    - If any in-place array mutation is introduced later, explicit data-version invalidation is required.
+Files:
+- `apps/web/src/components/chat/chat.tsx`
+- `apps/web/src/components/chat/conversation/conversation-layout.tsx`
 
-12. **Risk management**
-    - No broad refactor of chat data-layer shape in this PRD.
-    - No redesign of message/sidebar UI structure.
-    - Keep changes concentrated in list rendering + pagination control boundaries.
+- Scroll button click -> `scrollToBottom("instant")`.
+- Submit auto-scroll callback -> `scrollToBottom("instant")`.
 
-## Testing Decisions
+### 4) Keep referential-stability core unchanged
 
-1. **Test quality bar**
-   - Validate external behavior, not implementation internals.
-   - Focus on user-visible stability and pagination correctness.
+File: `apps/web/src/hooks/use-messages.tsx`
 
-2. **Automated checks in scope**
-   - Run `pnpm run check-types` after each phase.
+- No architecture change in reconcile pipeline.
+- No change to semantic equality boundary in this slice.
+- No change to rollback flag.
 
-3. **Manual QA ownership**
-   - User runs manual QA; implementation handoff must include explicit scenario checklist and pass criteria.
+## Testing Plan
 
-4. **Sidebar QA checklist**
-   - Long history fast scroll down/up; confirm no blank/jump artifacts.
-   - Repeated bottom reaches; confirm load-more always fires when needed.
-   - Confirm duplicate call prevention while load in-flight.
-   - Validate active row + context menu + desktop/mobile sidebar behaviors unchanged.
+### Automated
 
-5. **Conversation QA checklist**
-   - Open long thread; confirm deterministic initial anchor behavior.
-   - Submit repeatedly; confirm each submit reaches end deterministically.
-   - Scroll away from end during streaming; confirm no autonomous movement.
-   - Reach top repeatedly; confirm older-history load-more reliability.
-   - During prepend loads, confirm viewport pixel-stable (no visible jump).
-   - Validate scroll-to-bottom control behavior parity.
+- Run: `pnpm run check-types -F web`
 
-6. **QA report format required from user**
-   - scenario, expected, observed, pass/fail, notes (optionally video).
+### Manual QA matrix
 
-## Out of Scope
+1. **Tail reserve correctness**
+   - Send message while prior assistant exists.
+   - Verify only current last assistant has reserve min-height.
+   - Verify prior assistant drops reserve immediately when no longer last.
 
-1. Full scroll restoration across route/app reload.
-2. Virtualization rollout to other surfaces.
-3. Full chat architecture/data pipeline rewrite.
-4. Visual redesign of sidebar/message components.
-5. New non-virtualization features.
+2. **Button scroll**
+   - Scroll mid-thread, click bottom button.
+   - Must end at true window bottom every time.
 
-## Further Notes
+3. **Submit scroll**
+   - Submit from mid-thread and near-bottom.
+   - Must end at true window bottom on each submit.
 
-1. This PRD intentionally keeps scope tight to MVP-critical virtualization correctness.
-2. LegendList defaults/behaviors must follow local reverse-engineered documentation already produced for this repo context.
-3. If any rule here conflicts with MVP anchor policy decisions, anchor policy must be resolved first before coding conversation phase.
+4. **Stale-to-fresh stability**
+   - Select text before persisted handoff.
+   - Run 20 transitions.
+   - Acceptance: 0 selection drops, 0 unchanged-message flickers.
 
-## Unresolved Questions
+5. **Cross-browser**
+   - Chromium + WebKit pass for above cases.
 
-- Initial open anchor final rule: force end always, or restore alternate anchor (last-read / last-user) when available?
-  - => for now, force end always.
-- If alternate anchor is desired later, should this PRD still ship force-end now as MVP baseline?
-  - => force-end.
+## Acceptance Criteria
 
-## Resources
+1. Tail reserve bug fixed: no stale reserve on non-last messages.
+2. Scroll button always reaches true bottom.
+3. Submit auto-scroll always reaches true bottom.
+4. Existing stale-to-fresh selection/flicker guarantees preserved.
+5. No regression in load-more, stream render, or ordering behavior.
 
-- You must always read this documentation first: @.llms/plan/virtualization/0-legendlist-documentation.md
-- If adhoc need of specific deeper answers, you must then ask a sub-agent to browser source code at: @.llms/git-references/legendlist for legendlist source code and examples and git history (browse with sub-agent) (N.B. the react web part is not documented and is the only part we care about (the lib cas initially designed for react native))
-- DO NOT use web or context7 for legendlist related question. The library is in beta and undocumented yet.
+## Risks + Mitigations
+
+1. **Risk:** Tail forced re-render increases work slightly.
+   - **Mitigation:** Limit to last 2 rows only.
+
+2. **Risk:** Instant scroll may feel abrupt.
+   - **Mitigation:** Ship instant first for correctness; revisit smooth once stable.
+
+3. **Risk:** Different container modes behave differently.
+   - **Mitigation:** Explicit branch logic for document vs custom container.
+
+## Rollback
+
+- Fast rollback: remove tail-aware forcing and/or disable referential-stability via existing localStorage flag if critical issue appears.
+- Scroll rollback: switch triggers back to previous behavior while keeping submit pipeline intact.
