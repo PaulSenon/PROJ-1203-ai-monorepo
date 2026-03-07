@@ -1,5 +1,6 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import {
+  type AlwaysRenderConfig,
   LegendList,
   type LegendListRef,
   type LegendListRenderItemProps,
@@ -23,6 +24,22 @@ export type ConversationMessagesListProps = {
   onStartReached?: () => void;
   onEndReached?: () => void;
 };
+
+const ALWAYS_RENDER_CONFIG: AlwaysRenderConfig = {
+  bottom: 2,
+};
+
+function SeparatorComponent() {
+  return <div className="h-10" />;
+}
+
+function messageKeyExtractor(message: MyUIMessage) {
+  return message.id;
+}
+
+function messageTypeExtractor(message: MyUIMessage) {
+  return message.role;
+}
 
 export function ConversationMessagesList({
   messages,
@@ -113,11 +130,13 @@ export function ConversationMessagesList({
       const shouldReserveForAssistant = item.role === "assistant" && isDynamic;
 
       return (
-        <div className={cn(!isLast && "pb-10")} key={item.id}>
+        <div
+          className={cn(
+            shouldReserveForAssistant && "min-h-[calc(100vh-20rem)]"
+          )}
+          key={item.id}
+        >
           <ChatMessage
-            className={cn(
-              shouldReserveForAssistant && "min-h-[calc(100vh-20rem)]"
-            )}
             consolidate={!isDynamic}
             enableCodeHighlighting={true} // TODO: how to handle isReady reactivity here ???
             message={item}
@@ -135,17 +154,20 @@ export function ConversationMessagesList({
       <ScrollEdgeProbe ref={topRef} />
       <LegendList<MyUIMessage>
         alignItemsAtEnd
+        alwaysRender={ALWAYS_RENDER_CONFIG}
         data={messages}
+        getItemType={messageTypeExtractor}
+        ItemSeparatorComponent={SeparatorComponent}
         initialScrollAtEnd
-        keyExtractor={(message) => message.id}
-        maintainVisibleContentPosition={true}
+        keyExtractor={messageKeyExtractor}
+        maintainVisibleContentPosition
         onLayout={handleLayout}
         recycleItems
         ref={listRef}
         renderItem={renderItem}
         suggestEstimatedItemSize
         useWindowScroll
-        waitForInitialLayout={true}
+        waitForInitialLayout
       />
       <ScrollEdgeProbe ref={bottomRef} />
     </>
