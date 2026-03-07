@@ -1,5 +1,5 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Conversation } from "@/components/ui-custom/chat/conversation";
 import {
   useScrollToBottomActions,
@@ -7,10 +7,7 @@ import {
 } from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
 import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
 import { cn } from "@/lib/utils";
-import {
-  ConversationMessagesList,
-  type EnrichedLegendListRef,
-} from "./_parts/messages-list";
+import { ConversationMessagesList } from "./_parts/messages-list";
 
 export type ChatConversationLayoutProps = {
   messages: MyUIMessage[];
@@ -25,7 +22,6 @@ export function ChatConversationLayout({
   pendingAutoScrollMessageId,
   onStartReached,
 }: ChatConversationLayoutProps) {
-  const listRef = useRef<EnrichedLegendListRef | null>(null);
   const { bottomRef } = useScrollToBottomState();
   const { scrollToBottom } = useScrollToBottomActions();
 
@@ -33,15 +29,12 @@ export function ChatConversationLayout({
     isThreadSettled,
   });
 
-  useOnSubmitMessageLayoutEffect({
-    // TODO: make this var name more self explanatory (hard to grasp what it is for here...)
-    pendingAutoScrollMessageId, // this update when a new message append needs scroll to bottom
+  const {
+    pendingAutoScrollTargetId,
+    handlePendingAutoScrollTargetLayout,
+  } = useOnSubmitMessageLayoutEffect({
+    pendingAutoScrollMessageId,
     messages,
-    // TODO: Find lest hacky way to delay scroll when layout contain last message after submit
-    waitForUiLayout: async (id: string) =>
-      new Promise((resolve) => {
-        listRef.current?.onceLastItemKey(id, resolve);
-      }),
     callback: scrollToBottom,
   });
 
@@ -53,9 +46,10 @@ export function ChatConversationLayout({
     >
       <Conversation.List>
         <ConversationMessagesList
-          listRef={listRef}
           messages={messages}
           onStartReached={onStartReached}
+          onPendingAutoScrollTargetLayout={handlePendingAutoScrollTargetLayout}
+          pendingAutoScrollTargetId={pendingAutoScrollTargetId}
           shouldReserveLastAssistantSpace={shouldReserveLastAssistantSpace}
         />
       </Conversation.List>
@@ -93,47 +87,47 @@ function useShouldReserveLastAssistantSpace({
 }
 
 /**
- * Business rule to detect when a new submitted message has been rendered.
- * This hook guarantee to run callback right before new submitted message paint.
+ * Business rule to detect when a new submitted message has been rendered with
+ * its assistant follower (optimistic shell or first assistant message).
  *
- * Currently hacky because since we use a virtualizer, detecting message contains the last commit id isn't sufficient.
- * So instead I plugged a hacky way to await for a callback for when the last key of virtualizer eventually match
- * the mast message id. This must be refactored because quite unreadable and error prone.
+ * We scroll only once the message immediately after the submitted user message
+ * has mounted, which is the first moment where the submit append is complete.
  */
 function useOnSubmitMessageLayoutEffect({
   pendingAutoScrollMessageId,
   messages,
-  waitForUiLayout,
   callback,
 }: {
   pendingAutoScrollMessageId: string | undefined;
   messages: MyUIMessage[];
-  waitForUiLayout: (id: string) => Promise<void>;
   callback: () => void;
 }) {
   const lastHandledIntentIdRef = useRef<string | undefined>(undefined);
-  const tailMessageId = messages.at(-1)?.id;
-  // const beforeTailMessageId = messages.at(-2)?.id;
-  const raceConditionId = useRef<string>(null);
+  const pendingAutoScrollTargetId = useMemo(() => {
+    if (!pendingAutoScrollMessageId) return undefined;
 
-  useLayoutEffect(() => {
-    if (!pendingAutoScrollMessageId) return;
-    if (lastHandledIntentIdRef.current === pendingAutoScrollMessageId) return;
-    if (tailMessageId === undefined) return;
+    const submittedMessageIndex = messages.findIndex(
+      (message) => message.id === pendingAutoScrollMessageId
+    );
+    if (submittedMessageIndex === -1) return undefined;
 
-    // Scroll only when submit intent exists and message is committed at list tail.
-    // const hasIntentMessageInTail =
-    //   tailMessageId === pendingAutoScrollMessageId ||
-    //   beforeTailMessageId === pendingAutoScrollMessageId;
-    // if (!hasIntentMessageInTail) return;
+    return messages[submittedMessageIndex + 1]?.id;
+  }, [messages, pendingAutoScrollMessageId]);
 
-    raceConditionId.current = pendingAutoScrollMessageId;
-    (async () => {
-      await waitForUiLayout(tailMessageId);
-      if (raceConditionId.current !== pendingAutoScrollMessageId) return;
+  const handlePendingAutoScrollTargetLayout = useCallback(
+    (renderedMessageId: string) => {
+      if (!pendingAutoScrollMessageId) return;
+      if (lastHandledIntentIdRef.current === pendingAutoScrollMessageId) return;
+      if (pendingAutoScrollTargetId !== renderedMessageId) return;
+
       callback();
-    })();
+      lastHandledIntentIdRef.current = pendingAutoScrollMessageId;
+    },
+    [callback, pendingAutoScrollMessageId, pendingAutoScrollTargetId]
+  );
 
-    lastHandledIntentIdRef.current = pendingAutoScrollMessageId;
-  }, [pendingAutoScrollMessageId, tailMessageId, callback, waitForUiLayout]);
+  return {
+    pendingAutoScrollTargetId,
+    handlePendingAutoScrollTargetLayout,
+  };
 }

@@ -5,7 +5,14 @@ import {
   type LegendListRef,
   type LegendListRenderItemProps,
 } from "@legendapp/list/react";
-import { type RefObject, useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { ChatMessage } from "@/components/chat/message/message";
 import {
   ScrollEdgeProbe,
@@ -13,14 +20,11 @@ import {
 } from "@/hooks/utils/use-scroll-edges";
 import { cn } from "@/lib/utils";
 
-export type EnrichedLegendListRef = LegendListRef & {
-  onceLastItemKey: (key: string, callback: () => unknown) => void;
-};
-
 export type ConversationMessagesListProps = {
   messages: MyUIMessage[];
   shouldReserveLastAssistantSpace: boolean;
-  listRef: RefObject<EnrichedLegendListRef | null>;
+  pendingAutoScrollTargetId?: string;
+  onPendingAutoScrollTargetLayout?: (id: string) => void;
   onStartReached?: () => void;
   onEndReached?: () => void;
 };
@@ -44,13 +48,14 @@ function messageTypeExtractor(message: MyUIMessage) {
 export function ConversationMessagesList({
   messages,
   shouldReserveLastAssistantSpace,
+  pendingAutoScrollTargetId,
+  onPendingAutoScrollTargetLayout,
   onStartReached,
   onEndReached,
-  listRef,
 }: ConversationMessagesListProps) {
   const isReady = useRef(false);
   const consolidatedMessageIdsRef = useRef<Set<string>>(new Set());
-  // const listRef = useRef<EnrichedLegendListRef | null>(null);
+  const listRef = useRef<LegendListRef | null>(null);
   const messagesRef = useRef(messages);
   const handleStartReached = useCallback(() => {
     if (!isReady.current) return;
@@ -96,43 +101,6 @@ export function ConversationMessagesList({
     return consolidatedIds;
   }, [lastMessageId, messages, shouldReserveLastAssistantSpace]);
 
-  // TODO wire onStart and onEnd observers
-  const observers = useRef<Map<string, ((id: string) => void)[]>>(null);
-  if (observers.current === null) {
-    observers.current = new Map();
-  }
-
-  useEffect(() => {
-    if (listRef.current === null) return;
-    listRef.current.onceLastItemKey = (
-      key: string,
-      callback: () => unknown
-    ) => {
-      // if already present, trigger callback without subscribing
-      if (messagesRef.current.findLastIndex((m) => m.id === key) !== -1) {
-        console.log("LAST SHORTCUT", key);
-        callback();
-        return;
-      }
-      if (observers.current === null) return;
-      const obsForKey = observers.current.get(key) ?? [];
-
-      observers.current.set(key, [...obsForKey, callback]);
-    };
-    listRef.current.getState().listen("lastItemKeys", (keys) => {
-      for (const key of keys) {
-        for (const obs of observers.current?.get(key) ?? []) {
-          obs(key);
-          observers.current?.delete(key);
-        }
-      }
-      console.log("LAST ITEM KEYS", {
-        keys,
-        obs: observers.current?.entries(),
-      });
-    });
-  }, [listRef.current]);
-
   /**
    * Two little hacks here.
    * - we want initial scroll to be as window end, not list end
@@ -163,21 +131,22 @@ export function ConversationMessagesList({
       const shouldReserveForAssistant = shouldStreamMarkdown;
 
       return (
-        <div
-          className={cn(
-            shouldReserveForAssistant && "min-h-[calc(100vh-20rem)]"
-          )}
-          key={item.id}
-        >
-          <ChatMessage
-            consolidate={!shouldStreamMarkdown}
-            enableCodeHighlighting={true} // TODO: how to handle isReady reactivity here ???
-            message={item}
-          />
-        </div>
+        <ConversationMessageRow
+          consolidate={!shouldStreamMarkdown}
+          enableCodeHighlighting={true}
+          message={item}
+          onPendingAutoScrollTargetLayout={onPendingAutoScrollTargetLayout}
+          pendingAutoScrollTargetId={pendingAutoScrollTargetId}
+          shouldReserveForAssistant={shouldReserveForAssistant}
+        />
       );
     },
-    [consolidatedMessageIds, shouldReserveLastAssistantSpace]
+    [
+      consolidatedMessageIds,
+      onPendingAutoScrollTargetLayout,
+      pendingAutoScrollTargetId,
+      shouldReserveLastAssistantSpace,
+    ]
   );
 
   if (messages.length === 0) return null;
@@ -206,3 +175,43 @@ export function ConversationMessagesList({
     </>
   );
 }
+
+type ConversationMessageRowProps = {
+  message: MyUIMessage;
+  shouldReserveForAssistant: boolean;
+  consolidate: boolean;
+  enableCodeHighlighting: boolean;
+  pendingAutoScrollTargetId?: string;
+  onPendingAutoScrollTargetLayout?: (id: string) => void;
+};
+
+const ConversationMessageRow = memo(function _ConversationMessageRow({
+  message,
+  shouldReserveForAssistant,
+  consolidate,
+  enableCodeHighlighting,
+  pendingAutoScrollTargetId,
+  onPendingAutoScrollTargetLayout,
+}: ConversationMessageRowProps) {
+  const shouldNotifyPendingAutoScroll =
+    pendingAutoScrollTargetId === message.id &&
+    onPendingAutoScrollTargetLayout !== undefined;
+
+  useLayoutEffect(() => {
+    if (!shouldNotifyPendingAutoScroll) return;
+
+    onPendingAutoScrollTargetLayout(message.id);
+  }, [message.id, onPendingAutoScrollTargetLayout, shouldNotifyPendingAutoScroll]);
+
+  return (
+    <div
+      className={cn(shouldReserveForAssistant && "min-h-[calc(100vh-20rem)]")}
+    >
+      <ChatMessage
+        consolidate={consolidate}
+        enableCodeHighlighting={enableCodeHighlighting}
+        message={message}
+      />
+    </div>
+  );
+});
