@@ -68,6 +68,16 @@ export function ConversationMessagesList({
 
   messagesRef.current = messages;
 
+  useEffect(() => {
+    const currentMessageIds = new Set(messages.map((message) => message.id));
+
+    consolidatedMessageIdsRef.current = new Set(
+      [...consolidatedMessageIdsRef.current].filter((id) =>
+        currentMessageIds.has(id)
+      )
+    );
+  }, [messages]);
+
   const lastMessageId = messages.at(-1)?.id;
   const consolidatedMessageIds = useMemo(() => {
     const consolidatedIds = consolidatedMessageIdsRef.current;

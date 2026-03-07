@@ -5,6 +5,7 @@ import { cjk } from "@streamdown/cjk";
 import { createMathPlugin } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import { Streamdown } from "streamdown";
+import { useMemo } from "react";
 import { DEFAULT_TRUSTED_DOMAINS, resolveLinkKind } from "./link-policy";
 import { LinkSafetyModal } from "./link-safety-modal";
 import { workerCodePlugin } from "./worker-code-highlighter-plugin";
@@ -113,26 +114,31 @@ function BaseSmoothMarkdown({
   mode,
   trustedDomains,
 }: BaseSmoothMarkdownProps) {
+  const linkSafety = useMemo(
+    () => ({
+      enabled: true,
+      onLinkCheck: (url: string) => {
+        if (typeof window === "undefined") return false;
+        return (
+          resolveLinkKind(url, window.location.origin, trustedDomains) ===
+          "in_app"
+        );
+      },
+      renderModal: (props: Parameters<typeof LinkSafetyModal>[0]) => (
+        <LinkSafetyModal {...props} trustedDomains={trustedDomains} />
+      ),
+    }),
+    [trustedDomains]
+  );
+
   return (
     <Streamdown
       animated={STREAMDOWN_ANIMATED}
       caret="circle"
       className={className}
       controls={STREAMDOWN_CONTROLS}
-      isAnimating={isStreaming}
-      linkSafety={{
-        enabled: true,
-        onLinkCheck: (url) => {
-          if (typeof window === "undefined") return false;
-          return (
-            resolveLinkKind(url, window.location.origin, trustedDomains) ===
-            "in_app"
-          );
-        },
-        renderModal: (props) => (
-          <LinkSafetyModal {...props} trustedDomains={trustedDomains} />
-        ),
-      }}
+      isAnimating={mode === "streaming" && isStreaming}
+      linkSafety={linkSafety}
       mode={mode}
       plugins={
         enableCodeHighlighting
