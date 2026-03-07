@@ -34,6 +34,7 @@ export function ChatConversation() {
       messages={messages}
       onStartReached={handleStartReached}
       pendingAutoScrollMessageId={pendingAutoScrollMessageId}
+      threadUuid={uuid}
     />
   );
 }

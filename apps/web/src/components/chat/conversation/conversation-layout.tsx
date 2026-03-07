@@ -1,5 +1,5 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Conversation } from "@/components/ui-custom/chat/conversation";
 import {
   useScrollToBottomActions,
@@ -7,12 +7,14 @@ import {
 } from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
 import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
 import { cn } from "@/lib/utils";
+import { getOptimisticAssistantShellId } from "./_hooks/use-conversation-display-messages";
 import { ConversationMessagesList } from "./_parts/messages-list";
 
 export type ChatConversationLayoutProps = {
   messages: MyUIMessage[];
   isThreadSettled: boolean;
   pendingAutoScrollMessageId: string | undefined;
+  threadUuid: string;
   onStartReached?: () => void;
 };
 
@@ -20,6 +22,7 @@ export function ChatConversationLayout({
   messages,
   isThreadSettled,
   pendingAutoScrollMessageId,
+  threadUuid,
   onStartReached,
 }: ChatConversationLayoutProps) {
   const { bottomRef } = useScrollToBottomState();
@@ -36,6 +39,7 @@ export function ChatConversationLayout({
     pendingAutoScrollMessageId,
     messages,
     callback: scrollToBottom,
+    threadUuid,
   });
 
   return (
@@ -88,31 +92,48 @@ function useShouldReserveLastAssistantSpace({
 
 /**
  * Business rule to detect when a new submitted message has been rendered with
- * its assistant follower (optimistic shell or first assistant message).
+ * its deterministic optimistic assistant shell.
  *
- * We scroll only once the message immediately after the submitted user message
- * has mounted, which is the first moment where the submit append is complete.
+ * We only scroll when that shell exists and has committed to layout. If the
+ * shell is absent, we skip auto-scroll rather than guessing on a later message.
  */
 function useOnSubmitMessageLayoutEffect({
   pendingAutoScrollMessageId,
   messages,
   callback,
+  threadUuid,
 }: {
   pendingAutoScrollMessageId: string | undefined;
   messages: MyUIMessage[];
   callback: () => void;
+  threadUuid: string;
 }) {
   const lastHandledIntentIdRef = useRef<string | undefined>(undefined);
+  const pendingAutoScrollTargetIdRef = useRef<string | undefined>(undefined);
+  const pendingAutoScrollMessageIdRef = useRef<string | undefined>(undefined);
+  const scrollFrameRef = useRef<number | undefined>(undefined);
   const pendingAutoScrollTargetId = useMemo(() => {
     if (!pendingAutoScrollMessageId) return undefined;
 
-    const submittedMessageIndex = messages.findIndex(
-      (message) => message.id === pendingAutoScrollMessageId
+    const optimisticShellId = getOptimisticAssistantShellId(
+      threadUuid,
+      pendingAutoScrollMessageId
     );
-    if (submittedMessageIndex === -1) return undefined;
+    return messages.some((message) => message.id === optimisticShellId)
+      ? optimisticShellId
+      : undefined;
+  }, [messages, pendingAutoScrollMessageId, threadUuid]);
 
-    return messages[submittedMessageIndex + 1]?.id;
-  }, [messages, pendingAutoScrollMessageId]);
+  pendingAutoScrollTargetIdRef.current = pendingAutoScrollTargetId;
+  pendingAutoScrollMessageIdRef.current = pendingAutoScrollMessageId;
+
+  useEffect(() => {
+    return () => {
+      if (scrollFrameRef.current !== undefined) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
+    };
+  }, []);
 
   const handlePendingAutoScrollTargetLayout = useCallback(
     (renderedMessageId: string) => {
@@ -120,8 +141,23 @@ function useOnSubmitMessageLayoutEffect({
       if (lastHandledIntentIdRef.current === pendingAutoScrollMessageId) return;
       if (pendingAutoScrollTargetId !== renderedMessageId) return;
 
-      callback();
-      lastHandledIntentIdRef.current = pendingAutoScrollMessageId;
+      if (scrollFrameRef.current !== undefined) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
+
+      scrollFrameRef.current = requestAnimationFrame(() => {
+        scrollFrameRef.current = undefined;
+
+        if (pendingAutoScrollTargetIdRef.current !== renderedMessageId) return;
+        if (
+          lastHandledIntentIdRef.current === pendingAutoScrollMessageIdRef.current
+        ) {
+          return;
+        }
+
+        callback();
+        lastHandledIntentIdRef.current = pendingAutoScrollMessageIdRef.current;
+      });
     },
     [callback, pendingAutoScrollMessageId, pendingAutoScrollTargetId]
   );

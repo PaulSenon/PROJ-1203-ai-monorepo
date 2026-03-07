@@ -5,6 +5,13 @@ import {
   useActiveThreadState,
 } from "@/hooks/use-chat-active";
 
+export function getOptimisticAssistantShellId(
+  threadUuid: string,
+  userMessageId: string
+) {
+  return `assistant-shell:${threadUuid}:${userMessageId}`;
+}
+
 export function useConversationDisplayMessages() {
   const { isWaitingForFirstToken, uuid } = useActiveThreadState();
   const { messages } = useActiveThreadMessages();
@@ -14,7 +21,7 @@ export function useConversationDisplayMessages() {
 
     const lastUserMessageId = messages.at(-1)?.id ?? "pending";
     const optimisticAssistantShell = createOptimisticStepStartMessage(
-      `assistant-shell:${uuid}:${lastUserMessageId}`
+      getOptimisticAssistantShellId(uuid, lastUserMessageId)
     );
 
     return [...messages, optimisticAssistantShell];
