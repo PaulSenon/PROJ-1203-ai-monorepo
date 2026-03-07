@@ -38,7 +38,7 @@
     "@types/node": "^22.13.11",
     "alchemy": "catalog:",
     "husky": "^9.1.7",
-    "opencode-ai": "^1.2.20",
+    "opencode-ai": "^1.2.21",
     "tsdown": "catalog:",
     "turbo": "^2.5.4",
     "ultracite": "6.0.4"
