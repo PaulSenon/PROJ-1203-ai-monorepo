@@ -149,6 +149,21 @@ export type ReasoningPreviewProps = {
 
 const DEFAULT_PREVIEW_LINES = 2;
 const PREVIEW_LINE_HEIGHT_REM = 1.25;
+const MAX_PREVIEW_CHARS = 1200;
+
+function getBoundedPreviewText(text: string) {
+  if (text.length <= MAX_PREVIEW_CHARS) {
+    return {
+      text,
+      isTruncated: false,
+    };
+  }
+
+  return {
+    text: text.slice(-MAX_PREVIEW_CHARS).trimStart(),
+    isTruncated: true,
+  };
+}
 
 function ReasoningPreview({
   className,
@@ -157,6 +172,7 @@ function ReasoningPreview({
 }: ReasoningPreviewProps) {
   const { isOpen, isStreaming, disabled } = useReasoningContext();
   const text = children ?? "";
+  const preview = useMemo(() => getBoundedPreviewText(text), [text]);
 
   const hasText = text.trim().length > 0;
   const isCollapsed = !isOpen;
@@ -181,8 +197,11 @@ function ReasoningPreview({
   const observerReady =
     supportsIntersectionObserver && previewViewport !== null;
   const shouldObserveOverflowSentinel =
-    shouldRenderPreview && observerReady && !hasDetectedOverflow;
-  const showTopFade = hasDetectedOverflow;
+    shouldRenderPreview &&
+    observerReady &&
+    !preview.isTruncated &&
+    !hasDetectedOverflow;
+  const showTopFade = preview.isTruncated || hasDetectedOverflow;
   const previewStyle: ReasoningPreviewStyle = {
     "--reasoning-preview-lines": normalizedLines,
     "--reasoning-preview-line-height": `${PREVIEW_LINE_HEIGHT_REM}rem`,
@@ -218,7 +237,7 @@ function ReasoningPreview({
             root={previewViewport}
           />
         ) : null}
-        {text}
+        {preview.text}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import {
   type LegendListRef,
   type LegendListRenderItemProps,
 } from "@legendapp/list/react";
-import { type RefObject, useCallback, useEffect, useRef } from "react";
+import { type RefObject, useCallback, useEffect, useMemo, useRef } from "react";
 import { ChatMessage } from "@/components/chat/message/message";
 import {
   ScrollEdgeProbe,
@@ -49,6 +49,7 @@ export function ConversationMessagesList({
   listRef,
 }: ConversationMessagesListProps) {
   const isReady = useRef(false);
+  const consolidatedMessageIdsRef = useRef<Set<string>>(new Set());
   // const listRef = useRef<EnrichedLegendListRef | null>(null);
   const messagesRef = useRef(messages);
   const handleStartReached = useCallback(() => {
@@ -66,6 +67,24 @@ export function ConversationMessagesList({
   });
 
   messagesRef.current = messages;
+
+  const lastMessageId = messages.at(-1)?.id;
+  const consolidatedMessageIds = useMemo(() => {
+    const consolidatedIds = consolidatedMessageIdsRef.current;
+
+    for (const message of messages) {
+      const isStreamingLastAssistant =
+        shouldReserveLastAssistantSpace &&
+        message.role === "assistant" &&
+        message.id === lastMessageId;
+
+      if (!isStreamingLastAssistant) {
+        consolidatedIds.add(message.id);
+      }
+    }
+
+    return consolidatedIds;
+  }, [lastMessageId, messages, shouldReserveLastAssistantSpace]);
 
   // TODO wire onStart and onEnd observers
   const observers = useRef<Map<string, ((id: string) => void)[]>>(null);
@@ -126,8 +145,12 @@ export function ConversationMessagesList({
   const renderItem = useCallback(
     ({ item, index }: LegendListRenderItemProps<MyUIMessage>) => {
       const isLast = index === messagesRef.current.length - 1;
-      const isDynamic = isLast && shouldReserveLastAssistantSpace;
-      const shouldReserveForAssistant = item.role === "assistant" && isDynamic;
+      const shouldStreamMarkdown =
+        isLast &&
+        shouldReserveLastAssistantSpace &&
+        item.role === "assistant" &&
+        !consolidatedMessageIds.has(item.id);
+      const shouldReserveForAssistant = shouldStreamMarkdown;
 
       return (
         <div
@@ -137,14 +160,14 @@ export function ConversationMessagesList({
           key={item.id}
         >
           <ChatMessage
-            consolidate={!isDynamic}
+            consolidate={!shouldStreamMarkdown}
             enableCodeHighlighting={true} // TODO: how to handle isReady reactivity here ???
             message={item}
           />
         </div>
       );
     },
-    [shouldReserveLastAssistantSpace]
+    [consolidatedMessageIds, shouldReserveLastAssistantSpace]
   );
 
   if (messages.length === 0) return null;

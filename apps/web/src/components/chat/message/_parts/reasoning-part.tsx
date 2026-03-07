@@ -26,7 +26,6 @@ export const ReasoningPart = memo(function _ReasoningPart({
 }: ReasoningPartProps) {
   const isStreaming = part.state === "streaming";
   const text = part.text ?? "";
-  const deferredText = useDeferredValue(text);
   const hasText = NON_WHITESPACE_PATTERN.test(text);
 
   return (
@@ -39,19 +38,44 @@ export const ReasoningPart = memo(function _ReasoningPart({
       <Reasoning.Preview lines={previewLines}>{text}</Reasoning.Preview>
       <Reasoning.Content>
         {hasText ? (
-          <SmoothMarkdown
-            className={cn(
-              "text-muted-foreground text-sm",
-              MARKDOWN_OVERFLOW_GUARDS
-            )}
+          <DeferredReasoningMarkdown
             consolidate={consolidate}
             enableCodeHighlighting={enableCodeHighlighting}
             isStreaming={isStreaming}
-          >
-            {deferredText}
-          </SmoothMarkdown>
+            text={text}
+          />
         ) : null}
       </Reasoning.Content>
     </Reasoning.Root>
+  );
+});
+
+type DeferredReasoningMarkdownProps = {
+  text: string;
+  consolidate?: boolean;
+  enableCodeHighlighting?: boolean;
+  isStreaming: boolean;
+};
+
+const DeferredReasoningMarkdown = memo(function _DeferredReasoningMarkdown({
+  text,
+  consolidate,
+  enableCodeHighlighting,
+  isStreaming,
+}: DeferredReasoningMarkdownProps) {
+  const deferredText = useDeferredValue(text);
+
+  return (
+    <SmoothMarkdown
+      className={cn(
+        "text-muted-foreground text-sm",
+        MARKDOWN_OVERFLOW_GUARDS
+      )}
+      consolidate={consolidate}
+      enableCodeHighlighting={enableCodeHighlighting}
+      isStreaming={isStreaming}
+    >
+      {deferredText}
+    </SmoothMarkdown>
   );
 });

@@ -22,6 +22,28 @@ const streamdownPluginsWithCode = {
   code: workerCodePlugin,
 };
 
+const STREAMDOWN_ANIMATED = {
+  animation: "slideUp",
+  duration: 200,
+  easing: "ease-out",
+  sep: "word",
+} as const;
+
+const STREAMDOWN_CONTROLS = {
+  table: true,
+  code: true,
+  mermaid: {
+    download: true,
+    copy: true,
+    fullscreen: true,
+    panZoom: true,
+  },
+} as const;
+
+const STREAMDOWN_REMEND = {
+  linkMode: "text-only",
+} as const;
+
 export type SmoothMarkdownLinkPolicy = {
   trustedDomains?: string[];
 };
@@ -45,34 +67,59 @@ export function SmoothMarkdown({
   enableCodeHighlighting = true,
   consolidate,
 }: SmoothMarkdownProps) {
-  const [text] = useSmoothText(children, {
-    startStreaming: startStreaming ?? false,
-    charsPerSec: 200,
-  });
-
   const trustedDomains = linkPolicy?.trustedDomains ?? DEFAULT_TRUSTED_DOMAINS;
 
+  if (consolidate) {
+    return (
+      <BaseSmoothMarkdown
+        className={className}
+        enableCodeHighlighting={enableCodeHighlighting}
+        isStreaming={Boolean(isStreaming)}
+        mode="static"
+        trustedDomains={trustedDomains}
+      >
+        {children}
+      </BaseSmoothMarkdown>
+    );
+  }
+
+  return (
+    <StreamingSmoothMarkdown
+      className={className}
+      enableCodeHighlighting={enableCodeHighlighting}
+      isStreaming={Boolean(isStreaming)}
+      startStreaming={startStreaming}
+      trustedDomains={trustedDomains}
+    >
+      {children}
+    </StreamingSmoothMarkdown>
+  );
+}
+
+type BaseSmoothMarkdownProps = {
+  children: string;
+  className?: string;
+  enableCodeHighlighting: boolean;
+  isStreaming: boolean;
+  mode: "static" | "streaming";
+  trustedDomains: string[];
+};
+
+function BaseSmoothMarkdown({
+  children,
+  className,
+  enableCodeHighlighting,
+  isStreaming,
+  mode,
+  trustedDomains,
+}: BaseSmoothMarkdownProps) {
   return (
     <Streamdown
-      animated={{
-        animation: "slideUp",
-        duration: 200,
-        easing: "ease-out",
-        sep: "word",
-      }}
+      animated={STREAMDOWN_ANIMATED}
       caret="circle"
       className={className}
-      controls={{
-        table: true, // Show table download button
-        code: true, // Show code copy button
-        mermaid: {
-          download: true, // Show mermaid download button
-          copy: true, // Show mermaid copy button
-          fullscreen: true, // Show mermaid fullscreen button
-          panZoom: true, // Show mermaid pan/zoom controls
-        },
-      }}
-      isAnimating={Boolean(isStreaming)}
+      controls={STREAMDOWN_CONTROLS}
+      isAnimating={isStreaming}
       linkSafety={{
         enabled: true,
         onLinkCheck: (url) => {
@@ -86,17 +133,45 @@ export function SmoothMarkdown({
           <LinkSafetyModal {...props} trustedDomains={trustedDomains} />
         ),
       }}
-      mode={consolidate ? "static" : "streaming"}
+      mode={mode}
       plugins={
         enableCodeHighlighting
           ? streamdownPluginsWithCode
           : streamdownBasePlugins
       }
-      remend={{
-        linkMode: "text-only",
-      }}
+      remend={STREAMDOWN_REMEND}
+    >
+      {children}
+    </Streamdown>
+  );
+}
+
+type StreamingSmoothMarkdownProps = Omit<BaseSmoothMarkdownProps, "mode"> & {
+  startStreaming?: boolean;
+};
+
+function StreamingSmoothMarkdown({
+  children,
+  className,
+  enableCodeHighlighting,
+  isStreaming,
+  startStreaming,
+  trustedDomains,
+}: StreamingSmoothMarkdownProps) {
+  const [text] = useSmoothText(children, {
+    startStreaming: startStreaming ?? false,
+    charsPerSec: 200,
+  });
+
+  return (
+    <BaseSmoothMarkdown
+      className={className}
+      enableCodeHighlighting={enableCodeHighlighting}
+      isStreaming={isStreaming}
+      mode="streaming"
+      trustedDomains={trustedDomains}
     >
       {text}
-    </Streamdown>
+    </BaseSmoothMarkdown>
   );
 }
