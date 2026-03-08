@@ -96,7 +96,13 @@ function normalizeResumedMessages(
 function normalizeHttpMessages(
   messages: readonly MyUIMessage[] | undefined
 ): NormalizedMessages<"http-stream"> {
-  return normalizeAscendingMessages(messages, "http-stream");
+  return normalizeAscendingMessages(snapshotMessages(messages), "http-stream");
+}
+
+function snapshotMessages(messages: readonly MyUIMessage[] | undefined) {
+  if (!messages || messages.length === 0) return messages;
+
+  return structuredClone(messages) as MyUIMessage[];
 }
 
 function normalizeBaseMergedMessages(
