@@ -32,6 +32,9 @@ import { useChatNav } from "./use-chat-nav";
 import { useUserCacheEntryOnce } from "./use-user-cache";
 import { useFpsThrottledValue } from "./utils/use-fps-throttled-state";
 
+const EMPTY_CHAT_MESSAGES: MyUIMessage[] = [];
+Object.freeze(EMPTY_CHAT_MESSAGES);
+
 function useStreamingUiMessageChunks(threadUuid: string | "skip") {
   const isSkip = threadUuid === "skip";
 
@@ -659,7 +662,7 @@ export function UseChatProvider({ children }: { children: ReactNode }) {
       clearError: chatOutput.clearError,
       error: chatOutput.error,
       id: chatOutput.id,
-      messages: throttledSdkMessages ?? [],
+      messages: throttledSdkMessages ?? EMPTY_CHAT_MESSAGES,
       regenerate: chatOutput.regenerate,
       resumeStream: chatOutput.resumeStream,
       sendMessage: chatOutput.sendMessage,

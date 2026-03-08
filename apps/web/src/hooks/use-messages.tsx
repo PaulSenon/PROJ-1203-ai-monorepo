@@ -23,6 +23,7 @@ type NormalizedMessages<TSource extends string> = readonly MyUIMessage[] & {
 
 const EMPTY_NORMALIZED_MESSAGES = [] as const;
 const ENABLE_DEBUG_DATASOURCE = false;
+const NORMALIZATION_ORDER_SAMPLE_SIZE = 3;
 
 function emptyNormalizedMessages<
   TSource extends string,
@@ -98,7 +99,10 @@ function warnIfNotAscending(messages: readonly MyUIMessage[], label?: string) {
   if (!label) return;
   if (messages.length < 2) return;
 
-  const sampleCount = Math.min(messages.length - 1, 3);
+  const sampleCount = Math.min(
+    messages.length - 1,
+    NORMALIZATION_ORDER_SAMPLE_SIZE
+  );
   for (let i = 0; i < sampleCount; i++) {
     const prev = messages[i];
     const next = messages[i + 1];
@@ -269,13 +273,8 @@ function useStreamingUiMessageChunks(threadUuid: string | "skip") {
         { cursor, result }
       );
     }
-    if (result.delta.end <= cursor) return;
 
-    console.log("TOTO123: RECEIVED DELTA", {
-      cursor,
-      streamId: result.streamId,
-      delta: structuredClone(result.delta),
-    });
+    if (result.delta.end <= cursor) return;
 
     setUiMessageChunks((prev) =>
       result.delta ? prev.concat(result.delta.chunks) : prev
@@ -333,6 +332,7 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
 
     (async () => {
       const message = await createUiMessageFromChunks<MyUIMessage>(chunks);
+
       if (!message) return;
       if (cancelled) return;
       if (stream.streamId !== streamIdAtStart) return;
@@ -564,6 +564,7 @@ export function useMessages({
 
   useEffect(() => {
     if (isSkip) return;
+    // TODO perf: dedupe/throttle cache writes based on meaningful tail payload changes.
     cache.set(messages.slice(-10));
   }, [isSkip, messages, cache.set]);
 
