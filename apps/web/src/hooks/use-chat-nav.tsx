@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import React, {
   createContext,
   type ReactNode,
+  startTransition,
   useCallback,
   useContext,
   useDeferredValue,
@@ -106,10 +107,12 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
 
   const persistNewChatIdToUrl = useCallback(() => {
     if (deferredTargetRef.current.kind !== "new") return;
-    router.navigate({
-      replace: true,
-      to: "/chat/{-$id}",
-      params: { id: deferredTargetRef.current.id },
+    startTransition(() => {
+      router.navigate({
+        replace: true,
+        to: "/chat/{-$id}",
+        params: { id: deferredTargetRef.current.id },
+      });
     });
   }, [router]);
 
@@ -118,18 +121,22 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
     const nextTarget = createNewChatTarget(nextId);
     setNewThreadId(nextId);
     setInstantTarget(nextTarget);
-    router.navigate({
-      to: "/chat/{-$id}",
-      params: { id: undefined },
+    startTransition(() => {
+      router.navigate({
+        to: "/chat/{-$id}",
+        params: { id: undefined },
+      });
     });
   }, [router]);
 
   const openExistingChat = useCallback(
     (id: string) => {
       setInstantExistingChatTarget(id);
-      router.navigate({
-        to: "/chat/{-$id}",
-        params: { id },
+      startTransition(() => {
+        router.navigate({
+          to: "/chat/{-$id}",
+          params: { id },
+        });
       });
     },
     [router, setInstantExistingChatTarget]

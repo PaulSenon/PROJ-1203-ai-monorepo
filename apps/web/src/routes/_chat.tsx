@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { memo, useEffect } from "react";
 import { ChatSidebar } from "@/components/chat/sidebar/sidebar";
 import { ScrollToBottomProvider } from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
 import { ChatDraftProvider } from "@/hooks/use-chat-draft";
@@ -35,21 +35,21 @@ function PreloadCache() {
   return null;
 }
 
+const DeferredChatViewport = memo(function DeferredChatViewport() {
+  return (
+    <ChatProviders>
+      <Outlet />
+    </ChatProviders>
+  );
+});
+
 function RouteComponent() {
   return (
     <ChatNavProvider>
       <PreloadCache />
       <ChatSidebar>
-        <ChatProviders>
-          <Outlet />
-        </ChatProviders>
+        <DeferredChatViewport />
       </ChatSidebar>
-      {/* <main
-        className={cn("group/sidebar-wrapper relative w-full min-w-0 flex-1")}
-      >
-        <SidebarTrigger className="fixed top-3 top-safe-offset-2 left-3 z-50 flex bg-background-transparent p-4" />
-        <h1>Chat Layout</h1>
-      </main> */}
     </ChatNavProvider>
   );
 }

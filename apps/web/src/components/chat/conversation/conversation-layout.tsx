@@ -6,7 +6,6 @@ import {
   useScrollToBottomState,
 } from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
 import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
-import { useChatNavSwitching } from "@/hooks/use-chat-nav";
 import { cn } from "@/lib/utils";
 import {
   ConversationMessagesList,
@@ -61,21 +60,9 @@ export function ChatConversationLayout({
         />
       </Conversation.List>
 
-      <ConversationSwitchOverlay />
-
       <ScrollEdgeProbe ref={bottomRef} />
     </Conversation.Root>
   );
-}
-
-function ConversationSwitchOverlay() {
-  const isSwitching = useChatNavSwitching();
-
-  if (!isSwitching) {
-    return null;
-  }
-
-  return <div aria-hidden="true" className="absolute inset-0 z-20 bg-background/95" />;
 }
 
 /**

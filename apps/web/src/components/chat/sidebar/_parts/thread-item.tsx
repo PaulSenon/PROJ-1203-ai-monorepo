@@ -289,7 +289,7 @@ function ThreadItemRootImpl({
     [thread, actionHandlers]
   );
 
-  const handleLinkClickCapture = useCallback(
+  const handleLinkClick = useCallback(
     (event: ReactMouseEvent<HTMLAnchorElement>) => {
       if (event.defaultPrevented) return;
       if (event.button !== 0) return;
@@ -297,7 +297,8 @@ function ThreadItemRootImpl({
         return;
       }
 
-      chatNav.setInstantExistingChatTarget(thread.uuid);
+      event.preventDefault();
+      chatNav.openExistingChat(thread.uuid);
     },
     [chatNav, thread.uuid]
   );
@@ -314,7 +315,7 @@ function ThreadItemRootImpl({
               "group-data-[state=open]/cm:bg-sidebar-accent",
               isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
             )}
-            onClickCapture={handleLinkClickCapture}
+            onClick={handleLinkClick}
             params={{ id: thread.uuid }}
             to="/chat/{-$id}"
           >
