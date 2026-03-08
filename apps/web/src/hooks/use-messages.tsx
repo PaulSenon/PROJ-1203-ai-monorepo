@@ -22,6 +22,7 @@ type NormalizedMessages<TSource extends string> = readonly MyUIMessage[] & {
 };
 
 const EMPTY_NORMALIZED_MESSAGES = [] as const;
+const ENABLE_DEBUG_DATASOURCE = false;
 
 function emptyNormalizedMessages<
   TSource extends string,
@@ -184,6 +185,7 @@ function mergeMessageLayers(
 }
 
 function withDataSource(message: MyUIMessage, dataSource?: MessageDataSource) {
+  if (!ENABLE_DEBUG_DATASOURCE) return message;
   if (!dataSource) return message;
   const currentDataSource = message.metadata?.debug?.dataSource;
   if (currentDataSource === dataSource) return message;
