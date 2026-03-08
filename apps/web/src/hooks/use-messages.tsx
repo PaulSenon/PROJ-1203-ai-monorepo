@@ -4,6 +4,7 @@ import type {
   MyUIMessage,
   MyUIMessageChunk,
   MyUIMessageMetadata,
+  MyUIMessagePart,
 } from "@ai-monorepo/ai/types/uiMessage";
 import type { Id } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import dedent from "dedent";
@@ -268,30 +269,46 @@ function stabilizeMessage(prevMessage: MyUIMessage, nextMessage: MyUIMessage) {
   if (prevMessage === nextMessage) return prevMessage;
   if (prevMessage.id !== nextMessage.id) return nextMessage;
 
-  const metadata = stabilizeMetadata(
-    prevMessage.metadata,
-    nextMessage.metadata
-  );
-  const hasEqualNonMetadataFields = hasEqualMessageNonMetadataFields(
+  const hasEqualStaticFields = hasEqualMessageStaticFields(
     prevMessage,
     nextMessage
   );
 
-  if (hasEqualNonMetadataFields && metadata === prevMessage.metadata) {
+  if (
+    hasEqualStaticFields &&
+    prevMessage.parts === nextMessage.parts &&
+    prevMessage.metadata === nextMessage.metadata
+  ) {
     return prevMessage;
   }
 
-  if (metadata === nextMessage.metadata) {
+  const parts = stabilizeMessageParts(prevMessage.parts, nextMessage.parts);
+
+  const metadata = stabilizeMetadata(
+    prevMessage.metadata,
+    nextMessage.metadata
+  );
+
+  if (
+    hasEqualStaticFields &&
+    parts === prevMessage.parts &&
+    metadata === prevMessage.metadata
+  ) {
+    return prevMessage;
+  }
+
+  if (parts === nextMessage.parts && metadata === nextMessage.metadata) {
     return nextMessage;
   }
 
   return {
     ...nextMessage,
+    parts,
     metadata,
   } satisfies MyUIMessage;
 }
 
-function hasEqualMessageNonMetadataFields(
+function hasEqualMessageStaticFields(
   prevMessage: MyUIMessage,
   nextMessage: MyUIMessage
 ) {
@@ -301,33 +318,47 @@ function hasEqualMessageNonMetadataFields(
   const nextKeys = Object.keys(nextMessage);
 
   for (const key of prevKeys) {
-    if (key === "metadata") continue;
+    if (key === "metadata" || key === "parts") continue;
     if (!hasOwn(nextMessage, key)) return false;
     if (!Object.is(prevMessageRecord[key], nextMessageRecord[key]))
       return false;
   }
 
   for (const key of nextKeys) {
-    if (key === "metadata") continue;
+    if (key === "metadata" || key === "parts") continue;
     if (!hasOwn(prevMessage, key)) return false;
   }
 
   return true;
 }
 
+function stabilizeMessageParts(
+  prevParts: MyUIMessagePart[],
+  nextParts: MyUIMessagePart[]
+): MyUIMessagePart[] {
+  return stabilizeValue(prevParts, nextParts, "", {
+    shouldIgnorePath: neverIgnoreStabilizedPath,
+  }).value as MyUIMessagePart[];
+}
+
 function stabilizeMetadata(
   prevMetadata: MyUIMessageMetadata | undefined,
   nextMetadata: MyUIMessageMetadata | undefined
 ): MyUIMessageMetadata | undefined {
-  return stabilizeMetadataValue(prevMetadata, nextMetadata, "").value as
-    | MyUIMessageMetadata
-    | undefined;
+  return stabilizeValue(prevMetadata, nextMetadata, "", {
+    shouldIgnorePath: shouldIgnoreMetadataPath,
+  }).value as MyUIMessageMetadata | undefined;
 }
 
-function stabilizeMetadataValue(
+type StabilizeValueOptions = {
+  shouldIgnorePath(path: string): boolean;
+};
+
+function stabilizeValue(
   prevValue: unknown,
   nextValue: unknown,
-  path: string
+  path: string,
+  options: StabilizeValueOptions
 ): StabilizedValue<unknown> {
   if (Object.is(prevValue, nextValue)) {
     return {
@@ -336,7 +367,7 @@ function stabilizeMetadataValue(
     };
   }
 
-  if (shouldIgnoreMetadataPath(path)) {
+  if (options.shouldIgnorePath(path)) {
     // Intentional: ignored metadata paths keep the previous value/ref so they
     // do not trigger downstream rerenders on their own.
     if (prevValue === undefined) {
@@ -353,11 +384,11 @@ function stabilizeMetadataValue(
   }
 
   if (Array.isArray(prevValue) && Array.isArray(nextValue)) {
-    return stabilizeMetadataArray(prevValue, nextValue, path);
+    return stabilizeArrayValue(prevValue, nextValue, path, options);
   }
 
   if (isPlainObject(prevValue) && isPlainObject(nextValue)) {
-    return stabilizeMetadataObject(prevValue, nextValue, path);
+    return stabilizeObjectValue(prevValue, nextValue, path, options);
   }
 
   return {
@@ -366,10 +397,11 @@ function stabilizeMetadataValue(
   };
 }
 
-function stabilizeMetadataArray(
+function stabilizeArrayValue(
   prevValue: readonly unknown[],
   nextValue: readonly unknown[],
-  path: string
+  path: string,
+  options: StabilizeValueOptions
 ): StabilizedValue<readonly unknown[]> {
   if (prevValue.length !== nextValue.length) {
     return {
@@ -380,22 +412,37 @@ function stabilizeMetadataArray(
 
   let isEqual = true;
   let reusedNestedValue = false;
-  const stabilizedValues = nextValue.map((nextItem, index) => {
-    const stabilizedValue = stabilizeMetadataValue(
+  let stabilizedValues: unknown[] | null = null;
+
+  for (let index = 0; index < nextValue.length; index++) {
+    const nextItem = nextValue[index];
+
+    if (Object.is(prevValue[index], nextItem)) {
+      if (stabilizedValues) {
+        stabilizedValues.push(nextItem);
+      }
+      continue;
+    }
+
+    const nextStabilizedValue = stabilizeValue(
       prevValue[index],
       nextItem,
-      `${path}[${index}]`
+      `${path}[${index}]`,
+      options
     );
 
-    if (!stabilizedValue.isEqual) {
+    if (!nextStabilizedValue.isEqual) {
       isEqual = false;
     }
-    if (!Object.is(stabilizedValue.value, nextItem)) {
+    if (!Object.is(nextStabilizedValue.value, nextItem)) {
       reusedNestedValue = true;
     }
 
-    return stabilizedValue.value;
-  });
+    if (!stabilizedValues) {
+      stabilizedValues = nextValue.slice(0, index);
+    }
+    stabilizedValues.push(nextStabilizedValue.value);
+  }
 
   if (isEqual) {
     return {
@@ -412,34 +459,41 @@ function stabilizeMetadataArray(
   }
 
   return {
-    value: stabilizedValues,
+    value: stabilizedValues ?? nextValue,
     isEqual: false,
   };
 }
 
-function stabilizeMetadataObject(
+function stabilizeObjectValue(
   prevValue: Record<string, unknown>,
   nextValue: Record<string, unknown>,
-  path: string
+  path: string,
+  options: StabilizeValueOptions
 ): StabilizedValue<Record<string, unknown>> {
   let isEqual = true;
   let reusedNestedValue = false;
-  const stabilizedValue: Record<string, unknown> = {};
+  let stabilizedValue: Record<string, unknown> | null = null;
 
   for (const key of Object.keys(nextValue)) {
     const nextChild = nextValue[key];
     const childPath = path ? `${path}.${key}` : key;
 
     if (!hasOwn(prevValue, key)) {
+      stabilizedValue ??= { ...nextValue };
       stabilizedValue[key] = nextChild;
       isEqual = false;
       continue;
     }
 
-    const nextStabilizedValue = stabilizeMetadataValue(
+    if (Object.is(prevValue[key], nextChild)) {
+      continue;
+    }
+
+    const nextStabilizedValue = stabilizeValue(
       prevValue[key],
       nextChild,
-      childPath
+      childPath,
+      options
     );
 
     if (!nextStabilizedValue.isEqual) {
@@ -449,6 +503,7 @@ function stabilizeMetadataObject(
       reusedNestedValue = true;
     }
 
+    stabilizedValue ??= { ...nextValue };
     stabilizedValue[key] = nextStabilizedValue.value;
   }
 
@@ -456,7 +511,8 @@ function stabilizeMetadataObject(
     if (hasOwn(nextValue, key)) continue;
 
     const childPath = path ? `${path}.${key}` : key;
-    if (shouldIgnoreMetadataPath(childPath)) {
+    if (options.shouldIgnorePath(childPath)) {
+      stabilizedValue ??= { ...nextValue };
       stabilizedValue[key] = prevValue[key];
       reusedNestedValue = true;
       continue;
@@ -480,7 +536,7 @@ function stabilizeMetadataObject(
   }
 
   return {
-    value: stabilizedValue,
+    value: stabilizedValue ?? nextValue,
     isEqual: false,
   };
 }
@@ -489,12 +545,21 @@ function shouldIgnoreMetadataPath(path: string) {
   return METADATA_REF_IGNORE_PATHS.includes(path);
 }
 
+function neverIgnoreStabilizedPath() {
+  return false;
+}
+
 function hasOwn(value: object, key: string) {
   return Object.hasOwn(value, key);
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 type UseMessagesParams = {
