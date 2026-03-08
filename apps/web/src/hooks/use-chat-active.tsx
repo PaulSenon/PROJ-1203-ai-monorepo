@@ -18,7 +18,7 @@ import type { MaybePromise } from "@/lib/utils";
 import { useCvxMutationAuthV3 } from "./queries/convex/utils/use-convex-mutation-0-auth";
 import { useThread } from "./queries/use-chat-active-queries";
 import { useChatInputActions } from "./use-chat-input";
-import { useChatNav } from "./use-chat-nav";
+import { useRenderChatNav } from "./use-chat-nav";
 import { useMessages } from "./use-messages";
 import { useChatContext } from "./use-messages-legacy";
 import { getLiveStatusKind, useStreamOwnership } from "./use-stream-ownership";
@@ -129,7 +129,7 @@ type ActiveThreadStatus =
 export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const inputActions = useChatInputActions();
 
-  const chatNav = useChatNav();
+  const chatNav = useRenderChatNav();
   const isSkip = chatNav.isNew;
 
   const {

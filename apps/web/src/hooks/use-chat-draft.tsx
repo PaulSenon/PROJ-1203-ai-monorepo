@@ -11,7 +11,7 @@ import z from "zod";
 import { cvx } from "@/lib/convex/queries";
 import type { MaybePromise } from "@/lib/utils";
 import { useCvxQueryCached } from "./queries/convex/utils/use-convex-query-2-cached";
-import { ChatNavRerenderTrigger, useChatNav } from "./use-chat-nav";
+import { ChatNavRerenderTrigger, useRenderChatNav } from "./use-chat-nav";
 import { useUserCacheEntry } from "./use-user-cache";
 import { useSaveToClipboard } from "./utils/uas-save-to-clipboard";
 import { useDebouncedCallback } from "./utils/use-debounced-callback";
@@ -122,7 +122,7 @@ export function useChatDraftActions() {
 }
 
 function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
-  const { isNew, id } = useChatNav();
+  const { isNew, id } = useRenderChatNav();
 
   const saveToClipboard = useSaveToClipboard();
   const [saveStatus, setSaveStatus] =
@@ -276,5 +276,5 @@ export function ChatDraftProvider({ children }: { children: React.ReactNode }) {
     () => <INTERNAL_DraftProvider>{children}</INTERNAL_DraftProvider>,
     [children]
   );
-  return <ChatNavRerenderTrigger Outlet={Outlet} />;
+  return <ChatNavRerenderTrigger mode="deferred" Outlet={Outlet} />;
 }

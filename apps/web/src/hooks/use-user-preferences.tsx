@@ -16,7 +16,7 @@ import {
 import type { Prettify } from "@/lib/utils";
 import { useActiveThreadQuery } from "./queries/use-chat-active-queries";
 import { useUserPreferencesQuery } from "./queries/use-user-preferences-queries";
-import { ChatNavRerenderTrigger, useChatNav } from "./use-chat-nav";
+import { ChatNavRerenderTrigger, useRenderChatNav } from "./use-chat-nav";
 
 type ModelSelectorState = {
   selectedModelId?: AllowedModelIds;
@@ -35,7 +35,7 @@ const ModelSelectorActionsContext = createContext<ModelSelectorActions | null>(
 );
 
 function INTERNAL_ModelSelectorProvider({ children }: { children: ReactNode }) {
-  const chatNav = useChatNav();
+  const chatNav = useRenderChatNav();
   const [selectedModelId, setSelectedModelId] = useState<
     AllowedModelIds | undefined
   >(undefined);
@@ -144,5 +144,5 @@ export function ModelSelectorProvider({
     ),
     [children]
   );
-  return <ChatNavRerenderTrigger Outlet={Outlet} />;
+  return <ChatNavRerenderTrigger mode="deferred" Outlet={Outlet} />;
 }

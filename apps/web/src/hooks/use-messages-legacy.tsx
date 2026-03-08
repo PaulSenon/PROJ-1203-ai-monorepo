@@ -28,7 +28,7 @@ import { cvx } from "@/lib/convex/queries";
 import type { Prettify } from "@/lib/utils";
 import { useCvxQueryAuthNoCache } from "./queries/convex/utils/use-convex-query-0-auth";
 import { useCvxPaginatedQueryStable } from "./queries/convex/utils/use-convex-query-1-stable";
-import { useChatNav } from "./use-chat-nav";
+import { useRenderChatNav } from "./use-chat-nav";
 import { useUserCacheEntryOnce } from "./use-user-cache";
 import { useFpsThrottledValue } from "./utils/use-fps-throttled-state";
 
@@ -565,7 +565,7 @@ type UseChatContextValue = Prettify<ReturnType<typeof useChat<MyUIMessage>>> & {
 const UseChatContext = createContext<UseChatContextValue | null>(null);
 
 export function UseChatProvider({ children }: { children: ReactNode }) {
-  const chatNav = useChatNav();
+  const chatNav = useRenderChatNav();
   // Store listeners in a Ref so they don't trigger re-renders when changed
   const onFinishListenersRef = useRef<Set<ChatOnFinishCallback<MyUIMessage>>>(
     new Set()

@@ -5,43 +5,119 @@ import React, {
   type ReactNode,
   useCallback,
   useContext,
+  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { Route as ChatRoute } from "../routes/_chat/chat.{-$id}";
+
+type ChatThreadTarget = {
+  kind: "new" | "existing";
+  id: string;
+};
 
 type ChatNavState = {
   isNew: boolean;
   id: string;
+};
+
+type ChatNavShellState = ChatNavState & {
+  activeThreadId: string | undefined;
+  isSwitching: boolean;
+};
+
+type ChatNavActions = {
+  setInstantExistingChatTarget: (id: string) => void;
   persistNewChatIdToUrl: () => void;
   openNewChat: () => void;
   openExistingChat: (id: string) => void;
 };
 
-const ChatNavContext = createContext<ChatNavState | null>(null);
+const ChatNavInstantContext = createContext<ChatNavShellState | null>(null);
+const ChatNavRenderContext = createContext<ChatNavState | null>(null);
+const ChatNavActionsContext = createContext<ChatNavActions | null>(null);
+
+function createNewChatTarget(id: string): ChatThreadTarget {
+  return {
+    kind: "new",
+    id,
+  };
+}
+
+function createExistingChatTarget(id: string): ChatThreadTarget {
+  return {
+    kind: "existing",
+    id,
+  };
+}
+
+function areTargetsEqual(a: ChatThreadTarget, b: ChatThreadTarget) {
+  return a.kind === b.kind && a.id === b.id;
+}
+
+function toNavState(target: ChatThreadTarget): ChatNavState {
+  return {
+    id: target.id,
+    isNew: target.kind === "new",
+  };
+}
 
 export function ChatNavProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
-  // this will throw an error if used outside of /chat/{-$id} route:
   const params = ChatRoute.useParams();
-  const isNew = params.id === undefined;
-  const id = params.id ?? nanoid();
+  const routeThreadId = params.id;
+  const [newThreadId, setNewThreadId] = useState(() => nanoid());
+
+  const routeTarget = useMemo<ChatThreadTarget>(() => {
+    if (routeThreadId === undefined) {
+      return createNewChatTarget(newThreadId);
+    }
+    return createExistingChatTarget(routeThreadId);
+  }, [newThreadId, routeThreadId]);
+
+  const [instantTarget, setInstantTarget] = useState<ChatThreadTarget>(
+    routeTarget
+  );
 
   useEffect(() => {
-    console.log("DEBUG123: NAV chat nav id", id);
-  }, [id]);
+    setInstantTarget((current) => {
+      if (areTargetsEqual(current, routeTarget)) {
+        return current;
+      }
+      return routeTarget;
+    });
+  }, [routeTarget]);
+
+  const deferredTarget = useDeferredValue(instantTarget);
+  const deferredTargetRef = useRef(deferredTarget);
+  deferredTargetRef.current = deferredTarget;
+
+  const setInstantExistingChatTarget = useCallback((id: string) => {
+    setInstantTarget((current) => {
+      const nextTarget = createExistingChatTarget(id);
+      if (areTargetsEqual(current, nextTarget)) {
+        return current;
+      }
+      return nextTarget;
+    });
+  }, []);
 
   const persistNewChatIdToUrl = useCallback(() => {
-    if (!isNew) return;
+    if (deferredTargetRef.current.kind !== "new") return;
     router.navigate({
       replace: true,
       to: "/chat/{-$id}",
-      params: { id },
+      params: { id: deferredTargetRef.current.id },
     });
-  }, [isNew, id, router]);
+  }, [router]);
 
   const openNewChat = useCallback(() => {
+    const nextId = nanoid();
+    const nextTarget = createNewChatTarget(nextId);
+    setNewThreadId(nextId);
+    setInstantTarget(nextTarget);
     router.navigate({
       to: "/chat/{-$id}",
       params: { id: undefined },
@@ -49,49 +125,140 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   const openExistingChat = useCallback(
-    (targetId: string) => {
+    (id: string) => {
+      setInstantExistingChatTarget(id);
       router.navigate({
         to: "/chat/{-$id}",
-        params: { id: targetId },
+        params: { id },
       });
     },
-    [router]
+    [router, setInstantExistingChatTarget]
   );
 
-  const value = useMemo(
+  const actions = useMemo(
     () =>
       ({
-        isNew,
-        id,
+        setInstantExistingChatTarget,
         persistNewChatIdToUrl,
         openNewChat,
         openExistingChat,
-      }) satisfies ChatNavState,
-    [isNew, id, persistNewChatIdToUrl, openNewChat, openExistingChat]
+      }) satisfies ChatNavActions,
+    [
+      setInstantExistingChatTarget,
+      persistNewChatIdToUrl,
+      openNewChat,
+      openExistingChat,
+    ]
   );
+
+  const isSwitching = !areTargetsEqual(instantTarget, deferredTarget);
+
+  const instantState = useMemo(
+    () =>
+      ({
+        ...toNavState(instantTarget),
+        activeThreadId:
+          instantTarget.kind === "existing" ? instantTarget.id : undefined,
+        isSwitching,
+      }) satisfies ChatNavShellState,
+    [instantTarget, isSwitching]
+  );
+
+  const renderState = useMemo(
+    () => toNavState(deferredTarget) satisfies ChatNavState,
+    [deferredTarget]
+  );
+
   return (
-    <ChatNavContext.Provider value={value}>{children}</ChatNavContext.Provider>
+    <ChatNavActionsContext.Provider value={actions}>
+      <ChatNavInstantContext.Provider value={instantState}>
+        <ChatNavRenderContext.Provider value={renderState}>
+          {children}
+        </ChatNavRenderContext.Provider>
+      </ChatNavInstantContext.Provider>
+    </ChatNavActionsContext.Provider>
   );
 }
 
-/**
- * @throws {Error} if used outside of /chat/{-$id} route
- */
-export function useChatNav() {
-  const context = useContext(ChatNavContext);
+function useChatNavActions() {
+  const context = useContext(ChatNavActionsContext);
   if (!context) {
-    throw new Error("useChatNav must be used within ChatNavProvider");
+    throw new Error("useChatNavActions must be used within ChatNavProvider");
+  }
+  return context;
+}
+
+function useChatNavShellState() {
+  const context = useContext(ChatNavInstantContext);
+  if (!context) {
+    throw new Error("useChatNavShellState must be used within ChatNavProvider");
+  }
+  return context;
+}
+
+function useChatNavRenderState() {
+  const context = useContext(ChatNavRenderContext);
+  if (!context) {
+    throw new Error("useChatNavRenderState must be used within ChatNavProvider");
   }
   return context;
 }
 
 /**
- * Anything passed as an Outlet component will be re-rendered when the chat nav
- * changes.
- *
- * Perhaps there is a better way to handle this....
+ * Urgent chat navigation state for shell feedback.
+ */
+export function useChatNav() {
+  const state = useChatNavShellState();
+  const actions = useChatNavActions();
+
+  return useMemo(
+    () => ({
+      ...state,
+      ...actions,
+    }),
+    [state, actions]
+  );
+}
+
+/**
+ * Deferred chat navigation state for heavy thread-bound rendering.
+ */
+export function useRenderChatNav() {
+  const state = useChatNavRenderState();
+  const actions = useChatNavActions();
+
+  return useMemo(
+    () => ({
+      ...state,
+      ...actions,
+    }),
+    [state, actions]
+  );
+}
+
+export function useChatNavSwitching() {
+  return useChatNavShellState().isSwitching;
+}
+
+/**
+ * Anything passed as an Outlet component will be re-rendered when the selected
+ * chat navigation identity changes.
  */
 export function ChatNavRerenderTrigger({
+  Outlet,
+  mode = "instant",
+}: {
+  Outlet: React.ComponentType;
+  mode?: "instant" | "deferred";
+}) {
+  if (mode === "deferred") {
+    return <DeferredChatNavRerenderTrigger Outlet={Outlet} />;
+  }
+
+  return <InstantChatNavRerenderTrigger Outlet={Outlet} />;
+}
+
+function InstantChatNavRerenderTrigger({
   Outlet,
 }: {
   Outlet: React.ComponentType;
@@ -100,23 +267,47 @@ export function ChatNavRerenderTrigger({
   const previousChatNavRef = useRef<typeof chatNav>(chatNav);
 
   const key = useMemo(() => {
-    let res: string;
-    // stable id when staying on the isNew page
+    let result: string;
     if (
       chatNav.isNew === true &&
       chatNav.isNew === previousChatNavRef.current.isNew
     ) {
-      res = previousChatNavRef.current.id;
+      result = previousChatNavRef.current.id;
     } else {
-      res = chatNav.id;
+      result = chatNav.id;
     }
     previousChatNavRef.current = { ...chatNav };
-    return res;
+    return result;
   }, [chatNav]);
 
-  useEffect(() => {
-    console.log("DEBUG123: ChatNavRerenderer: key changed !", { key });
-  }, [key]);
+  return (
+    <React.Fragment key={key}>
+      <Outlet />
+    </React.Fragment>
+  );
+}
+
+function DeferredChatNavRerenderTrigger({
+  Outlet,
+}: {
+  Outlet: React.ComponentType;
+}) {
+  const chatNav = useRenderChatNav();
+  const previousChatNavRef = useRef<typeof chatNav>(chatNav);
+
+  const key = useMemo(() => {
+    let result: string;
+    if (
+      chatNav.isNew === true &&
+      chatNav.isNew === previousChatNavRef.current.isNew
+    ) {
+      result = previousChatNavRef.current.id;
+    } else {
+      result = chatNav.id;
+    }
+    previousChatNavRef.current = { ...chatNav };
+    return result;
+  }, [chatNav]);
 
   return (
     <React.Fragment key={key}>

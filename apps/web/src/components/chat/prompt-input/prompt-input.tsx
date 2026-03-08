@@ -10,6 +10,7 @@ import {
 } from "@/hooks/use-app-load-status";
 import { useActiveThreadActions } from "@/hooks/use-chat-active";
 import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
+import { useChatNavSwitching } from "@/hooks/use-chat-nav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useModelSelectorState } from "@/hooks/use-user-preferences";
 import { cn } from "@/lib/utils";
@@ -22,7 +23,10 @@ export function ChatInput() {
   const inputState = useChatInputState();
   const inputActions = useChatInputActions();
   const { sendMessage } = useActiveThreadActions();
+  const isSwitching = useChatNavSwitching();
   const { selectedModelId } = useModelSelectorState();
+  const isInputPending = inputState.isPending || isSwitching;
+  const isInputDisabled = inputState.disabled || isSwitching;
   const handleSubmit: PromptInputProps["onSubmit"] = (message, event) => {
     if (!message.text || message.text.trim() === "") return;
 
@@ -37,17 +41,21 @@ export function ChatInput() {
 
   // TODO: perhaps we need better autofocus logic
   useLayoutEffect(() => {
-    appUiStatus.setInputUIReady(!inputState.isPending);
-    if (inputState.isPending) return;
+    appUiStatus.setInputUIReady(!isInputPending);
+    if (isInputPending) return;
     inputActions.focus();
-  }, [inputState.isPending, inputActions.focus, appUiStatus.setInputUIReady]);
+  }, [isInputPending, inputActions.focus, appUiStatus.setInputUIReady]);
 
   // TODO: status not implemented yet
   const submitButtonStatus: PromptInputSubmitProps["status"] = "ready";
 
   return (
     <Input.Root
-      className={cn("relative mt-4", !isInitialUIStateReady && "opacity-0")}
+      className={cn(
+        "relative mt-4",
+        !isInitialUIStateReady && "opacity-0",
+        isSwitching && "pointer-events-none"
+      )}
       inputClassName={cn(
         "h-full",
         "rounded-xl bg-background dark:border-initial dark:bg-initial",
@@ -65,7 +73,7 @@ export function ChatInput() {
       </Input.Header> */}
       <Input.Body>
         <Input.Textarea
-          disabled={inputState.isPending} // can type while disabled (as long as not initializing)
+          disabled={isInputPending}
           onChange={(e) => inputActions.setInput(e.target.value)}
           ref={inputState.inputRef}
           submitOnEnter={!isMobile}
@@ -75,10 +83,13 @@ export function ChatInput() {
       <Input.Footer>
         <Input.Tools>
           <Input.ToolsMore />
-          <ChatModelSelector onClose={() => inputActions.focus()} />
+          <ChatModelSelector
+            disabled={isSwitching}
+            onClose={() => inputActions.focus()}
+          />
         </Input.Tools>
         <Input.SubmitButton
-          disabled={inputState.disabled}
+          disabled={isInputDisabled}
           status={submitButtonStatus}
         />
       </Input.Footer>

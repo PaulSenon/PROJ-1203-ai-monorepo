@@ -35,7 +35,7 @@ export function ChatSidebar({
 
   return (
     <ChatSidebarLayout
-      activeThreadId={chatNav.id}
+      activeThreadId={chatNav.activeThreadId}
       canLoadMore={sidebarThreads.canLoadMore}
       className={className}
       isLoadingMore={sidebarThreads.isLoadingMore}
@@ -44,7 +44,7 @@ export function ChatSidebar({
       threads={sidebarThreads.threads}
     >
       {children}
-      <MobileSidebarAutoclose key={chatNav.id ?? "new"} />
+      <MobileSidebarAutoclose key={chatNav.id} />
     </ChatSidebarLayout>
   );
 }

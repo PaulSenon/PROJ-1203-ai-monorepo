@@ -7,6 +7,7 @@ import {
   memo,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
+  useCallback,
   useMemo,
 } from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
@@ -24,6 +25,7 @@ import {
   type SidebarItemRootProps,
 } from "@/components/ui-custom/sidebar/sidebar-item";
 import { Tooltip } from "@/components/ui-custom/tooltip";
+import { useChatNav } from "@/hooks/use-chat-nav";
 import { cn } from "@/lib/utils";
 import {
   type LiveStateIndicatorVariant,
@@ -275,6 +277,7 @@ function ThreadItemRootImpl({
   isMobile = false,
   actionHandlers,
 }: ThreadItemRootProps) {
+  const chatNav = useChatNav();
   const { indicatorVariant, isLoading, tooltip } = useThreadItemState(thread);
 
   const quickActions = useMemo(
@@ -284,6 +287,19 @@ function ThreadItemRootImpl({
   const menuActions = useMemo(
     () => getThreadMenuActions(thread, actionHandlers),
     [thread, actionHandlers]
+  );
+
+  const handleLinkClickCapture = useCallback(
+    (event: ReactMouseEvent<HTMLAnchorElement>) => {
+      if (event.defaultPrevented) return;
+      if (event.button !== 0) return;
+      if (event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) {
+        return;
+      }
+
+      chatNav.setInstantExistingChatTarget(thread.uuid);
+    },
+    [chatNav, thread.uuid]
   );
 
   return (
@@ -298,6 +314,7 @@ function ThreadItemRootImpl({
               "group-data-[state=open]/cm:bg-sidebar-accent",
               isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
             )}
+            onClickCapture={handleLinkClickCapture}
             params={{ id: thread.uuid }}
             to="/chat/{-$id}"
           >
