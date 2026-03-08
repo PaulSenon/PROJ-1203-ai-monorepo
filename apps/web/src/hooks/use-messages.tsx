@@ -24,6 +24,16 @@ type NormalizedMessages<TSource extends string> = readonly MyUIMessage[] & {
 const EMPTY_NORMALIZED_MESSAGES = [] as const;
 const ENABLE_DEBUG_DATASOURCE = false;
 const NORMALIZATION_ORDER_SAMPLE_SIZE = 3;
+const EMPTY_MESSAGES: MyUIMessage[] = [];
+const METADATA_REF_IGNORE_PATHS = [
+  "updatedAt",
+  ...(ENABLE_DEBUG_DATASOURCE ? [] : ["debug.dataSource"]),
+];
+
+type StabilizedValue<T> = {
+  value: T;
+  isEqual: boolean;
+};
 
 function emptyNormalizedMessages<
   TSource extends string,
@@ -204,6 +214,287 @@ function withDataSource(message: MyUIMessage, dataSource?: MessageDataSource) {
       } satisfies MyUIMessageMetadata["debug"],
     } as MyUIMessageMetadata,
   } satisfies MyUIMessage;
+}
+
+function stabilizeMergedMessages(
+  prevMessages: MyUIMessage[],
+  nextMessages: MyUIMessage[]
+): MyUIMessage[] {
+  if (prevMessages === nextMessages) return prevMessages;
+  if (nextMessages.length === 0) {
+    return prevMessages.length === 0 ? prevMessages : nextMessages;
+  }
+  if (prevMessages.length === 0) return nextMessages;
+
+  if (prevMessages.length === nextMessages.length) {
+    let hasAlignedRefMismatch = false;
+
+    for (let i = 0; i < nextMessages.length; i++) {
+      if (prevMessages[i] !== nextMessages[i]) {
+        hasAlignedRefMismatch = true;
+        break;
+      }
+    }
+
+    if (!hasAlignedRefMismatch) {
+      return prevMessages;
+    }
+  }
+
+  const prevMessagesById = new Map(
+    prevMessages.map((message) => [message.id, message])
+  );
+  let matchesPreviousList = prevMessages.length === nextMessages.length;
+
+  const stabilizedMessages = nextMessages.map((nextMessage, index) => {
+    const prevMessage = prevMessagesById.get(nextMessage.id);
+    if (!prevMessage) {
+      matchesPreviousList = false;
+      return nextMessage;
+    }
+
+    const stabilizedMessage = stabilizeMessage(prevMessage, nextMessage);
+    if (prevMessages[index] !== stabilizedMessage) {
+      matchesPreviousList = false;
+    }
+
+    return stabilizedMessage;
+  });
+
+  return matchesPreviousList ? prevMessages : stabilizedMessages;
+}
+
+function stabilizeMessage(prevMessage: MyUIMessage, nextMessage: MyUIMessage) {
+  if (prevMessage === nextMessage) return prevMessage;
+  if (prevMessage.id !== nextMessage.id) return nextMessage;
+
+  const metadata = stabilizeMetadata(
+    prevMessage.metadata,
+    nextMessage.metadata
+  );
+  const hasEqualNonMetadataFields = hasEqualMessageNonMetadataFields(
+    prevMessage,
+    nextMessage
+  );
+
+  if (hasEqualNonMetadataFields && metadata === prevMessage.metadata) {
+    return prevMessage;
+  }
+
+  if (metadata === nextMessage.metadata) {
+    return nextMessage;
+  }
+
+  return {
+    ...nextMessage,
+    metadata,
+  } satisfies MyUIMessage;
+}
+
+function hasEqualMessageNonMetadataFields(
+  prevMessage: MyUIMessage,
+  nextMessage: MyUIMessage
+) {
+  const prevMessageRecord = prevMessage as unknown as Record<string, unknown>;
+  const nextMessageRecord = nextMessage as unknown as Record<string, unknown>;
+  const prevKeys = Object.keys(prevMessage);
+  const nextKeys = Object.keys(nextMessage);
+
+  for (const key of prevKeys) {
+    if (key === "metadata") continue;
+    if (!hasOwn(nextMessage, key)) return false;
+    if (!Object.is(prevMessageRecord[key], nextMessageRecord[key]))
+      return false;
+  }
+
+  for (const key of nextKeys) {
+    if (key === "metadata") continue;
+    if (!hasOwn(prevMessage, key)) return false;
+  }
+
+  return true;
+}
+
+function stabilizeMetadata(
+  prevMetadata: MyUIMessageMetadata | undefined,
+  nextMetadata: MyUIMessageMetadata | undefined
+): MyUIMessageMetadata | undefined {
+  return stabilizeMetadataValue(prevMetadata, nextMetadata, "").value as
+    | MyUIMessageMetadata
+    | undefined;
+}
+
+function stabilizeMetadataValue(
+  prevValue: unknown,
+  nextValue: unknown,
+  path: string
+): StabilizedValue<unknown> {
+  if (Object.is(prevValue, nextValue)) {
+    return {
+      value: prevValue,
+      isEqual: true,
+    };
+  }
+
+  if (shouldIgnoreMetadataPath(path)) {
+    // Intentional: ignored metadata paths keep the previous value/ref so they
+    // do not trigger downstream rerenders on their own.
+    if (prevValue === undefined) {
+      return {
+        value: nextValue,
+        isEqual: false,
+      };
+    }
+
+    return {
+      value: prevValue,
+      isEqual: true,
+    };
+  }
+
+  if (Array.isArray(prevValue) && Array.isArray(nextValue)) {
+    return stabilizeMetadataArray(prevValue, nextValue, path);
+  }
+
+  if (isPlainObject(prevValue) && isPlainObject(nextValue)) {
+    return stabilizeMetadataObject(prevValue, nextValue, path);
+  }
+
+  return {
+    value: nextValue,
+    isEqual: false,
+  };
+}
+
+function stabilizeMetadataArray(
+  prevValue: readonly unknown[],
+  nextValue: readonly unknown[],
+  path: string
+): StabilizedValue<readonly unknown[]> {
+  if (prevValue.length !== nextValue.length) {
+    return {
+      value: nextValue,
+      isEqual: false,
+    };
+  }
+
+  let isEqual = true;
+  let reusedNestedValue = false;
+  const stabilizedValues = nextValue.map((nextItem, index) => {
+    const stabilizedValue = stabilizeMetadataValue(
+      prevValue[index],
+      nextItem,
+      `${path}[${index}]`
+    );
+
+    if (!stabilizedValue.isEqual) {
+      isEqual = false;
+    }
+    if (!Object.is(stabilizedValue.value, nextItem)) {
+      reusedNestedValue = true;
+    }
+
+    return stabilizedValue.value;
+  });
+
+  if (isEqual) {
+    return {
+      value: prevValue,
+      isEqual: true,
+    };
+  }
+
+  if (!reusedNestedValue) {
+    return {
+      value: nextValue,
+      isEqual: false,
+    };
+  }
+
+  return {
+    value: stabilizedValues,
+    isEqual: false,
+  };
+}
+
+function stabilizeMetadataObject(
+  prevValue: Record<string, unknown>,
+  nextValue: Record<string, unknown>,
+  path: string
+): StabilizedValue<Record<string, unknown>> {
+  let isEqual = true;
+  let reusedNestedValue = false;
+  const stabilizedValue: Record<string, unknown> = {};
+
+  for (const key of Object.keys(nextValue)) {
+    const nextChild = nextValue[key];
+    const childPath = path ? `${path}.${key}` : key;
+
+    if (!hasOwn(prevValue, key)) {
+      stabilizedValue[key] = nextChild;
+      isEqual = false;
+      continue;
+    }
+
+    const nextStabilizedValue = stabilizeMetadataValue(
+      prevValue[key],
+      nextChild,
+      childPath
+    );
+
+    if (!nextStabilizedValue.isEqual) {
+      isEqual = false;
+    }
+    if (!Object.is(nextStabilizedValue.value, nextChild)) {
+      reusedNestedValue = true;
+    }
+
+    stabilizedValue[key] = nextStabilizedValue.value;
+  }
+
+  for (const key of Object.keys(prevValue)) {
+    if (hasOwn(nextValue, key)) continue;
+
+    const childPath = path ? `${path}.${key}` : key;
+    if (shouldIgnoreMetadataPath(childPath)) {
+      stabilizedValue[key] = prevValue[key];
+      reusedNestedValue = true;
+      continue;
+    }
+
+    isEqual = false;
+  }
+
+  if (isEqual) {
+    return {
+      value: prevValue,
+      isEqual: true,
+    };
+  }
+
+  if (!reusedNestedValue) {
+    return {
+      value: nextValue,
+      isEqual: false,
+    };
+  }
+
+  return {
+    value: stabilizedValue,
+    isEqual: false,
+  };
+}
+
+function shouldIgnoreMetadataPath(path: string) {
+  return METADATA_REF_IGNORE_PATHS.includes(path);
+}
+
+function hasOwn(value: object, key: string) {
+  return Object.hasOwn(value, key);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 type UseMessagesParams = {
@@ -411,6 +702,13 @@ export function useMessages({
 
   const cacheKey = useMemo(() => createCacheKey(threadUuid), [threadUuid]);
   const cache = useUserCacheEntryOnce<MyUIMessage[]>(cacheKey);
+  const previousMessagesRef = useRef<{
+    threadUuid: string | "skip";
+    messages: MyUIMessage[];
+  }>({
+    threadUuid,
+    messages: EMPTY_MESSAGES,
+  });
 
   const cacheLayerRaw = useMemo(
     () => normalizeCacheMessages(cache.snapshot ?? []),
@@ -544,7 +842,7 @@ export function useMessages({
   // 2. merge the layers that change frequently on top
   //  - resumed stream changes on every chunk received (very frequent)
   //  - http stream changes on every message received (very frequent)
-  const messages = useMemo(
+  const mergedMessages = useMemo(
     () =>
       mergeMessageLayers([
         createMessageLayer("base-merge", baseLayer),
@@ -553,6 +851,15 @@ export function useMessages({
       ]),
     [baseLayer, resumedLayer, httpLayer]
   );
+
+  const messages = useMemo<MyUIMessage[]>(() => {
+    const previousMessages =
+      previousMessagesRef.current.threadUuid === threadUuid
+        ? previousMessagesRef.current.messages
+        : EMPTY_MESSAGES;
+
+    return stabilizeMergedMessages(previousMessages, mergedMessages);
+  }, [mergedMessages, threadUuid]);
 
   const isQueryPending = isSkip
     ? false
@@ -567,6 +874,13 @@ export function useMessages({
     // TODO perf: dedupe/throttle cache writes based on meaningful tail payload changes.
     cache.set(messages.slice(-10));
   }, [isSkip, messages, cache.set]);
+
+  useEffect(() => {
+    previousMessagesRef.current = {
+      threadUuid,
+      messages,
+    };
+  }, [messages, threadUuid]);
 
   return useMemo(
     () => ({
