@@ -15,31 +15,84 @@ import { useChatContext } from "./use-messages-legacy";
 import { useUserCacheEntryOnce } from "./use-user-cache";
 import { useFpsThrottledValue } from "./utils/use-fps-throttled-state";
 
-// NormalizedMessages must be oldest -> newest for merge perf.
-declare const normalizedMessagesBrand: unique symbol;
-type NormalizedMessages = MyUIMessage[] & {
-  readonly [normalizedMessagesBrand]: true;
+// Normalized messages must be oldest -> newest for merge perf.
+declare const normalizedSourceBrand: unique symbol;
+type NormalizedMessages<TSource extends string> = readonly MyUIMessage[] & {
+  readonly [normalizedSourceBrand]: TSource;
 };
 
-type NormalizeOptions = {
-  reverse?: boolean;
-  debugLabel?: string;
-};
+const EMPTY_NORMALIZED_MESSAGES = [] as const;
 
-const emptyNormalizedMessages: NormalizedMessages =
-  [] as unknown as NormalizedMessages;
-
-function normalizeMessages(
-  messages: MyUIMessage[] | undefined,
-  options: NormalizeOptions = {}
-): NormalizedMessages {
-  if (!messages || messages.length === 0) return emptyNormalizedMessages;
-  const normalized = options.reverse ? [...messages].reverse() : messages;
-  warnIfNotNormalized(normalized, options.debugLabel);
-  return normalized as NormalizedMessages;
+function emptyNormalizedMessages<
+  TSource extends string,
+>(): NormalizedMessages<TSource> {
+  return EMPTY_NORMALIZED_MESSAGES as unknown as NormalizedMessages<TSource>;
 }
 
-function warnIfNotNormalized(messages: MyUIMessage[], label?: string) {
+function normalizeAscendingMessages<TSource extends string>(
+  messages: readonly MyUIMessage[] | undefined,
+  source: TSource,
+  debugLabel: string | null = source
+): NormalizedMessages<TSource> {
+  if (!messages || messages.length === 0) {
+    return emptyNormalizedMessages<TSource>();
+  }
+
+  if (debugLabel) {
+    warnIfNotAscending(messages, debugLabel);
+  }
+
+  return messages as NormalizedMessages<TSource>;
+}
+
+function normalizeCacheMessages(
+  messages: readonly MyUIMessage[] | undefined
+): NormalizedMessages<"cache"> {
+  return normalizeAscendingMessages(messages, "cache");
+}
+
+function normalizePersistedMessages(
+  messages: readonly MyUIMessage[] | undefined
+): NormalizedMessages<"persisted"> {
+  const ascendingMessages = messages ? [...messages].reverse() : messages;
+  return normalizeAscendingMessages(ascendingMessages, "persisted");
+}
+
+function normalizeOptimisticMessages(
+  messages: readonly MyUIMessage[] | undefined
+): NormalizedMessages<"optimistic"> {
+  return normalizeAscendingMessages(messages, "optimistic");
+}
+
+function normalizePersistedMessagesForMerge(
+  messages: readonly MyUIMessage[] | undefined
+): NormalizedMessages<"persisted"> {
+  return normalizeAscendingMessages(messages, "persisted", "persisted-trim");
+}
+
+function normalizeResumedMessages(
+  messages: readonly MyUIMessage[] | undefined
+): NormalizedMessages<"resumed-stream"> {
+  return normalizeAscendingMessages(
+    messages,
+    "resumed-stream",
+    "convex-stream"
+  );
+}
+
+function normalizeHttpMessages(
+  messages: readonly MyUIMessage[] | undefined
+): NormalizedMessages<"http-stream"> {
+  return normalizeAscendingMessages(messages, "http-stream");
+}
+
+function normalizeBaseMergedMessages(
+  messages: readonly MyUIMessage[] | undefined
+): NormalizedMessages<"base-merge"> {
+  return normalizeAscendingMessages(messages, "base-merge", null);
+}
+
+function warnIfNotAscending(messages: readonly MyUIMessage[], label?: string) {
   if (!import.meta.env.DEV) return;
   if (!label) return;
   if (messages.length < 2) return;
@@ -62,23 +115,37 @@ function isOngoingLiveStatus(liveStatus: MyUIMessageMetadata["liveStatus"]) {
   return liveStatus === "pending" || liveStatus === "streaming";
 }
 
-type MessageLayer = {
-  messages: NormalizedMessages;
+type MessageLayer<TSource extends string> = {
+  source: TSource;
+  messages: NormalizedMessages<TSource>;
   dataSource?: MessageDataSource;
 };
+
+function createMessageLayer<TSource extends string>(
+  source: TSource,
+  messages: NormalizedMessages<TSource>,
+  dataSource?: MessageDataSource
+): MessageLayer<TSource> {
+  return {
+    source,
+    messages,
+    dataSource,
+  };
+}
 
 type MergeOptions = {
   sort?: boolean;
 };
 
 function mergeMessageLayers(
-  layers: MessageLayer[],
+  layers: readonly MessageLayer<string>[],
   options: MergeOptions = {}
 ): MyUIMessage[] {
   if (layers.length === 0) return [];
 
   const [baseLayer, ...rest] = layers;
-  const baseMessages = baseLayer?.messages ?? emptyNormalizedMessages;
+  const baseMessages =
+    baseLayer?.messages ?? emptyNormalizedMessages<"merge-base">();
   const list: MyUIMessage[] = baseLayer?.dataSource
     ? baseMessages.map((msg) => withDataSource(msg, baseLayer.dataSource))
     : [...baseMessages];
@@ -344,16 +411,12 @@ export function useMessages({
   const cache = useUserCacheEntryOnce<MyUIMessage[]>(cacheKey);
 
   const cacheLayerRaw = useMemo(
-    () => normalizeMessages(cache.snapshot ?? [], { debugLabel: "cache" }),
+    () => normalizeCacheMessages(cache.snapshot ?? []),
     [cache.snapshot]
   );
 
   const persistedLayerRaw = useMemo(
-    () =>
-      normalizeMessages(paginatedMessages.results, {
-        reverse: true,
-        debugLabel: "persisted",
-      }),
+    () => normalizePersistedMessages(paginatedMessages.results),
     [paginatedMessages.results]
   );
 
@@ -375,9 +438,7 @@ export function useMessages({
     ) {
       // When resuming a stream, backend may emit an empty assistant shell in
       // persisted results; keep cache visible until resumed stream delivers.
-      return normalizeMessages(persistedLayerRaw.slice(0, -1), {
-        debugLabel: "persisted-trim",
-      });
+      return normalizePersistedMessagesForMerge(persistedLayerRaw.slice(0, -1));
     }
 
     return persistedLayerRaw;
@@ -427,33 +488,27 @@ export function useMessages({
       newCacheLayer.push(...cacheLayerRaw.slice(newestIndexInCache + 1));
     }
 
-    return normalizeMessages(newCacheLayer, { debugLabel: "cache-trim" });
+    return normalizeCacheMessages(newCacheLayer);
   }, [cacheLayerRaw, persistedLayerForMerge]);
 
   const optimisticLayer = useMemo(() => {
     if (optimisticPatchesArray.length === 0) {
-      return normalizeMessages([], { debugLabel: "optimistic" });
+      return normalizeOptimisticMessages([]);
     }
     const list: MyUIMessage[] = [];
     for (const patch of optimisticPatchesArray) {
       for (const msg of patch) list.push(msg);
     }
-    return normalizeMessages(list, { debugLabel: "optimistic" });
+    return normalizeOptimisticMessages(list);
   }, [optimisticPatchesArray]);
 
   const resumedLayer = useMemo(
-    () =>
-      normalizeMessages(resumedMessages.messages, {
-        debugLabel: "convex-stream",
-      }),
+    () => normalizeResumedMessages(resumedMessages.messages),
     [resumedMessages.messages]
   );
 
   const httpLayer = useMemo(
-    () =>
-      normalizeMessages(httpStreamingMessages.messages, {
-        debugLabel: "http-stream",
-      }),
+    () => normalizeHttpMessages(httpStreamingMessages.messages),
     [httpStreamingMessages.messages]
   );
 
@@ -466,9 +521,13 @@ export function useMessages({
     () =>
       mergeMessageLayers(
         [
-          { messages: cacheLayerForMerge, dataSource: "cache" },
-          { messages: persistedLayerForMerge, dataSource: "convex-persisted" },
-          { messages: optimisticLayer, dataSource: "optimistic" },
+          createMessageLayer("cache", cacheLayerForMerge, "cache"),
+          createMessageLayer(
+            "persisted",
+            persistedLayerForMerge,
+            "convex-persisted"
+          ),
+          createMessageLayer("optimistic", optimisticLayer, "optimistic"),
         ],
         { sort: false } // important we want to sort only once at the end
       ),
@@ -476,7 +535,7 @@ export function useMessages({
   );
 
   const baseLayer = useMemo(
-    () => normalizeMessages(baseMessages),
+    () => normalizeBaseMergedMessages(baseMessages),
     [baseMessages]
   );
 
@@ -486,9 +545,9 @@ export function useMessages({
   const messages = useMemo(
     () =>
       mergeMessageLayers([
-        { messages: baseLayer },
-        { messages: resumedLayer, dataSource: "convex-stream" },
-        { messages: httpLayer, dataSource: "http-stream" },
+        createMessageLayer("base-merge", baseLayer),
+        createMessageLayer("resumed-stream", resumedLayer, "convex-stream"),
+        createMessageLayer("http-stream", httpLayer, "http-stream"),
       ]),
     [baseLayer, resumedLayer, httpLayer]
   );
