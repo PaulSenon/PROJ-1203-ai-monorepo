@@ -11,7 +11,6 @@ import { SidebarVirtualThreadList } from "./_parts/sidebar-virtual-thread-list";
 
 export function ChatSidebarLayout({
   className,
-  activeThreadId,
   threads,
   children,
   onLoadMore,
@@ -20,7 +19,6 @@ export function ChatSidebarLayout({
   onNewChat,
 }: {
   className?: string;
-  activeThreadId?: string;
   threads: Doc<"threads">[];
   children?: React.ReactNode;
   onLoadMore?: () => void;
@@ -63,7 +61,6 @@ export function ChatSidebarLayout({
           onNewChat={onNewChat}
         />
         <SidebarVirtualThreadList
-          activeThreadId={activeThreadId}
           canLoadMore={canLoadMore}
           footer={listFooter}
           header={listHeader}

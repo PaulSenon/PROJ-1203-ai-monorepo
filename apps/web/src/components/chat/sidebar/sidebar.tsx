@@ -2,13 +2,17 @@
 
 import { useCallback, useLayoutEffect } from "react";
 import { useAppLoadStatusActions } from "@/hooks/use-app-load-status";
-import { useChatNav } from "@/hooks/use-chat-nav";
+import {
+  useActiveSidebarThreadId,
+  useChatNavActions,
+} from "@/hooks/use-chat-nav";
 import { useMobileSidebarAutoclose } from "./_hooks/use-mobile-sidebar-autoclose";
 import { useSidebarThreads } from "./_hooks/use-sidebar-threads";
 import { ChatSidebarLayout } from "./sidebar-layout";
 
 function MobileSidebarAutoclose() {
-  useMobileSidebarAutoclose();
+  const activeThreadId = useActiveSidebarThreadId();
+  useMobileSidebarAutoclose(activeThreadId);
   return null;
 }
 
@@ -20,7 +24,7 @@ export function ChatSidebar({
   children?: React.ReactNode;
 }) {
   const appUiStatus = useAppLoadStatusActions();
-  const chatNav = useChatNav();
+  const { openNewChat } = useChatNavActions();
 
   const sidebarThreads = useSidebarThreads();
 
@@ -30,12 +34,11 @@ export function ChatSidebar({
   }, [sidebarThreads.isPending, appUiStatus.setSidebarUIReady]);
 
   const handleNewChat = useCallback(() => {
-    chatNav.openNewChat();
-  }, [chatNav.openNewChat]);
+    openNewChat();
+  }, [openNewChat]);
 
   return (
     <ChatSidebarLayout
-      activeThreadId={chatNav.activeThreadId}
       canLoadMore={sidebarThreads.canLoadMore}
       className={className}
       isLoadingMore={sidebarThreads.isLoadingMore}
@@ -44,7 +47,7 @@ export function ChatSidebar({
       threads={sidebarThreads.threads}
     >
       {children}
-      <MobileSidebarAutoclose key={chatNav.id} />
+      <MobileSidebarAutoclose />
     </ChatSidebarLayout>
   );
 }

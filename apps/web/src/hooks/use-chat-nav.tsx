@@ -7,10 +7,11 @@ import React, {
   useCallback,
   useContext,
   useDeferredValue,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { Route as ChatRoute } from "../routes/_chat/chat.{-$id}";
 
@@ -36,9 +37,39 @@ type ChatNavActions = {
   openExistingChat: (id: string) => void;
 };
 
+type SidebarActiveThreadStore = {
+  getSnapshot: () => string | undefined;
+  subscribe: (listener: () => void) => () => void;
+  setActiveThreadId: (nextActiveThreadId: string | undefined) => void;
+};
+
 const ChatNavInstantContext = createContext<ChatNavShellState | null>(null);
 const ChatNavRenderContext = createContext<ChatNavState | null>(null);
 const ChatNavActionsContext = createContext<ChatNavActions | null>(null);
+const SidebarActiveThreadStoreContext =
+  createContext<SidebarActiveThreadStore | null>(null);
+
+function createSidebarActiveThreadStore(
+  initialActiveThreadId: string | undefined
+): SidebarActiveThreadStore {
+  let activeThreadId = initialActiveThreadId;
+  const listeners = new Set<() => void>();
+
+  return {
+    getSnapshot: () => activeThreadId,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    setActiveThreadId: (nextActiveThreadId) => {
+      if (activeThreadId === nextActiveThreadId) {
+        return;
+      }
+      activeThreadId = nextActiveThreadId;
+      listeners.forEach((listener) => listener());
+    },
+  };
+}
 
 function createNewChatTarget(id: string): ChatThreadTarget {
   return {
@@ -65,6 +96,14 @@ function toNavState(target: ChatThreadTarget): ChatNavState {
   };
 }
 
+function toActiveThreadId(target: ChatThreadTarget) {
+  return target.kind === "existing" ? target.id : undefined;
+}
+
+export function getExistingChatHref(threadId: string) {
+  return `/chat/${threadId}`;
+}
+
 export function ChatNavProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const params = ChatRoute.useParams();
@@ -81,8 +120,14 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
   const [instantTarget, setInstantTarget] = useState<ChatThreadTarget>(
     routeTarget
   );
+  const sidebarActiveThreadStoreRef = useRef<SidebarActiveThreadStore>(
+    createSidebarActiveThreadStore(toActiveThreadId(routeTarget))
+  );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    sidebarActiveThreadStoreRef.current.setActiveThreadId(
+      toActiveThreadId(routeTarget)
+    );
     setInstantTarget((current) => {
       if (areTargetsEqual(current, routeTarget)) {
         return current;
@@ -96,6 +141,7 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
   deferredTargetRef.current = deferredTarget;
 
   const setInstantExistingChatTarget = useCallback((id: string) => {
+    sidebarActiveThreadStoreRef.current.setActiveThreadId(id);
     setInstantTarget((current) => {
       const nextTarget = createExistingChatTarget(id);
       if (areTargetsEqual(current, nextTarget)) {
@@ -119,6 +165,7 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
   const openNewChat = useCallback(() => {
     const nextId = nanoid();
     const nextTarget = createNewChatTarget(nextId);
+    sidebarActiveThreadStoreRef.current.setActiveThreadId(undefined);
     setNewThreadId(nextId);
     setInstantTarget(nextTarget);
     startTransition(() => {
@@ -159,16 +206,20 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
   );
 
   const isSwitching = !areTargetsEqual(instantTarget, deferredTarget);
+  const instantActiveThreadId = toActiveThreadId(instantTarget);
+
+  useLayoutEffect(() => {
+    sidebarActiveThreadStoreRef.current.setActiveThreadId(instantActiveThreadId);
+  }, [instantActiveThreadId]);
 
   const instantState = useMemo(
     () =>
       ({
         ...toNavState(instantTarget),
-        activeThreadId:
-          instantTarget.kind === "existing" ? instantTarget.id : undefined,
+        activeThreadId: instantActiveThreadId,
         isSwitching,
       }) satisfies ChatNavShellState,
-    [instantTarget, isSwitching]
+    [instantTarget, instantActiveThreadId, isSwitching]
   );
 
   const renderState = useMemo(
@@ -178,16 +229,20 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
 
   return (
     <ChatNavActionsContext.Provider value={actions}>
-      <ChatNavInstantContext.Provider value={instantState}>
-        <ChatNavRenderContext.Provider value={renderState}>
-          {children}
-        </ChatNavRenderContext.Provider>
-      </ChatNavInstantContext.Provider>
+      <SidebarActiveThreadStoreContext.Provider
+        value={sidebarActiveThreadStoreRef.current}
+      >
+        <ChatNavInstantContext.Provider value={instantState}>
+          <ChatNavRenderContext.Provider value={renderState}>
+            {children}
+          </ChatNavRenderContext.Provider>
+        </ChatNavInstantContext.Provider>
+      </SidebarActiveThreadStoreContext.Provider>
     </ChatNavActionsContext.Provider>
   );
 }
 
-function useChatNavActions() {
+export function useChatNavActions() {
   const context = useContext(ChatNavActionsContext);
   if (!context) {
     throw new Error("useChatNavActions must be used within ChatNavProvider");
@@ -245,6 +300,30 @@ export function useRenderChatNav() {
 
 export function useChatNavSwitching() {
   return useChatNavShellState().isSwitching;
+}
+
+function useSidebarActiveThreadStore() {
+  const context = useContext(SidebarActiveThreadStoreContext);
+  if (!context) {
+    throw new Error(
+      "useSidebarActiveThreadStore must be used within ChatNavProvider"
+    );
+  }
+  return context;
+}
+
+export function useActiveSidebarThreadId() {
+  const store = useSidebarActiveThreadStore();
+  return useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+}
+
+export function useIsSidebarThreadActive(threadId: string) {
+  const store = useSidebarActiveThreadStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    () => store.getSnapshot() === threadId,
+    () => store.getSnapshot() === threadId
+  );
 }
 
 /**

@@ -1,5 +1,4 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
-import { Link } from "@tanstack/react-router";
 import { MoreVerticalIcon } from "lucide-react";
 import {
   type ButtonHTMLAttributes,
@@ -25,7 +24,11 @@ import {
   type SidebarItemRootProps,
 } from "@/components/ui-custom/sidebar/sidebar-item";
 import { Tooltip } from "@/components/ui-custom/tooltip";
-import { useChatNav } from "@/hooks/use-chat-nav";
+import {
+  getExistingChatHref,
+  useChatNavActions,
+  useIsSidebarThreadActive,
+} from "@/hooks/use-chat-nav";
 import { cn } from "@/lib/utils";
 import {
   type LiveStateIndicatorVariant,
@@ -262,7 +265,6 @@ function A11YContextMenuTriggerButton(
 
 type ThreadItemRootProps = {
   thread: ThreadDoc;
-  isActive?: boolean;
   className?: string;
   as?: SidebarItemRootProps["as"];
   isMobile?: boolean;
@@ -271,13 +273,13 @@ type ThreadItemRootProps = {
 
 function ThreadItemRootImpl({
   thread,
-  isActive = false,
   className,
   as = "li",
   isMobile = false,
   actionHandlers,
 }: ThreadItemRootProps) {
-  const chatNav = useChatNav();
+  const { openExistingChat } = useChatNavActions();
+  const isActive = useIsSidebarThreadActive(thread.uuid);
   const { indicatorVariant, isLoading, tooltip } = useThreadItemState(thread);
 
   const quickActions = useMemo(
@@ -298,16 +300,16 @@ function ThreadItemRootImpl({
       }
 
       event.preventDefault();
-      chatNav.openExistingChat(thread.uuid);
+      openExistingChat(thread.uuid);
     },
-    [chatNav, thread.uuid]
+    [openExistingChat, thread.uuid]
   );
 
   return (
     <SidebarItem.Root as={as} className={className}>
       <ThreadContextMenu actions={menuActions}>
         <SidebarItem.Button asChild>
-          <Link
+          <a
             className={cn(
               "-webkit-touch-callout-none group/link relative flex h-10 w-full items-center gap-0! overflow-hidden transition-background-color duration-500 ease-(--ease-default) md:h-9",
               "focus-visible:box-shadow-none focus-visible:bg-sidebar-accent focus-visible:ring-0!",
@@ -315,9 +317,8 @@ function ThreadItemRootImpl({
               "group-data-[state=open]/cm:bg-sidebar-accent",
               isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
             )}
+            href={getExistingChatHref(thread.uuid)}
             onClick={handleLinkClick}
-            params={{ id: thread.uuid }}
-            to="/chat/{-$id}"
           >
             <LiveStateIndicatorIcon variant={indicatorVariant} />
             <span className="mx-1 h-full min-w-0 flex-1 content-center">
@@ -366,7 +367,7 @@ function ThreadItemRootImpl({
                 </div>
               </>
             )}
-          </Link>
+          </a>
         </SidebarItem.Button>
       </ThreadContextMenu>
     </SidebarItem.Root>
@@ -378,7 +379,6 @@ const ThreadItemRoot = memo(
   (previousProps, nextProps) =>
     previousProps.className === nextProps.className &&
     previousProps.as === nextProps.as &&
-    previousProps.isActive === nextProps.isActive &&
     previousProps.isMobile === nextProps.isMobile &&
     previousProps.actionHandlers === nextProps.actionHandlers &&
     previousProps.thread.uuid === nextProps.thread.uuid &&

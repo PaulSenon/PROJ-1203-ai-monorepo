@@ -17,7 +17,6 @@ type ListSupplementalComponent =
 
 export function SidebarVirtualThreadList({
   threads,
-  activeThreadId,
   isMobile,
   canLoadMore,
   isLoadingMore,
@@ -27,7 +26,6 @@ export function SidebarVirtualThreadList({
   footer,
 }: {
   threads: ThreadDoc[];
-  activeThreadId?: string;
   isMobile: boolean;
   canLoadMore: boolean;
   isLoadingMore: boolean;
@@ -92,12 +90,11 @@ export function SidebarVirtualThreadList({
       <ThreadItem.Root
         as="div"
         className={cn("px-4", index > 0 && "pt-1.5")}
-        isActive={thread.uuid === activeThreadId}
         isMobile={isMobile}
         thread={thread}
       />
     ),
-    [activeThreadId, isMobile]
+    [isMobile]
   );
 
   useLayoutEffect(() => {
@@ -124,7 +121,6 @@ export function SidebarVirtualThreadList({
       data={threads}
       drawDistance={180}
       estimatedItemSize={44}
-      extraData={activeThreadId ?? null}
       keyExtractor={(thread) => thread.uuid}
       ListFooterComponent={footer}
       ListHeaderComponent={header}
