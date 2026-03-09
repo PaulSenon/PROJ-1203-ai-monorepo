@@ -176,6 +176,75 @@ function ThreadQuickActions({
   );
 }
 
+const MemoThreadQuickActions = memo(ThreadQuickActions);
+
+type ThreadLinkBodyProps = {
+  indicatorVariant: LiveStateIndicatorVariant | undefined;
+  isLoading: boolean;
+  isMobile: boolean;
+  quickActions: ThreadItemAction[];
+  text: string | undefined;
+  tooltip: string;
+};
+
+const ThreadLinkBody = memo(function ThreadLinkBody({
+  indicatorVariant,
+  isLoading,
+  isMobile,
+  quickActions,
+  text,
+  tooltip,
+}: ThreadLinkBodyProps) {
+  return (
+    <>
+      <LiveStateIndicatorIcon variant={indicatorVariant} />
+      <span className="mx-1 h-full min-w-0 flex-1 content-center">
+        {isMobile ? null : (
+          <Tooltip asChild isMobile={isMobile} tooltip={tooltip}>
+            <div className="absolute top-0 bottom-0 left-0 z-30 m-0 h-full w-[calc(100%-4rem)]" />
+          </Tooltip>
+        )}
+        <ThreadTitle isLoading={isLoading} text={text} />
+      </span>
+      {isMobile ? (
+        <div className="relative z-30 mr-1 ml-1 flex shrink-0 items-center justify-center">
+          <A11YContextMenuTriggerButton
+            aria-label="Thread options"
+            className={cn(
+              "sr-only h-7 w-7 shrink-0 rounded-md bg-transparent p-1.5 text-foreground hover:bg-sidebar-ring/50 hover:text-accent-foreground focus-visible:not-sr-only focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+            )}
+          >
+            <MoreVerticalIcon className="size-4" />
+            <span className="sr-only">Thread options</span>
+          </A11YContextMenuTriggerButton>
+        </div>
+      ) : (
+        <>
+          <div
+            className={cn(
+              "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100"
+            )}
+          >
+            <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
+            <MemoThreadQuickActions actions={quickActions} isMobile={isMobile} />
+          </div>
+          <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
+            <A11YContextMenuTriggerButton
+              aria-label="Thread options"
+              className={cn(
+                "pointer-events-none h-7 w-7 shrink-0 rounded-md bg-sidebar-accent p-1.5 text-foreground opacity-0 backdrop-blur-sm hover:bg-sidebar-ring/50 hover:text-accent-foreground focus:outline-none focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              )}
+            >
+              <MoreVerticalIcon className="size-4" />
+              <span className="sr-only">Thread options</span>
+            </A11YContextMenuTriggerButton>
+          </div>
+        </>
+      )}
+    </>
+  );
+});
+
 function ThreadContextMenu({
   actions,
   children,
@@ -320,53 +389,14 @@ function ThreadItemRootImpl({
             href={getExistingChatHref(thread.uuid)}
             onClick={handleLinkClick}
           >
-            <LiveStateIndicatorIcon variant={indicatorVariant} />
-            <span className="mx-1 h-full min-w-0 flex-1 content-center">
-              {isMobile ? null : (
-                <Tooltip asChild isMobile={isMobile} tooltip={tooltip}>
-                  <div className="absolute top-0 bottom-0 left-0 z-30 m-0 h-full w-[calc(100%-4rem)]" />
-                </Tooltip>
-              )}
-              <ThreadTitle isLoading={isLoading} text={thread.title} />
-            </span>
-            {isMobile ? (
-              <div className="relative z-30 mr-1 ml-1 flex shrink-0 items-center justify-center">
-                <A11YContextMenuTriggerButton
-                  aria-label="Thread options"
-                  className={cn(
-                    "sr-only h-7 w-7 shrink-0 rounded-md bg-transparent p-1.5 text-foreground hover:bg-sidebar-ring/50 hover:text-accent-foreground focus-visible:not-sr-only focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                  )}
-                >
-                  <MoreVerticalIcon className="size-4" />
-                  <span className="sr-only">Thread options</span>
-                </A11YContextMenuTriggerButton>
-              </div>
-            ) : (
-              <>
-                <div
-                  className={cn(
-                    "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100"
-                  )}
-                >
-                  <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
-                  <ThreadQuickActions
-                    actions={quickActions}
-                    isMobile={isMobile}
-                  />
-                </div>
-                <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
-                  <A11YContextMenuTriggerButton
-                    aria-label="Thread options"
-                    className={cn(
-                      "pointer-events-none h-7 w-7 shrink-0 rounded-md bg-sidebar-accent p-1.5 text-foreground opacity-0 backdrop-blur-sm hover:bg-sidebar-ring/50 hover:text-accent-foreground focus:outline-none focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                    )}
-                  >
-                    <MoreVerticalIcon className="size-4" />
-                    <span className="sr-only">Thread options</span>
-                  </A11YContextMenuTriggerButton>
-                </div>
-              </>
-            )}
+            <ThreadLinkBody
+              indicatorVariant={indicatorVariant}
+              isLoading={isLoading}
+              isMobile={isMobile}
+              quickActions={quickActions}
+              text={thread.title}
+              tooltip={tooltip}
+            />
           </a>
         </SidebarItem.Button>
       </ThreadContextMenu>

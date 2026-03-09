@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useChatDraftActions, useChatDraftState } from "./use-chat-draft";
+import { useRenderChatNav } from "./use-chat-nav";
 
 // TODO draft: on new chat from click to new chat button, the draft shouldn't be restored but instead should show a hint to the user if there were a draft saved, with action to restore it
 
@@ -31,6 +32,7 @@ const ChatInputActionsContext = createContext<ChatInputContextActions | null>(
 );
 
 export function ChatInputProvider({ children }: { children: React.ReactNode }) {
+  const chatNav = useRenderChatNav();
   const draftState = useChatDraftState();
 
   const draftActions = useChatDraftActions();
@@ -94,10 +96,10 @@ export function ChatInputProvider({ children }: { children: React.ReactNode }) {
     () => ({
       input,
       inputRef,
-      isPending: draftState.status !== "fresh",
-      disabled: draftState.status !== "fresh",
+      isPending: !chatNav.isNew && draftState.status !== "fresh",
+      disabled: !chatNav.isNew && draftState.status !== "fresh",
     }),
-    [input, inputRef, draftState.status]
+    [input, inputRef, chatNav.isNew, draftState.status]
   ) satisfies ChatInputContextState;
 
   const actions = useMemo(
