@@ -192,7 +192,6 @@ function RouteComponent() {
                       onShare: (selectedThread) =>
                         appendLog("share", selectedThread),
                     }}
-                    isActive={thread.uuid === activeUuid}
                     isMobile={isMobilePreview}
                     key={thread.uuid}
                     thread={thread}

@@ -2,6 +2,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { memo, useEffect } from "react";
 import { ChatSidebar } from "@/components/chat/sidebar/sidebar";
 import { ScrollToBottomProvider } from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
+import { AppReadyRouterBridge } from "@/hooks/use-app-ready-router-bridge";
 import { ChatDraftProvider } from "@/hooks/use-chat-draft";
 import { ChatInputProvider } from "@/hooks/use-chat-input";
 import { ChatNavProvider } from "@/hooks/use-chat-nav";
@@ -46,6 +47,7 @@ const DeferredChatViewport = memo(function DeferredChatViewport() {
 function RouteComponent() {
   return (
     <ChatNavProvider>
+      <AppReadyRouterBridge />
       <PreloadCache />
       <ChatSidebar>
         <DeferredChatViewport />

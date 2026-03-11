@@ -4,10 +4,6 @@ import type {
   PromptInputSubmitProps,
 } from "@/components/ai-elements/prompt-input";
 import { ChatInput as Input } from "@/components/ui-custom/chat/chat-input";
-import {
-  useAppLoadStatus,
-  useAppLoadStatusActions,
-} from "@/hooks/use-app-load-status";
 import { useActiveThreadActions } from "@/hooks/use-chat-active";
 import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
 import { useChatNavSwitching } from "@/hooks/use-chat-nav";
@@ -18,8 +14,6 @@ import { ChatModelSelector } from "./_parts/model-selector";
 
 export function ChatInput() {
   const isMobile = useIsMobile();
-  const { isInitialUIStateReady } = useAppLoadStatus();
-  const appUiStatus = useAppLoadStatusActions();
   const inputState = useChatInputState();
   const inputActions = useChatInputActions();
   const { sendMessage } = useActiveThreadActions();
@@ -39,23 +33,18 @@ export function ChatInput() {
     });
   };
 
-  // TODO: perhaps we need better autofocus logic
+  // TODO(app-ready): connect input visibility/focus policy to app-ready phases later.
   useLayoutEffect(() => {
-    appUiStatus.setInputUIReady(!isInputPending);
     if (isInputPending) return;
     inputActions.focus();
-  }, [isInputPending, inputActions.focus, appUiStatus.setInputUIReady]);
+  }, [isInputPending, inputActions.focus]);
 
   // TODO: status not implemented yet
   const submitButtonStatus: PromptInputSubmitProps["status"] = "ready";
 
   return (
     <Input.Root
-      className={cn(
-        "relative mt-4",
-        !isInitialUIStateReady && "opacity-0",
-        isSwitching && "pointer-events-none"
-      )}
+      className={cn("relative mt-4", isSwitching && "pointer-events-none")}
       inputClassName={cn(
         "h-full",
         "rounded-xl bg-background dark:border-initial dark:bg-initial",

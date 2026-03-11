@@ -6,7 +6,7 @@
 import { deferSyncTask } from "@/helpers/defer-sync-task";
 import { cvx } from "@/lib/convex/queries";
 import { ensureQueryCached } from "./queries/convex/utils/use-convex-query-2-cached";
-import { appLoadPromise } from "./use-app-load-status";
+import { appLoadPromise } from "./use-app-ready";
 
 async function deferWhenInitialAppReadyAndCpuIdle<T>(task: () => Promise<T>) {
   await appLoadPromise.wait();

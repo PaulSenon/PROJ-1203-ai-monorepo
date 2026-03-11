@@ -3,7 +3,7 @@ import { ConvexQueryCacheProvider } from "convex-helpers/react/cache/provider";
 import type { ReactNode } from "react";
 import ReactDom from "react-dom/client";
 import Loader from "./components/loader";
-import { AppLoadStatusProvider } from "./hooks/use-app-load-status";
+import { AppReadyProvider } from "./hooks/use-app-ready";
 import { AuthProvider } from "./hooks/use-auth";
 import { UserCacheProvider } from "./hooks/use-user-cache";
 import { routeTree } from "./routeTree.gen";
@@ -28,7 +28,7 @@ const router = createRouter({
      *   - I18N provider
      */
     return (
-      <AppLoadStatusProvider>
+      <AppReadyProvider>
         <AuthProvider>
           {/* TODO: see todo from use-auth.tsx where I talk about the confusion of separation of concern between convex an auth. */}
           {/* <ConvexProvider> */}
@@ -43,7 +43,7 @@ const router = createRouter({
           </ConvexQueryCacheProvider>
           {/* </ConvexProvider> */}
         </AuthProvider>
-      </AppLoadStatusProvider>
+      </AppReadyProvider>
     );
   },
   InnerWrap({ children }) {

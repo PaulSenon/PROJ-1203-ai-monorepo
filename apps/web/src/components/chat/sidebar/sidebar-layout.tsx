@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { Sidebar as SidebarShell } from "@/components/ui-custom/sidebar/sidebar-shell";
 import { ScrollbarZIndexHack } from "@/components/ui-custom/utils/scrollbar-z-index-hack";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import { SidebarFloatingActions } from "./_parts/sidebar-floating-actions";
 import { SidebarFooter, SidebarFooterSpacer } from "./_parts/sidebar-footer";
 import { SidebarHeader, SidebarHeaderSpacer } from "./_parts/sidebar-header";
@@ -11,20 +12,26 @@ import { SidebarVirtualThreadList } from "./_parts/sidebar-virtual-thread-list";
 
 export function ChatSidebarLayout({
   className,
+  style,
   threads,
   children,
   onLoadMore,
   canLoadMore = false,
   isLoadingMore = false,
   onNewChat,
+  sidebarFloatingActionsClassName,
+  sidebarFloatingActionsStyle,
 }: {
   className?: string;
+  style?: React.CSSProperties;
   threads: Doc<"threads">[];
   children?: React.ReactNode;
   onLoadMore?: () => void;
   canLoadMore?: boolean;
   isLoadingMore?: boolean;
   onNewChat?: () => void;
+  sidebarFloatingActionsClassName?: string;
+  sidebarFloatingActionsStyle?: React.CSSProperties;
 }) {
   const isMobile = useIsMobile();
   const [isAtTop, setIsAtTop] = useState(true);
@@ -54,7 +61,7 @@ export function ChatSidebarLayout({
 
   return (
     <SidebarShell.Provider>
-      <SidebarShell.Root className={className} variant="inset">
+      <SidebarShell.Root className={className} style={style} variant="inset">
         <SidebarHeader
           className="absolute top-0 z-50 w-full"
           isOverflowing={!isAtTop}
@@ -77,8 +84,12 @@ export function ChatSidebarLayout({
       </SidebarShell.Root>
 
       <SidebarFloatingActions
-        className="fixed top-3 top-safe-offset-2 left-3"
+        className={cn(
+          "fixed top-3 top-safe-offset-2 left-3",
+          sidebarFloatingActionsClassName
+        )}
         onNewChat={onNewChat}
+        style={sidebarFloatingActionsStyle}
       />
 
       <SidebarShell.Inset>{children}</SidebarShell.Inset>
