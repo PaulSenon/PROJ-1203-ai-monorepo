@@ -28,7 +28,8 @@ Ship exactly this behavior:
 - adaptive reveal timing by wait duration
 
 3. keep it simple
-- no input refactor in V1
+- no input ownership/session refactor in V1
+- remove legacy app-load wiring from prompt-input path (no replacement input transition logic yet)
 - no phase2 architecture work in V1
 
 ---
@@ -45,6 +46,7 @@ Single active loop at a time. New loop cancels prior unfinished loop.
 ### UI destinations (what can be hidden/revealed)
 
 - `sidebar-content`
+- `sidebar-floating-actions`
 - `conversation-content`
 
 ### Readiness scopes (grouped readiness semantics)
@@ -54,8 +56,14 @@ Single active loop at a time. New loop cancels prior unfinished loop.
 
 ### Ready signals (actual emitters)
 
-- `sidebar-thread-history-layout` -> scope `sidebar`
-- `conversation-layout` -> scope `conversation`
+- scope `sidebar` signals:
+  - `sidebar-thread-history-layout`
+- scope `conversation` signals:
+  - `conversation-layout`
+
+Scope readiness rule (V1):
+
+- a scope is ready only when all its configured signals fired at least once in current cycle
 
 Key principle: source components emit signals only. They do not choose loop kind.
 
@@ -67,17 +75,19 @@ Key principle: source components emit signals only. They do not choose loop kind
 
 - hidden destinations:
   - `sidebar-content`
+  - `sidebar-floating-actions`
   - `conversation-content`
 - required readiness scopes:
   - `sidebar`
   - `conversation`
 - release:
-  - both destinations reveal together
+  - all hidden destinations reveal together
   - normal transition (unless reduced-motion)
 
 ### Loop: `navigation`
 
 - triggered by thread route identity change
+  - includes `threadId` transitions to/from `null`
 - hidden destinations:
   - `conversation-content` only
 - required readiness scopes:
@@ -91,6 +101,12 @@ Key principle: source components emit signals only. They do not choose loop kind
 
 Reduced motion: always `none`.
 
+Preemption rule:
+
+- starting a new loop cancels prior unfinished loop immediately
+- new loop hidden set is applied immediately
+- any destination not in new hidden set becomes visible immediately (prevents stale hidden deadlocks)
+
 ---
 
 ## 4) Config Shape
@@ -98,7 +114,10 @@ Reduced motion: always `none`.
 ```ts
 type AppReadyLoopKind = "initial-load" | "navigation";
 
-type AppReadyDestination = "sidebar-content" | "conversation-content";
+type AppReadyDestination =
+  | "sidebar-content"
+  | "sidebar-floating-actions"
+  | "conversation-content";
 
 type AppReadyScope = "sidebar" | "conversation";
 
@@ -107,13 +126,17 @@ type AppReadySignal =
   | "conversation-layout";
 
 const appReadyConfig = {
-  signalToScope: {
-    "sidebar-thread-history-layout": "sidebar",
-    "conversation-layout": "conversation",
+  scopeSignals: {
+    sidebar: ["sidebar-thread-history-layout"],
+    conversation: ["conversation-layout"],
   },
   loops: {
     "initial-load": {
-      hiddenDestinations: ["sidebar-content", "conversation-content"],
+      hiddenDestinations: [
+        "sidebar-content",
+        "sidebar-floating-actions",
+        "conversation-content",
+      ],
       requiredScopes: ["sidebar", "conversation"],
       transitionPolicy: "normal",
     },
@@ -125,6 +148,10 @@ const appReadyConfig = {
   },
 } as const;
 ```
+
+Runtime note:
+
+- core can derive an internal `signalToScope` map from `scopeSignals` at init for O(1) signal routing
 
 ---
 
@@ -145,6 +172,7 @@ on navigation identity changed:
   start loop(navigation, cycle++)
   clear readiness for new cycle
   hide destinations from navigation config
+  reveal destinations not hidden by navigation config
   wait required scopes
 
 on all required scopes ready:
@@ -257,6 +285,15 @@ function useAppReadySignalOnDoubleRafEffect(
 
 All convenience hooks are thin wrappers over `useAppReadySignalAction`.
 
+## Global lock (non-React consumers)
+
+Keep one global controllable promise lock (`appLoadPromise`) for non-React deferred tasks.
+
+- suspend when active loop phase is not `visible`
+- resolve when active loop phase becomes `visible`
+- applies to both `initial-load` and `navigation`
+- single lock only (no per-scope lock in V1)
+
 ---
 
 ## 8) Performance Contract (must)
@@ -318,7 +355,8 @@ Sidebar destination binding is also part of V1, but kept inline in L3 adapter fo
 
 ```txt
 apps/web/src/components/chat/sidebar/
-  sidebar.tsx   # binds `sidebar-content` hide/reveal wrapper
+  sidebar.tsx         # binds `sidebar-content` destination + sidebar ready signal
+  sidebar-layout.tsx  # binds `sidebar-floating-actions` destination className passthrough
 ```
 
 No micro-file sprawl.
@@ -335,12 +373,12 @@ No micro-file sprawl.
 6. Mount provider in `main.tsx` (same provider slot as legacy intent).
 7. Mount router bridge in `_chat.tsx`.
 8. Add conversation overlay part and bind `conversation-content` destination.
-9. Wire `conversation-layout` once in `conversation.tsx`:
-   - non-empty path from layout callback
-   - empty path via double-raf convenience hook with `skip`
+9. Wire `conversation-layout` in `conversation.tsx` with placeholder readiness logic:
+   - use layout/raf convenience hook only
+   - single path for empty and non-empty states (no special-case split in V1)
 10. Wire `sidebar-thread-history-layout` in `sidebar.tsx` with layout hook + `skip` while pending.
-11. Add `sidebar-content` hide wrapper in sidebar L3 only.
-12. Keep input untouched.
+11. Add `sidebar-content` + `sidebar-floating-actions` destination bindings in sidebar L3 only.
+12. Remove prompt-input legacy app-load logic only; add TODO comment for future input transition integration.
 13. Remove obsolete legacy calls only where replaced by this flow.
 
 ---
@@ -355,14 +393,16 @@ Allowed:
 - `apps/web/src/routes/_chat.tsx`
 - `apps/web/src/components/chat/chat.tsx`
 - `apps/web/src/components/chat/conversation/conversation.tsx`
-- `apps/web/src/components/chat/conversation/conversation-layout.tsx` / list part only for callback plumbing
 - `apps/web/src/components/chat/sidebar/sidebar.tsx`
+- `apps/web/src/components/chat/sidebar/sidebar-layout.tsx` (minimal prop/classname passthrough only)
 - `apps/web/src/components/chat/_parts/conversation-ready-overlay.tsx` (new)
+- `apps/web/src/components/chat/prompt-input/prompt-input.tsx` (remove legacy app-load wiring + TODO)
+- `apps/web/src/hooks/use-preload.ts` (if import source changes from app-load legacy module)
 
 Not allowed in V1:
 
 - `apps/web/src/hooks/use-chat-nav.tsx`
-- `apps/web/src/components/chat/prompt-input/*`
+- other prompt-input files outside `prompt-input.tsx`
 - broad `sidebar-layout.tsx` API churn unless strictly required by this feature
 - unrelated demo/component routes
 - phase2 architecture refactors
@@ -376,13 +416,13 @@ Not allowed in V1:
 ```text
 mount provider
   -> loop=initial-load cycle=1
-  -> hide sidebar-content + conversation-content
+  -> hide sidebar-content + sidebar-floating-actions + conversation-content
 
 sidebar emits sidebar-thread-history-layout
 conversation emits conversation-layout
 
 required scopes satisfied (sidebar + conversation)
-  -> release both destinations together
+  -> release all hidden destinations together
 ```
 
 ### Rapid nav before initial ready
@@ -399,7 +439,7 @@ signal for cycle=3 arrives -> release cycle=3
 
 ## 14) Verification Checklist
 
-1. hard load: both destinations hidden then reveal together
+1. hard load: all initial-load destinations hidden then reveal together
 2. navigation: conversation blackout instant
 3. navigation: reveal preset none/fast/normal by wait
 4. repeated fast nav: no stale release from old cycles
@@ -407,6 +447,7 @@ signal for cycle=3 arrives -> release cycle=3
 6. reduced motion: animation skipped
 7. no destination-state subscription inside heavy conversation subtree
 8. signal hooks do not add render churn
+9. mobile sidebar floating actions hidden/revealed with sidebar on initial-load
 
 ---
 
