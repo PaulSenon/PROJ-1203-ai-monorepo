@@ -1,5 +1,4 @@
 import { useCallback, useRef } from "react";
-import { useAppReadySignalOnDoubleRafEffect } from "@/hooks/use-app-ready";
 import {
   useActiveThreadMessages,
   useActiveThreadState,
@@ -10,7 +9,7 @@ import { ChatConversationLayout } from "./conversation-layout";
 const LOAD_OLDER_PAGE_SIZE = 20;
 
 export function ChatConversation() {
-  const { uuid, isThreadSettled, isDataPending, pendingAutoScrollMessageId } =
+  const { uuid, isThreadSettled, pendingAutoScrollMessageId, isDataPending } =
     useActiveThreadState();
   const { loadOlder, olderHistoryStatus } = useActiveThreadMessages();
 
@@ -18,10 +17,6 @@ export function ChatConversation() {
   olderHistoryStatusRef.current = olderHistoryStatus;
 
   const messages = useConversationDisplayMessages();
-
-  useAppReadySignalOnDoubleRafEffect("conversation-layout", {
-    skip: isDataPending,
-  });
 
   const handleStartReached = useCallback(() => {
     if (olderHistoryStatusRef.current !== "CanLoadMore") return;
@@ -31,6 +26,7 @@ export function ChatConversation() {
 
   return (
     <ChatConversationLayout
+      isPending={isDataPending}
       isThreadSettled={isThreadSettled}
       key={uuid}
       messages={messages}

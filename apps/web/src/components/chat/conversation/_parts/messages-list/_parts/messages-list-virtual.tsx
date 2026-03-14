@@ -17,12 +17,13 @@ export type EnrichedLegendListRef = LegendListRef & {
   onceLastItemKey: (key: string, callback: () => unknown) => void;
 };
 
-export type ConversationMessagesListProps = {
+export type MessagesListVirtualProps = {
   messages: MyUIMessage[];
   shouldReserveLastAssistantSpace: boolean;
   listRef: RefObject<EnrichedLegendListRef | null>;
   onStartReached?: () => void;
   onEndReached?: () => void;
+  onLayoutReady?: () => void;
 };
 
 const ALWAYS_RENDER_CONFIG: AlwaysRenderConfig = {
@@ -41,13 +42,14 @@ function messageTypeExtractor(message: MyUIMessage) {
   return message.role;
 }
 
-export function ConversationMessagesList({
+export function MessagesListVirtual({
   messages,
   shouldReserveLastAssistantSpace,
   onStartReached,
   onEndReached,
+  onLayoutReady,
   listRef,
-}: ConversationMessagesListProps) {
+}: MessagesListVirtualProps) {
   const isReady = useRef(false);
   // const listRef = useRef<EnrichedLegendListRef | null>(null);
   const messagesRef = useRef(messages);
@@ -120,8 +122,19 @@ export function ConversationMessagesList({
       top: document.documentElement.scrollHeight,
       behavior: "instant",
     });
+    requestAnimationFrame(() =>
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: "instant",
+      })
+    );
     isReady.current = true;
+    onLayoutReady?.();
   }, [listRef.current?.getState]);
+
+  const handleLoad = useCallback(() => {
+    onLayoutReady?.();
+  }, [onLayoutReady]);
 
   const renderItem = useCallback(
     ({ item, index }: LegendListRenderItemProps<MyUIMessage>) => {
@@ -147,7 +160,7 @@ export function ConversationMessagesList({
     [shouldReserveLastAssistantSpace]
   );
 
-  if (messages.length === 0) return null;
+  // if (messages.length === 0) return null;
 
   return (
     <>
@@ -162,6 +175,7 @@ export function ConversationMessagesList({
         keyExtractor={messageKeyExtractor}
         maintainVisibleContentPosition
         onLayout={handleLayout}
+        onLoad={handleLoad}
         recycleItems
         ref={listRef}
         renderItem={renderItem}

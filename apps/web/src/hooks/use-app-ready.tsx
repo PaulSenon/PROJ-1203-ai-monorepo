@@ -69,13 +69,13 @@ const APP_READY_TRANSITIONS: Record<
   },
   fast: {
     preset: "fast",
-    durationMs: 112,
-    easing: "var(--ease-default)",
+    durationMs: 150,
+    easing: "var(--ease-snappy)",
   },
   normal: {
     preset: "normal",
-    durationMs: 150,
-    easing: "var(--ease-default)",
+    durationMs: 250,
+    easing: "var(--ease-snappy)",
   },
 };
 
@@ -136,6 +136,8 @@ function areNavigationIdentitiesEqual(
   return a.routeKind === b.routeKind && a.threadId === b.threadId;
 }
 
+const DURATION_SKIP_TRANSITION_MS = 150;
+const DURATION_FAST_TRANSITION_MS = 300;
 function resolveTransitionPreset(
   loopKind: AppReadyLoopKind,
   waitDurationMs: number
@@ -148,11 +150,11 @@ function resolveTransitionPreset(
     return "normal";
   }
 
-  if (waitDurationMs < 100) {
+  if (waitDurationMs < DURATION_SKIP_TRANSITION_MS) {
     return "none";
   }
 
-  if (waitDurationMs < 200) {
+  if (waitDurationMs < DURATION_FAST_TRANSITION_MS) {
     return "fast";
   }
 

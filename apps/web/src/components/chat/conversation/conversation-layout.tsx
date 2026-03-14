@@ -5,16 +5,16 @@ import {
   useScrollToBottomActions,
   useScrollToBottomState,
 } from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
+import { useAppReadySignalAction } from "@/hooks/use-app-ready";
 import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
 import { cn } from "@/lib/utils";
-import {
-  ConversationMessagesList,
-  type EnrichedLegendListRef,
-} from "./_parts/messages-list";
+import type { EnrichedLegendListRef } from "./_parts/messages-list/_parts/messages-list-virtual";
+import { MessagesList } from "./_parts/messages-list/messages-list";
 
 export type ChatConversationLayoutProps = {
   messages: MyUIMessage[];
   isThreadSettled: boolean;
+  isPending: boolean;
   pendingAutoScrollMessageId: string | undefined;
   onStartReached?: () => void;
 };
@@ -23,12 +23,13 @@ export function ChatConversationLayout({
   messages,
   isThreadSettled,
   pendingAutoScrollMessageId,
+  isPending,
   onStartReached,
 }: ChatConversationLayoutProps) {
   const listRef = useRef<EnrichedLegendListRef | null>(null);
   const { bottomRef } = useScrollToBottomState();
   const { scrollToBottom } = useScrollToBottomActions();
-
+  const { ready: markReady } = useAppReadySignalAction("conversation-layout");
   const shouldReserveLastAssistantSpace = useShouldReserveLastAssistantSpace({
     isThreadSettled,
   });
@@ -52,9 +53,11 @@ export function ChatConversationLayout({
       )}
     >
       <Conversation.List>
-        <ConversationMessagesList
+        <MessagesList
+          isPending={isPending}
           listRef={listRef}
           messages={messages}
+          onReady={markReady}
           onStartReached={onStartReached}
           shouldReserveLastAssistantSpace={shouldReserveLastAssistantSpace}
         />

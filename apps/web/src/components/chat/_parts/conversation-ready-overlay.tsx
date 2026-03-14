@@ -17,7 +17,7 @@ export function ConversationReadyOverlay() {
   return (
     <div
       aria-hidden="true"
-      className="md:-top-2 md:-bottom-6 absolute inset-x-0 top-0 bottom-0 z-[60] bg-background transition-opacity"
+      className="md:-top-2 background absolute inset-x-0 top-0 bottom-0 z-2 bg-background transition-opacity"
       style={style}
     />
   );
