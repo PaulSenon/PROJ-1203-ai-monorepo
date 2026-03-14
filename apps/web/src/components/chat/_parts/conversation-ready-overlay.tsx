@@ -1,8 +1,24 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useAppReadyUiDestination } from "@/hooks/use-app-ready";
+
+const VIEWPORT_SCROLLBAR_HIDDEN_ATTR = "data-app-ready-hide-viewport-scrollbar";
 
 export function ConversationReadyOverlay() {
   const destination = useAppReadyUiDestination("conversation-content");
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const shouldHideViewportScrollbar = destination.phase !== "visible";
+
+    root.toggleAttribute(
+      VIEWPORT_SCROLLBAR_HIDDEN_ATTR,
+      shouldHideViewportScrollbar
+    );
+
+    return () => {
+      root.removeAttribute(VIEWPORT_SCROLLBAR_HIDDEN_ATTR);
+    };
+  }, [destination.phase]);
 
   const style = useMemo(
     () => ({

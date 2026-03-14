@@ -41,6 +41,16 @@ body {
   scrollbar-gutter: stable;
 }
 
+html[data-app-ready-hide-viewport-scrollbar],
+html[data-app-ready-hide-viewport-scrollbar] body {
+  scrollbar-width: none;
+}
+
+html[data-app-ready-hide-viewport-scrollbar]::-webkit-scrollbar,
+html[data-app-ready-hide-viewport-scrollbar] body::-webkit-scrollbar {
+  display: none;
+}
+
 :root {
   --radius: 0.625rem;
   --background: oklch(0.145 0 0);
