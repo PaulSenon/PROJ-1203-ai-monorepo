@@ -315,6 +315,7 @@ function RouteComponent() {
             >
               <ScrollToBottomProvider containerRef={previewScrollRef}>
                 <ChatConversationLayout
+                  isPending={false}
                   isThreadSettled={isThreadSettled}
                   key={`${threadUuid}:${layoutRemountKey}`}
                   messages={messages}

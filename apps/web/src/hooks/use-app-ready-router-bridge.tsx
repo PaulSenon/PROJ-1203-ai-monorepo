@@ -1,18 +1,18 @@
 import { useLayoutEffect } from "react";
-import { Route as ChatRoute } from "@/routes/_chat/chat.{-$id}";
 import { useAppReadyNavigationIdentityAction } from "./use-app-ready";
+import { useChatNav } from "./use-chat-nav";
 
 export function AppReadyRouterBridge() {
-  const { id } = ChatRoute.useParams();
+  const chatNav = useChatNav();
   const { publishNavigationIdentity } = useAppReadyNavigationIdentityAction();
 
   useLayoutEffect(() => {
-    // Bridge only publishes identity. First-observation semantics live in core.
+    // Bridge follows instant chat-nav identity so blackout starts with shell nav feedback.
     publishNavigationIdentity({
       routeKind: "chat-thread",
-      threadId: id ?? null,
+      threadId: chatNav.isNew ? null : chatNav.id,
     });
-  }, [id, publishNavigationIdentity]);
+  }, [chatNav.id, chatNav.isNew, publishNavigationIdentity]);
 
   return null;
 }

@@ -540,11 +540,19 @@ export function useAppReadyUiDestination(destination: AppReadyDestination) {
 
 export function useAppReadySignalAction(signal: AppReadySignal) {
   const store = useAppReadyStore();
-  const cycleId = useAppReadyStoreSelector((state) => state.cycleId);
+  const cycleIdRef = useRef<number | null>(null);
+
+  // Freeze cycle ownership to this mounted source instance.
+  if (cycleIdRef.current === null) {
+    cycleIdRef.current = store.getSnapshot().cycleId;
+  }
 
   const ready = useCallback(() => {
-    store.signalReady(signal, cycleId);
-  }, [store, signal, cycleId]);
+    store.signalReady(
+      signal,
+      cycleIdRef.current ?? store.getSnapshot().cycleId
+    );
+  }, [store, signal]);
 
   return useMemo(
     () => ({
