@@ -493,16 +493,25 @@ export function useMessages({
     [baseLayer, resumedLayer, httpLayer]
   );
 
+  // query data are pending if any query is pending
   const isQueryPending = isSkip
     ? false
     : paginatedMessages.isPending || resumedMessages.isPending;
-  const isPending = isSkip ? false : cache.isPending;
-  const isStale = isSkip ? false : !cache.isPending && isQueryPending;
+  // data are pending is cache is pending, or if cache it empty, fallback on query pending
+  const isPending = isSkip
+    ? false
+    : cache.isPending || (cache.isEmpty && isQueryPending);
+  // data are stale if cache no longer pending and not empty while query is still pending
+  const isStale = isSkip
+    ? false
+    : !(cache.isPending || cache.isEmpty) && isQueryPending;
+  // data are loading only when data are loading (loading = subsequent load-more on paginated query)
   const isLoading = isSkip ? false : paginatedMessages.isLoading;
   const paginatedStatus = paginatedMessages.status;
 
   useEffect(() => {
     if (isSkip) return;
+    if (messages.length === 0) return;
     cache.set(messages.slice(-10));
   }, [isSkip, messages, cache.set]);
 

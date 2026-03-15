@@ -108,6 +108,7 @@ export function useUserCacheEntryOnce<T>(
       ...entry,
       snapshot,
       isPending: snapshot === undefined,
+      isEmpty: snapshot === null,
     }),
     [entry, snapshot]
   );

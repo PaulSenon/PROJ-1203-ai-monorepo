@@ -42,10 +42,12 @@ export function Chat() {
   return (
     <>
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <ChatConversation />
+        {/* ConversationReadyOverlay must be before ChatConversation (sticky>absolute hack) */}
         <ConversationReadyOverlay />
+        <ChatConversation />
       </div>
-      <StickyContainer>
+      {/* z-2 to be above ConversationReadyOverlay */}
+      <StickyContainer className="z-2">
         <div className="relative mx-auto flex w-full max-w-3xl flex-col items-start justify-center gap-4 px-4 pt-2 pb-2 md:pb-4">
           <ScrollToBottom />
           <div className="w-full">

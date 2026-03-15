@@ -41,14 +41,23 @@ body {
   scrollbar-gutter: stable;
 }
 
+/**
+ * Used by conversation loading overlay to avoid scrollbar gutter jumps
+ * when stabilizing new conversation height (because virtualizer)
+
+ * ! IMPORTANT: 
+ * ! Must only use layout stable style because repaint is 
+ * ! both heavy and done at a critical cpu intensive time.
+ */
 html[data-app-ready-hide-viewport-scrollbar],
 html[data-app-ready-hide-viewport-scrollbar] body {
   scrollbar-width: none;
+  overflow-y: clip;
 }
-
 html[data-app-ready-hide-viewport-scrollbar]::-webkit-scrollbar,
 html[data-app-ready-hide-viewport-scrollbar] body::-webkit-scrollbar {
   display: none;
+  overflow-y: clip;
 }
 
 :root {

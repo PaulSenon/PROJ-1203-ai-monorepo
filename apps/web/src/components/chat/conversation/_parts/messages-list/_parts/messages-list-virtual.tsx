@@ -122,17 +122,22 @@ export function MessagesListVirtual({
       top: document.documentElement.scrollHeight,
       behavior: "instant",
     });
-    requestAnimationFrame(() =>
+
+    // TODO: this is hacky but this appears to work better.
+    requestAnimationFrame(() => {
       window.scrollTo({
         top: document.documentElement.scrollHeight,
         behavior: "instant",
-      })
-    );
+      });
+      // triggering ready here appears sooner but might miss
+      onLayoutReady?.();
+    });
+
     isReady.current = true;
-    onLayoutReady?.();
   }, [listRef.current?.getState]);
 
   const handleLoad = useCallback(() => {
+    // triggering ready here appears too late but never miss (fallback)
     onLayoutReady?.();
   }, [onLayoutReady]);
 
