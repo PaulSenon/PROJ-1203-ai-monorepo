@@ -26,7 +26,7 @@ export type AppReadySignal =
 
 export type AppReadyNavigationIdentity = {
   routeKind: "chat-thread";
-  threadId: string | null;
+  sessionId: string;
 };
 
 type AppReadyTransitionPreset = "none" | "fast" | "normal";
@@ -133,7 +133,7 @@ function areNavigationIdentitiesEqual(
   a: AppReadyNavigationIdentity,
   b: AppReadyNavigationIdentity
 ) {
-  return a.routeKind === b.routeKind && a.threadId === b.threadId;
+  return a.routeKind === b.routeKind && a.sessionId === b.sessionId;
 }
 
 const DURATION_SKIP_TRANSITION_MS = 150;

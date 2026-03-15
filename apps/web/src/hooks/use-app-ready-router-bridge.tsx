@@ -7,12 +7,12 @@ export function AppReadyRouterBridge() {
   const { publishNavigationIdentity } = useAppReadyNavigationIdentityAction();
 
   useLayoutEffect(() => {
-    // Bridge follows instant chat-nav identity so blackout starts with shell nav feedback.
+    // Bridge mirrors logical chat session identity, not URL persistence mode.
     publishNavigationIdentity({
       routeKind: "chat-thread",
-      threadId: chatNav.isNew ? null : chatNav.id,
+      sessionId: chatNav.id,
     });
-  }, [chatNav.id, chatNav.isNew, publishNavigationIdentity]);
+  }, [chatNav.id, publishNavigationIdentity]);
 
   return null;
 }
