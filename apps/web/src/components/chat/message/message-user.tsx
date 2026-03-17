@@ -43,6 +43,7 @@ export function ChatMessageUser({
         <Message.Footer>
           <MessageFooterUser
             createdAt={message.metadata?.createdAt}
+            messageId={message.id}
             onAction={handleFooterAction}
             readEditInitialText={readRawText}
           />

@@ -1,5 +1,11 @@
 import type { AppContract } from "@ai-monorepo/api-contract/contract";
-import { createORPCClient, DynamicLink, ORPCError } from "@orpc/client";
+import {
+  createORPCClient,
+  DynamicLink,
+  type InferClientErrors,
+  isDefinedError,
+  ORPCError,
+} from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { ContractRouterClient } from "@orpc/contract";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
@@ -52,3 +58,11 @@ export const orpc = createTanstackQueryUtils(client);
 // Specialized chat client
 export const chatRpc =
   createORPCClient<ContractRouterClient<AppContract>>(linkWithAuthHeader);
+
+type ChatRPCErrors = InferClientErrors<typeof chatRpc>["chat"];
+export function isChatRPCError(
+  error: unknown
+): error is Extract<ChatRPCErrors, ORPCError<string, unknown>> {
+  if (!(error instanceof Error)) return false;
+  return isDefinedError<ChatRPCErrors>(error);
+}

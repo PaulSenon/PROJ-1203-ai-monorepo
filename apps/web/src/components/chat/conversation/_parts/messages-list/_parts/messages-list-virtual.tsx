@@ -5,7 +5,7 @@ import {
   type LegendListRef,
   type LegendListRenderItemProps,
 } from "@legendapp/list/react";
-import { type RefObject, useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { ChatMessage } from "@/components/chat/message/message";
 import {
   ScrollEdgeProbe,
@@ -20,10 +20,10 @@ export type EnrichedLegendListRef = LegendListRef & {
 export type MessagesListVirtualProps = {
   messages: MyUIMessage[];
   shouldReserveLastAssistantSpace: boolean;
-  listRef: RefObject<EnrichedLegendListRef | null>;
   onStartReached?: () => void;
   onEndReached?: () => void;
   onLayoutReady?: () => void;
+  onLastItemKeyUpdate?: (lastItemKey?: string) => void;
 };
 
 const ALWAYS_RENDER_CONFIG: AlwaysRenderConfig = {
@@ -48,11 +48,13 @@ export function MessagesListVirtual({
   onStartReached,
   onEndReached,
   onLayoutReady,
-  listRef,
+  onLastItemKeyUpdate,
 }: MessagesListVirtualProps) {
+  const listRef = useRef<EnrichedLegendListRef | null>(null);
   const isReady = useRef(false);
-  // const listRef = useRef<EnrichedLegendListRef | null>(null);
   const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
   const handleStartReached = useCallback(() => {
     if (!isReady.current) return;
     onStartReached?.();
@@ -67,85 +69,46 @@ export function MessagesListVirtual({
     rootMargin: "100%",
   });
 
-  messagesRef.current = messages;
-
-  // TODO wire onStart and onEnd observers
-  const observers = useRef<Map<string, ((id: string) => void)[]>>(null);
-  if (observers.current === null) {
-    observers.current = new Map();
-  }
-
-  useEffect(() => {
-    if (listRef.current === null) return;
-    listRef.current.onceLastItemKey = (
-      key: string,
-      callback: () => unknown
-    ) => {
-      // if already present, trigger callback without subscribing
-      if (messagesRef.current.findLastIndex((m) => m.id === key) !== -1) {
-        console.log("LAST SHORTCUT", key);
-        callback();
-        return;
-      }
-      if (observers.current === null) return;
-      const obsForKey = observers.current.get(key) ?? [];
-
-      observers.current.set(key, [...obsForKey, callback]);
-    };
-    listRef.current.getState().listen("lastItemKeys", (keys) => {
-      for (const key of keys) {
-        for (const obs of observers.current?.get(key) ?? []) {
-          obs(key);
-          observers.current?.delete(key);
-        }
-      }
-      console.log("LAST ITEM KEYS", {
-        keys,
-        obs: observers.current?.entries(),
-      });
-    });
-  }, [listRef.current]);
-
   /**
    * Two little hacks here.
    * - we want initial scroll to be as window end, not list end
    * - we should only do that on "first layout but only when state is ready"
    */
+  const raf = useRef(0);
   const handleLayout = useCallback(() => {
     // skip if we already did our initial scroll once
-    if (isReady.current === true) return;
-    // skip if internal list state not ready (meaning window height ready)
-    if (listRef.current?.getState() === undefined) return;
-
-    // perform real window end scroll
-    window.scrollTo({
-      top: document.documentElement.scrollHeight,
-      behavior: "instant",
-    });
-
-    // TODO: this is hacky but this appears to work better.
-    requestAnimationFrame(() => {
-      window.scrollTo({
-        top: document.documentElement.scrollHeight,
-        behavior: "instant",
+    if (isReady.current === true) {
+      // when ready we notify last added item key when layout changes
+      cancelAnimationFrame(raf.current);
+      raf.current = requestAnimationFrame(() => {
+        onLastItemKeyUpdate?.(messagesRef.current.at(-1)?.id);
       });
-      // triggering ready here appears sooner but might miss
+      return;
+    }
+
+    // on first load we trigger ready event
+    cancelAnimationFrame(raf.current);
+    raf.current = requestAnimationFrame(() => {
+      isReady.current = true;
       onLayoutReady?.();
     });
+  }, [onLayoutReady, onLastItemKeyUpdate]);
 
-    isReady.current = true;
-  }, [listRef.current?.getState]);
-
+  // This is only a safety net, in case the ready event isn't properly fired
+  // on layout. Because this is critical as it might block the full UI in a loading
+  // state. So we also handle onLoad that runs later than layout but I guess it's less
+  // framerate dependent.
   const handleLoad = useCallback(() => {
-    // triggering ready here appears too late but never miss (fallback)
     onLayoutReady?.();
   }, [onLayoutReady]);
 
   const renderItem = useCallback(
     ({ item, index }: LegendListRenderItemProps<MyUIMessage>) => {
       const isLast = index === messagesRef.current.length - 1;
+      const isFollowup = messagesRef.current.length > 2;
       const isDynamic = isLast && shouldReserveLastAssistantSpace;
-      const shouldReserveForAssistant = item.role === "assistant" && isDynamic;
+      const shouldReserveForAssistant =
+        item.role === "assistant" && isDynamic && isFollowup;
 
       return (
         <div
@@ -165,13 +128,14 @@ export function MessagesListVirtual({
     [shouldReserveLastAssistantSpace]
   );
 
-  // if (messages.length === 0) return null;
+  // just a safety net
+  if (messages.length === 0) return null;
 
   return (
     <>
       <ScrollEdgeProbe ref={topRef} />
       <LegendList<MyUIMessage>
-        alignItemsAtEnd
+        alignItemsAtEnd={true}
         alwaysRender={ALWAYS_RENDER_CONFIG}
         data={messages}
         getItemType={messageTypeExtractor}
@@ -186,7 +150,7 @@ export function MessagesListVirtual({
         renderItem={renderItem}
         suggestEstimatedItemSize
         useWindowScroll
-        waitForInitialLayout
+        waitForInitialLayout={false}
       />
       <ScrollEdgeProbe ref={bottomRef} />
     </>

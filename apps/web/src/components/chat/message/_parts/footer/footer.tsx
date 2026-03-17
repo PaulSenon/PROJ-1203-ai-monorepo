@@ -1,7 +1,12 @@
 import { type ComponentProps, memo } from "react";
 import { cn } from "@/lib/utils";
 import { CopyAction, RetryAction } from "./_parts/footer-actions";
-import { CreatedAtInfo, ModelInfo, SpeedInfo } from "./_parts/footer-infos";
+import {
+  CreatedAtInfo,
+  DebugMessageId,
+  ModelInfo,
+  SpeedInfo,
+} from "./_parts/footer-infos";
 import type { MessageFooterActionHandler } from "./footer.types";
 
 const ROOT_CLASSNAME =
@@ -12,6 +17,7 @@ export type MessageFooterAssistantProps = ComponentProps<"div"> & {
   modelId?: string;
   mockedTokensPerSecond?: number;
   onAction: MessageFooterActionHandler;
+  messageId?: string;
 };
 
 export const MessageFooterAssistant = memo(function _MessageFooterAssistant({
@@ -20,6 +26,7 @@ export const MessageFooterAssistant = memo(function _MessageFooterAssistant({
   mockedTokensPerSecond,
   className,
   onAction,
+  messageId,
   ...props
 }: MessageFooterAssistantProps) {
   return (
@@ -31,6 +38,7 @@ export const MessageFooterAssistant = memo(function _MessageFooterAssistant({
       <div className="flex items-center gap-2 text-muted-foreground/80">
         <ModelInfo modelId={modelId} />
         <SpeedInfo mockedTokensPerSecond={mockedTokensPerSecond} />
+        <DebugMessageId messageId={messageId} />
       </div>
     </div>
   );
@@ -40,6 +48,7 @@ export type MessageFooterUserProps = ComponentProps<"div"> & {
   createdAt?: number;
   readEditInitialText: () => string;
   onAction: MessageFooterActionHandler;
+  messageId: string;
 };
 
 export const MessageFooterUser = memo(function _MessageFooterUser({
@@ -47,6 +56,7 @@ export const MessageFooterUser = memo(function _MessageFooterUser({
   readEditInitialText,
   className,
   onAction,
+  messageId,
   ...props
 }: MessageFooterUserProps) {
   // const [isEditing, setIsEditing] = useState(false);
@@ -86,6 +96,7 @@ export const MessageFooterUser = memo(function _MessageFooterUser({
       {/* )} */}
       <div className="flex items-center gap-2 text-muted-foreground/80">
         <CreatedAtInfo createdAt={createdAt} />
+        <DebugMessageId messageId={messageId} />
       </div>
     </div>
   );

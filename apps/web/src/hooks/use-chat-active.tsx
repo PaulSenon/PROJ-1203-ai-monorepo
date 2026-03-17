@@ -1,3 +1,4 @@
+import { createOptimisticStepStartMessage } from "@ai-monorepo/ai/helpers";
 import type { AllowedModelIds } from "@ai-monorepo/ai/model.registry";
 import type {
   MyUIMessage,
@@ -11,6 +12,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { cvx } from "@/lib/convex/queries";
@@ -31,8 +33,8 @@ type ActiveThreadState = {
   isDataStale: boolean;
   isStreaming: boolean;
   messagesQueue: MyUIMessage[];
-  isStreamingOptimistic: boolean;
-  isWaitingForFirstToken: boolean;
+  // isStreamingOptimistic: boolean;
+  // isWaitingForFirstToken: boolean;
   isThreadSettled: boolean;
   pendingAutoScrollMessageId: string | undefined;
 };
@@ -76,8 +78,8 @@ type ActiveThreadStateType = Pick<
   | "isDataPending"
   | "isDataStale"
   | "isStreaming"
-  | "isStreamingOptimistic"
-  | "isWaitingForFirstToken"
+  // | "isStreamingOptimistic"
+  // | "isWaitingForFirstToken"
   | "isThreadSettled"
   | "pendingAutoScrollMessageId"
 >;
@@ -165,6 +167,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     resumeStreamEnabled,
   });
 
+  const upsertPromiseRef = useRef<Promise<unknown>>(Promise.resolve());
   const [messagesQueue, _setMessagesQueue] = useState<MyUIMessage[]>([]);
   const {
     sendMessage: sdkSendMessage,
@@ -172,8 +175,25 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     setMessages: sdkSetMessages,
     status: sdkStatus,
   } = useChatContext({
-    onError: () => {
+    onError: async (error) => {
+      console.error("sdkChatError", error);
       clearOwnership();
+
+      // upsertThread might throw if not allowed (because already streaming)
+      await upsertPromiseRef.current.catch((e) => {
+        console.error("Error in previous upsert", e);
+      });
+      await upsertThread({
+        threadUuid: chatNav.id,
+        patch: {
+          liveStatus: "error",
+        },
+      }).catch((e) => {
+        console.error(
+          "Error attempting to update thread liveStatus to error from client",
+          e
+        );
+      });
     },
   });
 
@@ -189,8 +209,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
 
   // Streaming status (!== request data)
   const streamStatus: ActiveThreadStatus | undefined = useMemo(() => {
-    if (chatNav.isNew) return "new";
-    if (isThreadQueryPending) return undefined;
+    // if (isThreadQueryPending) return undefined;
 
     if (thread?.liveStatus === "error") return "error";
     if (thread?.liveStatus === "cancelled") return "cancelled";
@@ -199,12 +218,14 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       return "streaming";
     if (sdkStatus === "submitted" || thread?.liveStatus === "pending")
       return "pending";
-  }, [chatNav.isNew, isThreadQueryPending, thread?.liveStatus, sdkStatus]);
+    if (chatNav.isNew) return "new";
+  }, [chatNav.isNew, thread?.liveStatus, sdkStatus]);
   const streamStatusKing = getLiveStatusKind(streamStatus); // TODO: getLiveStatusKind was supposed to be used with liveStatus type not ActiveThreadStatus. Temp hack before we unify this "status" reducer we need everywhere.
   const isStreaming = streamStatus === "streaming";
-  const isWaitingForFirstToken =
-    streamStatusKing === "ongoing" && messages.at(-1)?.role === "user";
-  const isStreamingOptimistic = isStreaming || isWaitingForFirstToken;
+  // TODO: perhaps no longer useful since we have optimistic agent response now.
+  // const isWaitingForFirstToken =
+  //   streamStatusKing === "ongoing" && messages.at(-1)?.role === "user";
+  // const isStreamingOptimistic = isStreaming || isWaitingForFirstToken;
 
   const upsertThread = useCvxMutationAuthV3(
     ...cvx.mutationV3.threads.upsert.options()
@@ -216,12 +237,16 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   // later remark linked to above todo, we should also handle undefined as settled to avoid having the last assistant min-height latching on pageload 100% of the time. Or we should also handle data loading state to only read when ready. To be defined.
 
   const __sendMessageInternal = useCallback(
-    async (uiMessage: MyUIMessage) => {
+    async (uiMessage: MyUIMessage, nextMessageId: string) => {
       if (chatNav.isNew) chatNav.persistNewChatIdToUrl();
+
+      const optimisticNextMessage =
+        createOptimisticStepStartMessage(nextMessageId);
+
       // TODO: save cleared input to restore in case of error
       inputActions.clear();
       console.log("TOTO123: UPSERTING THREAD...");
-      const upsertPromise = upsertThread({
+      upsertPromiseRef.current = upsertThread({
         threadUuid: chatNav.id,
         patch: {
           liveStatus: "pending",
@@ -231,35 +256,32 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       let patchId: string | undefined;
       console.log("DEBUG123: __sendMessageInternal", chatNav.id);
       try {
-        console.log("TOTO123: APPLIED OPTIMISTIC PATCH", uiMessage);
-        patchId = applyOptimisticPatch(uiMessage);
-        setPendingAutoScrollMessageId(uiMessage.id);
+        const msgs = [uiMessage, optimisticNextMessage];
+        console.log("TOTO123: APPLIED OPTIMISTIC PATCH", msgs);
+        patchId = applyOptimisticPatch(msgs);
+        setPendingAutoScrollMessageId(optimisticNextMessage.id);
         console.log("TOTO123: SDK SET SDK MESSAGES []");
         sdkSetMessages([]);
         markOwned();
-        await sdkSendMessage(uiMessage);
+        await sdkSendMessage(uiMessage, {
+          metadata: {
+            nextMessageId,
+          },
+        });
       } catch (error) {
+        // TODO: This sucks so we need to fork useChat to handle this properly
+        //! IMPORTANT:
+        //! sdkSendMessage is almost never throwing (can only throw before request is sent)
+        //! for sdkSendMessage error handling, this must be implemented in onError.
         clearOwnership();
         console.error("error while sending message", error);
-
-        // upsertThread might throw if not allowed (because already streaming)
-        try {
-          await upsertPromise;
-          await upsertThread({
-            threadUuid: chatNav.id,
-            patch: {
-              liveStatus: "error",
-            },
-          });
-        } catch (_error) {
-          console.error("error while upserting thread", _error);
-        }
       } finally {
         console.log("TOTO123: REVERTING OPTIMISTIC PATCH", patchId);
         if (patchId) revertOptimisticPatch(patchId);
+        // TODO: This is not frame perfect. We should ultimately flush the stream messages when we have the persisted ones. Perhaps we need some abstraction on sendMessage or something to handle proper lifecycle. Or any better things That would allow handling when everything is fully done. Or at least a `await persisted(...)` before. Be careful with dead-lock and do not to mess around with stream ownership though.
         sdkSetMessages([]);
         // upsertThread might throw if not allowed (because already streaming)
-        await upsertPromise.catch((error) => {
+        await upsertPromiseRef.current.catch((error) => {
           console.error("error while upserting thread", error);
         });
 
@@ -284,6 +306,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const sendMessage = useCallback(
     (params: SendMessageParams) => {
       const messageId = nanoid();
+      const nextMessageId = nanoid();
       const uiMessage: MyUIMessage = {
         role: "user",
         parts: [{ type: "text", text: params.text }],
@@ -303,7 +326,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       // ) {
       //   setMessagesQueue((prev) => [...prev, uiMessage]);
       // } else {
-      return __sendMessageInternal(uiMessage);
+      return __sendMessageInternal(uiMessage, nextMessageId);
       // }
     },
     [__sendMessageInternal]
@@ -425,8 +448,8 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         isDataPending,
         isDataStale,
         isStreaming,
-        isStreamingOptimistic,
-        isWaitingForFirstToken,
+        // isStreamingOptimistic,
+        // isWaitingForFirstToken,
         isThreadSettled,
         pendingAutoScrollMessageId,
       }) satisfies ActiveThreadStateType,
@@ -437,8 +460,8 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       isDataPending,
       isDataStale,
       isStreaming,
-      isStreamingOptimistic,
-      isWaitingForFirstToken,
+      // isStreamingOptimistic,
+      // isWaitingForFirstToken,
       isThreadSettled,
       pendingAutoScrollMessageId,
     ]

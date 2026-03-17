@@ -66,7 +66,9 @@ function createSidebarActiveThreadStore(
         return;
       }
       activeThreadId = nextActiveThreadId;
-      listeners.forEach((listener) => listener());
+      for (const listener of listeners) {
+        listener();
+      }
     },
   };
 }
@@ -117,9 +119,8 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
     return createExistingChatTarget(routeThreadId);
   }, [newThreadId, routeThreadId]);
 
-  const [instantTarget, setInstantTarget] = useState<ChatThreadTarget>(
-    routeTarget
-  );
+  const [instantTarget, setInstantTarget] =
+    useState<ChatThreadTarget>(routeTarget);
   const sidebarActiveThreadStoreRef = useRef<SidebarActiveThreadStore>(
     createSidebarActiveThreadStore(toActiveThreadId(routeTarget))
   );
@@ -209,7 +210,9 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
   const instantActiveThreadId = toActiveThreadId(instantTarget);
 
   useLayoutEffect(() => {
-    sidebarActiveThreadStoreRef.current.setActiveThreadId(instantActiveThreadId);
+    sidebarActiveThreadStoreRef.current.setActiveThreadId(
+      instantActiveThreadId
+    );
   }, [instantActiveThreadId]);
 
   const instantState = useMemo(
@@ -261,7 +264,9 @@ function useChatNavShellState() {
 function useChatNavRenderState() {
   const context = useContext(ChatNavRenderContext);
   if (!context) {
-    throw new Error("useChatNavRenderState must be used within ChatNavProvider");
+    throw new Error(
+      "useChatNavRenderState must be used within ChatNavProvider"
+    );
   }
   return context;
 }
@@ -314,7 +319,11 @@ function useSidebarActiveThreadStore() {
 
 export function useActiveSidebarThreadId() {
   const store = useSidebarActiveThreadStore();
-  return useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  return useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+    store.getSnapshot
+  );
 }
 
 export function useIsSidebarThreadActive(threadId: string) {

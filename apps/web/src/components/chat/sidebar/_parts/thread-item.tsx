@@ -226,7 +226,10 @@ const ThreadLinkBody = memo(function ThreadLinkBody({
             )}
           >
             <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
-            <MemoThreadQuickActions actions={quickActions} isMobile={isMobile} />
+            <MemoThreadQuickActions
+              actions={quickActions}
+              isMobile={isMobile}
+            />
           </div>
           <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
             <A11YContextMenuTriggerButton
