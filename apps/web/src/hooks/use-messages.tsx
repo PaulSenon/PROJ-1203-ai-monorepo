@@ -9,9 +9,12 @@ import type { Id } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import dedent from "dedent";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cvx } from "@/lib/convex/queries";
+import {
+  useAiSdkChatMessages,
+  useAiSdkChatState,
+} from "./chat/use-ai-sdk-chat";
 import { useCvxQueryAuthNoCache } from "./queries/convex/utils/use-convex-query-0-auth";
 import { useCvxPaginatedQueryStable } from "./queries/convex/utils/use-convex-query-1-stable";
-import { useChatContext } from "./use-messages-legacy";
 import { useUserCacheEntryOnce } from "./use-user-cache";
 import { useFpsThrottledValue } from "./utils/use-fps-throttled-state";
 
@@ -316,7 +319,8 @@ export function useMessages({
   const resumedMessages = useStreamingUiMessage(
     resumeStreamEnabled ? threadUuid : "skip"
   );
-  const httpStreamingMessages = useChatContext();
+  const httpStreamingMessages = useAiSdkChatMessages();
+  const httpStreamingState = useAiSdkChatState();
 
   type PatchId = string;
   const optimisticPatches = useRef<Map<PatchId, MyUIMessage[]>>(new Map());
@@ -451,10 +455,10 @@ export function useMessages({
 
   const httpLayer = useMemo(
     () =>
-      normalizeMessages(httpStreamingMessages.messages, {
+      normalizeMessages(httpStreamingMessages, {
         debugLabel: "http-stream",
       }),
-    [httpStreamingMessages.messages]
+    [httpStreamingMessages]
   );
 
   // For performance reasons, we merge layer in two steps:
@@ -523,7 +527,7 @@ export function useMessages({
       isStale,
       loadMore: paginatedMessages.loadMore,
       paginatedStatus,
-      streamingStatus: httpStreamingMessages.status,
+      streamingStatus: httpStreamingState.status,
       applyOptimisticPatch,
       revertOptimisticPatch,
     }),
@@ -534,7 +538,7 @@ export function useMessages({
       isStale,
       paginatedMessages.loadMore,
       paginatedStatus,
-      httpStreamingMessages.status,
+      httpStreamingState.status,
       applyOptimisticPatch,
       revertOptimisticPatch,
     ]

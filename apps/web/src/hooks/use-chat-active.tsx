@@ -17,12 +17,16 @@ import {
 } from "react";
 import { cvx } from "@/lib/convex/queries";
 import type { MaybePromise } from "@/lib/utils";
+import {
+  useAiSdkChatActions,
+  useAiSdkChatHandlers,
+  useAiSdkChatState,
+} from "./chat/use-ai-sdk-chat";
 import { useCvxMutationAuthV3 } from "./queries/convex/utils/use-convex-mutation-0-auth";
 import { useThread } from "./queries/use-chat-active-queries";
 import { useChatInputActions } from "./use-chat-input";
 import { useRenderChatNav } from "./use-chat-nav";
 import { useMessages } from "./use-messages";
-import { useChatContext } from "./use-messages-legacy";
 import { getLiveStatusKind, useStreamOwnership } from "./use-stream-ownership";
 
 type ActiveThreadState = {
@@ -173,8 +177,9 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     sendMessage: sdkSendMessage,
     regenerate: sdkRegenerate,
     setMessages: sdkSetMessages,
-    status: sdkStatus,
-  } = useChatContext({
+  } = useAiSdkChatActions();
+  const { status: sdkStatus } = useAiSdkChatState();
+  useAiSdkChatHandlers({
     onError: async (error) => {
       console.error("sdkChatError", error);
       clearOwnership();
