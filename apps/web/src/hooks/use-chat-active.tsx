@@ -15,6 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useChatSessionScope } from "@/components/providers/4-chat-session-scope";
 import { cvx } from "@/lib/convex/queries";
 import type { MaybePromise } from "@/lib/utils";
 import {
@@ -22,10 +23,10 @@ import {
   useAiSdkChatHandlers,
   useAiSdkChatState,
 } from "./chat/use-ai-sdk-chat";
+import { useChatNavActions } from "./chat/use-chat-nav";
 import { useCvxMutationAuthV3 } from "./queries/convex/utils/use-convex-mutation-0-auth";
 import { useThread } from "./queries/use-chat-active-queries";
 import { useChatInputActions } from "./use-chat-input";
-import { useRenderChatNav } from "./use-chat-nav";
 import { useMessages } from "./use-messages";
 import { getLiveStatusKind, useStreamOwnership } from "./use-stream-ownership";
 
@@ -134,19 +135,19 @@ type ActiveThreadStatus =
 
 export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const inputActions = useChatInputActions();
-
-  const chatNav = useRenderChatNav();
-  const isSkip = chatNav.isNew;
+  const chatNavAction = useChatNavActions();
+  const scope = useChatSessionScope();
+  const isSkip = scope.isNew;
 
   const {
     data: thread,
     isPending: isThreadQueryPending,
     isStale: isThreadQueryStale,
-  } = useThread(isSkip ? "skip" : chatNav.id);
+  } = useThread(isSkip ? "skip" : scope.sessionId);
 
   // TODO start: from here to "TODO end" should move this in a separate hook/function for readability
   const { isLocalOwned, markOwned, clearOwnership } = useStreamOwnership({
-    threadUuid: isSkip ? "skip" : chatNav.id,
+    threadUuid: isSkip ? "skip" : scope.sessionId,
     liveStatus: thread?.liveStatus,
     isThreadQueryPending,
   });
@@ -167,7 +168,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     applyOptimisticPatch,
     revertOptimisticPatch,
   } = useMessages({
-    threadUuid: isSkip ? "skip" : chatNav.id,
+    threadUuid: isSkip ? "skip" : scope.sessionId,
     resumeStreamEnabled,
   });
 
@@ -189,7 +190,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         console.error("Error in previous upsert", e);
       });
       await upsertThread({
-        threadUuid: chatNav.id,
+        threadUuid: scope.sessionId,
         patch: {
           liveStatus: "error",
         },
@@ -223,8 +224,8 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       return "streaming";
     if (sdkStatus === "submitted" || thread?.liveStatus === "pending")
       return "pending";
-    if (chatNav.isNew) return "new";
-  }, [chatNav.isNew, thread?.liveStatus, sdkStatus]);
+    if (scope.isNew) return "new";
+  }, [scope.isNew, thread?.liveStatus, sdkStatus]);
   const streamStatusKing = getLiveStatusKind(streamStatus); // TODO: getLiveStatusKind was supposed to be used with liveStatus type not ActiveThreadStatus. Temp hack before we unify this "status" reducer we need everywhere.
   const isStreaming = streamStatus === "streaming";
   // TODO: perhaps no longer useful since we have optimistic agent response now.
@@ -243,7 +244,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
 
   const __sendMessageInternal = useCallback(
     async (uiMessage: MyUIMessage, nextMessageId: string) => {
-      if (chatNav.isNew) chatNav.persistNewChatIdToUrl();
+      if (scope.isNew) chatNavAction.persistNewChatIdToUrl();
 
       const optimisticNextMessage =
         createOptimisticStepStartMessage(nextMessageId);
@@ -252,14 +253,14 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       inputActions.clear();
       console.log("TOTO123: UPSERTING THREAD...");
       upsertPromiseRef.current = upsertThread({
-        threadUuid: chatNav.id,
+        threadUuid: scope.sessionId,
         patch: {
           liveStatus: "pending",
           lastUsedModelId: uiMessage?.metadata?.modelId,
         },
       });
       let patchId: string | undefined;
-      console.log("DEBUG123: __sendMessageInternal", chatNav.id);
+      console.log("DEBUG123: __sendMessageInternal", scope.sessionId);
       try {
         const msgs = [uiMessage, optimisticNextMessage];
         console.log("TOTO123: APPLIED OPTIMISTIC PATCH", msgs);
@@ -295,11 +296,11 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     },
     [
       sdkSendMessage,
-      chatNav.isNew,
-      chatNav.persistNewChatIdToUrl,
+      scope.isNew,
+      chatNavAction.persistNewChatIdToUrl,
       inputActions.clear,
       upsertThread,
-      chatNav.id,
+      scope.sessionId,
       sdkSetMessages,
       applyOptimisticPatch,
       revertOptimisticPatch,
@@ -344,7 +345,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const regenerate = useCallback(
     async (messageId: string, options?: RegenerateMessageOptions) => {
       const upsertPromise = upsertThread({
-        threadUuid: chatNav.id,
+        threadUuid: scope.sessionId,
         patch: {
           liveStatus: "pending",
           lastUsedModelId: options?.selectedModelId,
@@ -408,7 +409,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         console.error("error while regenerating message", error);
         await upsertPromise;
         await upsertThread({
-          threadUuid: chatNav.id,
+          threadUuid: scope.sessionId,
           patch: {
             liveStatus: "error",
           },
@@ -424,7 +425,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     [
       sdkRegenerate,
       upsertThread,
-      chatNav.id,
+      scope.sessionId,
       messages,
       sdkSetMessages,
       applyOptimisticPatch,
@@ -447,7 +448,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const state = useMemo(
     () =>
       ({
-        uuid: chatNav.id,
+        uuid: scope.sessionId,
         streamStatus,
         messagesQueue,
         isDataPending,
@@ -459,7 +460,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         pendingAutoScrollMessageId,
       }) satisfies ActiveThreadStateType,
     [
-      chatNav.id,
+      scope.sessionId,
       streamStatus,
       messagesQueue,
       isDataPending,

@@ -47,3 +47,40 @@ export function useMergedRefs<T>(
  * ```
  */
 export type WithAutocomplete<T extends string> = T | (string & {});
+
+/**
+ * This create a stable id generator from a any id generator function.
+ *
+ * @example
+ * ```ts
+ * const ids = createStableIdGenerator(nanoid);
+ *
+ * // lookup id
+ * const a = ids.current;
+ * const b = ids.current;
+ * a === b // OK
+ *
+ * // consume id
+ * const c = ids.consume();
+ * a === b === c // OK return the previous id
+ * const d = ids.current;
+ * d !== c // then next one has been regenerated
+ * ```
+ *
+ * @param createId:uuid generator function
+ * @returns
+ */
+export function createStableIdGenerator<T>(createId: () => T) {
+  let current = createId();
+
+  return {
+    get current() {
+      return current;
+    },
+    consume() {
+      const value = current;
+      current = createId();
+      return value;
+    },
+  };
+}

@@ -1,13 +1,10 @@
 import { createRouter, RouterProvider } from "@tanstack/react-router";
-import { ConvexQueryCacheProvider } from "convex-helpers/react/cache/provider";
 import type { ReactNode } from "react";
 import ReactDom from "react-dom/client";
 import Loader from "./components/loader";
-import { AppReadyProvider } from "./hooks/use-app-ready";
-import { AuthProvider } from "./hooks/use-auth";
-import { UserCacheProvider } from "./hooks/use-user-cache";
+import { AppRootScope } from "./components/providers/0-app-root-scope";
+import { UserScopeFromAuth } from "./components/providers/1-user-scope";
 import { routeTree } from "./routeTree.gen";
-import { TanstackQueryClientProvider } from "./utils/tanstack-query/query-client-provider";
 
 const router = createRouter({
   routeTree,
@@ -27,24 +24,7 @@ const router = createRouter({
      *   - Theme provider
      *   - I18N provider
      */
-    return (
-      <AppReadyProvider>
-        <AuthProvider>
-          {/* TODO: see todo from use-auth.tsx where I talk about the confusion of separation of concern between convex an auth. */}
-          {/* <ConvexProvider> */}
-          <ConvexQueryCacheProvider
-            debug={false}
-            expiration={120_000}
-            maxIdleEntries={100}
-          >
-            <TanstackQueryClientProvider>
-              <UserCacheProvider>{children}</UserCacheProvider>
-            </TanstackQueryClientProvider>
-          </ConvexQueryCacheProvider>
-          {/* </ConvexProvider> */}
-        </AuthProvider>
-      </AppReadyProvider>
-    );
+    return <AppRootScope>{children}</AppRootScope>;
   },
   InnerWrap({ children }) {
     /**
@@ -57,7 +37,7 @@ const router = createRouter({
      *   - Layout or state derived from useRouter() / useSearch()
      *   - Router-aware suspense / loading UI providers
      */
-    return <>{children}</>;
+    return <UserScopeFromAuth>{children}</UserScopeFromAuth>;
   },
 });
 

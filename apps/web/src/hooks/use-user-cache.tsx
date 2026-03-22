@@ -10,13 +10,8 @@ import {
 } from "react";
 import { type Cache, type SkipCache, skipCache } from "@/lib/cache/Cache";
 import { UserCache } from "@/lib/cache/UserCache";
-import { useAuth } from "./use-auth";
 import { useEmergencySave } from "./utils/use-emergency-save";
-
-export const lastLoggedInUserIdCache = {
-  get: () => localStorage.getItem("lastLoggedInUserId"),
-  set: (userId: string) => localStorage.setItem("lastLoggedInUserId", userId),
-};
+import { useValueChangeEffect } from "./utils/use-value-change-effect";
 
 type CacheState = {
   cache: Cache<string>;
@@ -24,24 +19,21 @@ type CacheState = {
 };
 const userCacheContext = createContext<CacheState | null>(null);
 
-export function UserCacheProvider({ children }: { children: React.ReactNode }) {
-  const { clerkUser, isLoadingClerk } = useAuth();
-  const cacheScope = useMemo(
-    () => clerkUser?.id ?? lastLoggedInUserIdCache.get() ?? "anonymous",
-    [clerkUser]
-  );
-
+interface UserCacheProviderProps {
+  children: React.ReactNode;
+  userId: string;
+}
+export function UserCacheProvider({
+  children,
+  userId,
+}: UserCacheProviderProps) {
+  const cacheScope = userId;
   const cache = useMemo(() => UserCache.newInstance(cacheScope), [cacheScope]);
 
-  useEffect(() => {
-    if (isLoadingClerk) return;
-    if (clerkUser) {
-      lastLoggedInUserIdCache.set(clerkUser.id);
-    } else {
-      lastLoggedInUserIdCache.set("anonymous");
-      cache.clear();
-    }
-  }, [clerkUser, isLoadingClerk, cache]);
+  // trigger cache clear on cache scope change change
+  useValueChangeEffect(() => {
+    cache.clear();
+  }, cacheScope);
 
   const value = useMemo(
     () => ({ cache, scope: cacheScope }),

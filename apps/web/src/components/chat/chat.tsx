@@ -1,10 +1,15 @@
 import { AnimatePresence, motion } from "motion/react";
 import { ScrollToBottomButton } from "@/components/ui-custom/chat/scroll-to-bottom-button";
+import { ChatSessionScope } from "../providers/4-chat-session-scope";
 import {
   useScrollToBottomActions,
   useScrollToBottomState,
 } from "../ui-custom/chat/hooks/use-scroll-to-bottom";
 import { StickyContainer } from "../ui-custom/sticky-container";
+import {
+  ChatSessionActivityPool,
+  type ChatSessionRendererProps,
+} from "./_parts/chat-activity-pool";
 import { ConversationReadyOverlay } from "./_parts/conversation-ready-overlay";
 import { ChatConversation } from "./conversation/conversation";
 import { ChatInput } from "./prompt-input/prompt-input";
@@ -38,13 +43,21 @@ function ScrollToBottom() {
   );
 }
 
+export function ChatSession({ isNew, sessionId }: ChatSessionRendererProps) {
+  return (
+    <ChatSessionScope isNew={isNew} sessionId={sessionId}>
+      <ChatConversation />
+    </ChatSessionScope>
+  );
+}
+
 export function Chat() {
   return (
     <>
       <div className="relative flex min-h-0 flex-1 flex-col">
         {/* ConversationReadyOverlay must be before ChatConversation (sticky>absolute hack) */}
         <ConversationReadyOverlay />
-        <ChatConversation />
+        <ChatSessionActivityPool component={ChatSession} />
       </div>
       {/* z-2 to be above ConversationReadyOverlay */}
       <StickyContainer className="z-2">
