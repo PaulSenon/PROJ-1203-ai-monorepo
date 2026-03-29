@@ -1,6 +1,6 @@
 import { useRouter } from "@tanstack/react-router";
 import { nanoid } from "nanoid";
-import React, {
+import {
   createContext,
   type ReactNode,
   useCallback,
@@ -8,12 +8,14 @@ import React, {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { Route as ChatRoute } from "../routes/_chat/chat.{-$id}";
 
 type ChatNavState = {
   isNew: boolean;
   id: string;
+  setThreadIntent: (id: string | undefined) => void;
   persistNewChatIdToUrl: () => void;
   openNewChat: () => void;
   openExistingChat: (id: string) => void;
@@ -25,37 +27,56 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   // this will throw an error if used outside of /chat/{-$id} route:
   const params = ChatRoute.useParams();
-  const isNew = params.id === undefined;
-  const id = params.id ?? nanoid();
+  const routeThreadId = params.id;
+  const routeThreadIntent = routeThreadId ?? "__new__";
+
+  const newChatIdRef = useRef<string>(nanoid());
+  const [threadIntent, setThreadIntentState] =
+    useState<string>(routeThreadIntent);
 
   useEffect(() => {
-    console.log("DEBUG123: NAV chat nav id", id);
-  }, [id]);
+    setThreadIntentState((current) =>
+      current === routeThreadIntent ? current : routeThreadIntent
+    );
+  }, [routeThreadIntent]);
+
+  const setThreadIntent = useCallback((id: string | undefined) => {
+    const nextThreadIntent = id ?? "__new__";
+    setThreadIntentState((current) =>
+      current === nextThreadIntent ? current : nextThreadIntent
+    );
+  }, []);
+
+  const isNew = threadIntent === "__new__";
+  const id = isNew ? newChatIdRef.current : threadIntent;
 
   const persistNewChatIdToUrl = useCallback(() => {
-    if (!isNew) return;
+    if (routeThreadId !== undefined) return;
     router.navigate({
       replace: true,
       to: "/chat/{-$id}",
       params: { id },
     });
-  }, [isNew, id, router]);
+  }, [routeThreadId, id, router]);
 
   const openNewChat = useCallback(() => {
+    newChatIdRef.current = nanoid();
+    setThreadIntent(undefined);
     router.navigate({
       to: "/chat/{-$id}",
       params: { id: undefined },
     });
-  }, [router]);
+  }, [setThreadIntent, router]);
 
   const openExistingChat = useCallback(
     (targetId: string) => {
+      setThreadIntent(targetId);
       router.navigate({
         to: "/chat/{-$id}",
         params: { id: targetId },
       });
     },
-    [router]
+    [setThreadIntent, router]
   );
 
   const value = useMemo(
@@ -63,11 +84,19 @@ export function ChatNavProvider({ children }: { children: ReactNode }) {
       ({
         isNew,
         id,
+        setThreadIntent,
         persistNewChatIdToUrl,
         openNewChat,
         openExistingChat,
       }) satisfies ChatNavState,
-    [isNew, id, persistNewChatIdToUrl, openNewChat, openExistingChat]
+    [
+      isNew,
+      id,
+      setThreadIntent,
+      persistNewChatIdToUrl,
+      openNewChat,
+      openExistingChat,
+    ]
   );
   return (
     <ChatNavContext.Provider value={value}>{children}</ChatNavContext.Provider>
@@ -83,44 +112,4 @@ export function useChatNav() {
     throw new Error("useChatNav must be used within ChatNavProvider");
   }
   return context;
-}
-
-/**
- * Anything passed as an Outlet component will be re-rendered when the chat nav
- * changes.
- *
- * Perhaps there is a better way to handle this....
- */
-export function ChatNavRerenderTrigger({
-  Outlet,
-}: {
-  Outlet: React.ComponentType;
-}) {
-  const chatNav = useChatNav();
-  const previousChatNavRef = useRef<typeof chatNav>(chatNav);
-
-  const key = useMemo(() => {
-    let res: string;
-    // stable id when staying on the isNew page
-    if (
-      chatNav.isNew === true &&
-      chatNav.isNew === previousChatNavRef.current.isNew
-    ) {
-      res = previousChatNavRef.current.id;
-    } else {
-      res = chatNav.id;
-    }
-    previousChatNavRef.current = { ...chatNav };
-    return res;
-  }, [chatNav]);
-
-  useEffect(() => {
-    console.log("DEBUG123: ChatNavRerenderer: key changed !", { key });
-  }, [key]);
-
-  return (
-    <React.Fragment key={key}>
-      <Outlet />
-    </React.Fragment>
-  );
 }

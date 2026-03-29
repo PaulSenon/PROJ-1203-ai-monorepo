@@ -202,12 +202,6 @@ function useStreamingUiMessageChunks(threadUuid: string | "skip") {
     }
     if (result.delta.end <= cursor) return;
 
-    console.log("TOTO123: RECEIVED DELTA", {
-      cursor,
-      streamId: result.streamId,
-      delta: structuredClone(result.delta),
-    });
-
     setUiMessageChunks((prev) =>
       result.delta ? prev.concat(result.delta.chunks) : prev
     );
@@ -323,6 +317,7 @@ export function useMessages({
   const [optimisticPatchesArray, setOptimisticPatchesArray] = useState<
     MyUIMessage[][]
   >([]);
+  const previousThreadIdentityRef = useRef(threadUuid);
 
   const applyOptimisticPatch = useCallback(
     (patch: MyUIMessage[] | MyUIMessage): PatchId => {
@@ -339,6 +334,13 @@ export function useMessages({
     optimisticPatches.current.delete(patchId);
     setOptimisticPatchesArray(Array.from(optimisticPatches.current.values()));
   }, []);
+
+  useEffect(() => {
+    if (previousThreadIdentityRef.current === threadUuid) return;
+    previousThreadIdentityRef.current = threadUuid;
+    optimisticPatches.current.clear();
+    setOptimisticPatchesArray([]);
+  }, [threadUuid]);
 
   const cacheKey = useMemo(() => createCacheKey(threadUuid), [threadUuid]);
   const cache = useUserCacheEntryOnce<MyUIMessage[]>(cacheKey);

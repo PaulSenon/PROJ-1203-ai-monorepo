@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "react";
+import { useDeferredValue, useEffect, useLayoutEffect, useRef } from "react";
 import type {
   PromptInputProps,
   PromptInputSubmitProps,
@@ -8,8 +8,12 @@ import {
   useAppLoadStatus,
   useAppLoadStatusActions,
 } from "@/hooks/use-app-load-status";
-import { useActiveThreadActions } from "@/hooks/use-chat-active";
+import {
+  useActiveThreadActions,
+  useActiveThreadState,
+} from "@/hooks/use-chat-active";
 import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
+import { useChatNav } from "@/hooks/use-chat-nav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useModelSelectorState } from "@/hooks/use-user-preferences";
 import { cn } from "@/lib/utils";
@@ -17,16 +21,32 @@ import { ChatModelSelector } from "./_parts/model-selector";
 
 export function ChatInput() {
   const isMobile = useIsMobile();
+  const chatNav = useChatNav();
   const { isInitialUIStateReady } = useAppLoadStatus();
   const appUiStatus = useAppLoadStatusActions();
   const inputState = useChatInputState();
   const inputActions = useChatInputActions();
   const { sendMessage } = useActiveThreadActions();
+  const { isDataPending, isDataStale } = useActiveThreadState();
   const { selectedModelId } = useModelSelectorState();
-  const handleSubmit: PromptInputProps["onSubmit"] = (message, event) => {
-    if (!message.text || message.text.trim() === "") return;
+  const activeThreadKey = chatNav.isNew ? "__new__" : chatNav.id;
+  const deferredThreadKey = useDeferredValue(activeThreadKey);
+  const isSwitching = activeThreadKey !== deferredThreadKey;
+  const wasSwitchingRef = useRef(false);
+  const isThreadReady = !(isDataPending || isDataStale);
+  const isComposerDisabled =
+    inputState.disabled || isSwitching || !isThreadReady;
 
-    console.log("ChatInput: handleSubmit", { message, event });
+  useEffect(() => {
+    if (!wasSwitchingRef.current && isSwitching) {
+      inputActions.clear();
+    }
+    wasSwitchingRef.current = isSwitching;
+  }, [isSwitching, inputActions.clear]);
+
+  const handleSubmit: PromptInputProps["onSubmit"] = (message) => {
+    if (isComposerDisabled) return;
+    if (!message.text || message.text.trim() === "") return;
     sendMessage({
       text: message.text,
       options: {
@@ -37,10 +57,10 @@ export function ChatInput() {
 
   // TODO: perhaps we need better autofocus logic
   useLayoutEffect(() => {
-    appUiStatus.setInputUIReady(!inputState.isPending);
-    if (inputState.isPending) return;
+    appUiStatus.setInputUIReady(!isComposerDisabled);
+    if (isComposerDisabled) return;
     inputActions.focus();
-  }, [inputState.isPending, inputActions.focus, appUiStatus.setInputUIReady]);
+  }, [isComposerDisabled, inputActions.focus, appUiStatus.setInputUIReady]);
 
   // TODO: status not implemented yet
   const submitButtonStatus: PromptInputSubmitProps["status"] = "ready";
@@ -65,7 +85,7 @@ export function ChatInput() {
       </Input.Header> */}
       <Input.Body>
         <Input.Textarea
-          disabled={inputState.isPending} // can type while disabled (as long as not initializing)
+          disabled={isComposerDisabled}
           onChange={(e) => inputActions.setInput(e.target.value)}
           ref={inputState.inputRef}
           submitOnEnter={!isMobile}
@@ -75,10 +95,13 @@ export function ChatInput() {
       <Input.Footer>
         <Input.Tools>
           <Input.ToolsMore />
-          <ChatModelSelector onClose={() => inputActions.focus()} />
+          <ChatModelSelector
+            disabled={isComposerDisabled}
+            onClose={() => inputActions.focus()}
+          />
         </Input.Tools>
         <Input.SubmitButton
-          disabled={inputState.disabled}
+          disabled={isComposerDisabled}
           status={submitButtonStatus}
         />
       </Input.Footer>

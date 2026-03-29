@@ -81,7 +81,6 @@ export function ConversationMessagesList({
     ) => {
       // if already present, trigger callback without subscribing
       if (messagesRef.current.findLastIndex((m) => m.id === key) !== -1) {
-        console.log("LAST SHORTCUT", key);
         callback();
         return;
       }
@@ -97,10 +96,6 @@ export function ConversationMessagesList({
           observers.current?.delete(key);
         }
       }
-      console.log("LAST ITEM KEYS", {
-        keys,
-        obs: observers.current?.entries(),
-      });
     });
   }, [listRef.current]);
 

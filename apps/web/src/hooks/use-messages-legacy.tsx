@@ -313,26 +313,6 @@ export function useMessages(threadUuid: string | "skip") {
 
   const staleMessages = isStale ? (cache.snapshot ?? []) : messages;
 
-  useEffect(() => {
-    console.log("TOTO123: SDLFKSKDJFLKSDJF", {
-      isQueryPending,
-      isPending,
-      isLoading,
-      isStale,
-      isStreaming,
-      messages,
-      staleMessages,
-    });
-  }, [
-    isQueryPending,
-    isPending,
-    isLoading,
-    isStale,
-    isStreaming,
-    messages,
-    staleMessages,
-  ]);
-
   return useMemo(
     () => ({
       messages: staleMessages,
@@ -615,11 +595,6 @@ export function UseChatProvider({ children }: { children: ReactNode }) {
     onToolCall: handleToolCall,
   });
 
-  useEffect(() => {
-    console.log("DEBUG123: chatOutput id", chatOutput.id);
-    console.log("DEBUG123: chat nav id", chatNav.id);
-  }, [chatOutput.id, chatNav.id]);
-
   const throttledSdkMessages = useFpsThrottledValue(chatOutput.messages, {
     maxFps: 5,
   });
@@ -739,23 +714,27 @@ export const useChatContext = (
   onToolCallRef.current = onToolCall;
 
   useEffect(() => {
-    if (!onFinishRef.current) return;
-    const unsubscribe = subscribeOnFinish(onFinishRef.current);
+    const unsubscribe = subscribeOnFinish((event) => {
+      onFinishRef.current?.(event);
+    });
     return unsubscribe;
   }, [subscribeOnFinish]); // <--- This dependency is now stable!
   useEffect(() => {
-    if (!onDataRef.current) return;
-    const unsubscribe = subscribeOnData(onDataRef.current);
+    const unsubscribe = subscribeOnData((event) => {
+      onDataRef.current?.(event);
+    });
     return unsubscribe;
   }, [subscribeOnData]); // <--- This dependency is now stable!
   useEffect(() => {
-    if (!onErrorRef.current) return;
-    const unsubscribe = subscribeOnError(onErrorRef.current);
+    const unsubscribe = subscribeOnError((event) => {
+      onErrorRef.current?.(event);
+    });
     return unsubscribe;
   }, [subscribeOnError]); // <--- This dependency is now stable!
   useEffect(() => {
-    if (!onToolCallRef.current) return;
-    const unsubscribe = subscribeOnToolCall(onToolCallRef.current);
+    const unsubscribe = subscribeOnToolCall((event) => {
+      onToolCallRef.current?.(event);
+    });
     return unsubscribe;
   }, [subscribeOnToolCall]); // <--- This dependency is now stable!
 

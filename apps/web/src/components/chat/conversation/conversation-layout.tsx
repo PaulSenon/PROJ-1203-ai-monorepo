@@ -1,5 +1,5 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Conversation } from "@/components/ui-custom/chat/conversation";
 import {
   useScrollToBottomActions,
@@ -16,6 +16,7 @@ export type ChatConversationLayoutProps = {
   messages: MyUIMessage[];
   isThreadSettled: boolean;
   pendingAutoScrollMessageId: string | undefined;
+  threadIdentity: string;
   onStartReached?: () => void;
 };
 
@@ -23,6 +24,7 @@ export function ChatConversationLayout({
   messages,
   isThreadSettled,
   pendingAutoScrollMessageId,
+  threadIdentity,
   onStartReached,
 }: ChatConversationLayoutProps) {
   const listRef = useRef<EnrichedLegendListRef | null>(null);
@@ -31,12 +33,14 @@ export function ChatConversationLayout({
 
   const shouldReserveLastAssistantSpace = useShouldReserveLastAssistantSpace({
     isThreadSettled,
+    threadIdentity,
   });
 
   useOnSubmitMessageLayoutEffect({
     // TODO: make this var name more self explanatory (hard to grasp what it is for here...)
     pendingAutoScrollMessageId, // this update when a new message append needs scroll to bottom
     messages,
+    threadIdentity,
     // TODO: Find lest hacky way to delay scroll when layout contain last message after submit
     waitForUiLayout: async (id: string) =>
       new Promise((resolve) => {
@@ -77,13 +81,19 @@ export function ChatConversationLayout({
  */
 function useShouldReserveLastAssistantSpace({
   isThreadSettled,
+  threadIdentity,
 }: {
   isThreadSettled: boolean;
+  threadIdentity: string;
 }) {
   const shouldSeedReserveLatch = !isThreadSettled;
 
   const [hasReserveLatchInThreadSession, setHasReserveLatchInThreadSession] =
     useState<boolean>(shouldSeedReserveLatch);
+
+  useEffect(() => {
+    setHasReserveLatchInThreadSession(shouldSeedReserveLatch);
+  }, [threadIdentity, shouldSeedReserveLatch]);
 
   if (!hasReserveLatchInThreadSession && shouldSeedReserveLatch) {
     setHasReserveLatchInThreadSession(true);
@@ -103,11 +113,13 @@ function useShouldReserveLastAssistantSpace({
 function useOnSubmitMessageLayoutEffect({
   pendingAutoScrollMessageId,
   messages,
+  threadIdentity,
   waitForUiLayout,
   callback,
 }: {
   pendingAutoScrollMessageId: string | undefined;
   messages: MyUIMessage[];
+  threadIdentity: string;
   waitForUiLayout: (id: string) => Promise<void>;
   callback: () => void;
 }) {
@@ -115,6 +127,11 @@ function useOnSubmitMessageLayoutEffect({
   const tailMessageId = messages.at(-1)?.id;
   // const beforeTailMessageId = messages.at(-2)?.id;
   const raceConditionId = useRef<string>(null);
+
+  useEffect(() => {
+    lastHandledIntentIdRef.current = undefined;
+    raceConditionId.current = null;
+  }, [threadIdentity]);
 
   useLayoutEffect(() => {
     if (!pendingAutoScrollMessageId) return;

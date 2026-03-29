@@ -11,6 +11,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { cvx } from "@/lib/convex/queries";
@@ -180,6 +181,14 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const [pendingAutoScrollMessageId, setPendingAutoScrollMessageId] = useState<
     string | undefined
   >();
+  const threadIdentity = chatNav.isNew ? "__new__" : chatNav.id;
+  const currentThreadIdRef = useRef(chatNav.id);
+  currentThreadIdRef.current = chatNav.id;
+
+  useEffect(() => {
+    _setMessagesQueue([]);
+    setPendingAutoScrollMessageId(undefined);
+  }, [threadIdentity]);
 
   // Requests data status (pending -> stale -> fresh)
   const isDataPending = isSkip
@@ -217,36 +226,37 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
 
   const __sendMessageInternal = useCallback(
     async (uiMessage: MyUIMessage) => {
+      const requestThreadId = chatNav.id;
+      const isCurrentRequestThread = () =>
+        currentThreadIdRef.current === requestThreadId;
       if (chatNav.isNew) chatNav.persistNewChatIdToUrl();
       // TODO: save cleared input to restore in case of error
       inputActions.clear();
-      console.log("TOTO123: UPSERTING THREAD...");
       const upsertPromise = upsertThread({
-        threadUuid: chatNav.id,
+        threadUuid: requestThreadId,
         patch: {
           liveStatus: "pending",
           lastUsedModelId: uiMessage?.metadata?.modelId,
         },
       });
       let patchId: string | undefined;
-      console.log("DEBUG123: __sendMessageInternal", chatNav.id);
       try {
-        console.log("TOTO123: APPLIED OPTIMISTIC PATCH", uiMessage);
         patchId = applyOptimisticPatch(uiMessage);
         setPendingAutoScrollMessageId(uiMessage.id);
-        console.log("TOTO123: SDK SET SDK MESSAGES []");
         sdkSetMessages([]);
         markOwned();
         await sdkSendMessage(uiMessage);
       } catch (error) {
-        clearOwnership();
+        if (isCurrentRequestThread()) {
+          clearOwnership();
+        }
         console.error("error while sending message", error);
 
         // upsertThread might throw if not allowed (because already streaming)
         try {
           await upsertPromise;
           await upsertThread({
-            threadUuid: chatNav.id,
+            threadUuid: requestThreadId,
             patch: {
               liveStatus: "error",
             },
@@ -255,15 +265,14 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
           console.error("error while upserting thread", _error);
         }
       } finally {
-        console.log("TOTO123: REVERTING OPTIMISTIC PATCH", patchId);
         if (patchId) revertOptimisticPatch(patchId);
-        sdkSetMessages([]);
+        if (isCurrentRequestThread()) {
+          sdkSetMessages([]);
+        }
         // upsertThread might throw if not allowed (because already streaming)
         await upsertPromise.catch((error) => {
           console.error("error while upserting thread", error);
         });
-
-        console.log("TOTO123: UPSERTED THREAD");
       }
     },
     [
@@ -310,13 +319,16 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   );
 
   const cancel = useCallback(async () => {
-    console.log("TODO: cancel");
+    return;
   }, []);
 
   const regenerate = useCallback(
     async (messageId: string, options?: RegenerateMessageOptions) => {
+      const requestThreadId = chatNav.id;
+      const isCurrentRequestThread = () =>
+        currentThreadIdRef.current === requestThreadId;
       const upsertPromise = upsertThread({
-        threadUuid: chatNav.id,
+        threadUuid: requestThreadId,
         patch: {
           liveStatus: "pending",
           lastUsedModelId: options?.selectedModelId,
@@ -376,18 +388,22 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
           },
         });
       } catch (error) {
-        clearOwnership();
+        if (isCurrentRequestThread()) {
+          clearOwnership();
+        }
         console.error("error while regenerating message", error);
         await upsertPromise;
         await upsertThread({
-          threadUuid: chatNav.id,
+          threadUuid: requestThreadId,
           patch: {
             liveStatus: "error",
           },
         });
       } finally {
         if (patchId) revertOptimisticPatch(patchId);
-        sdkSetMessages([]); // TODO if we keep this we might remove the one in catch below
+        if (isCurrentRequestThread()) {
+          sdkSetMessages([]); // TODO if we keep this we might remove the one in catch below
+        }
         await upsertPromise.catch((error) => {
           console.error("error while upserting thread", error);
         });
@@ -443,14 +459,6 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       pendingAutoScrollMessageId,
     ]
   );
-
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    console.log("DEBUG: use-chat-active state", {
-      state,
-      messages: messages.slice(-4),
-    });
-  }, [state, messages]);
 
   const messagesState = useMemo(
     () =>

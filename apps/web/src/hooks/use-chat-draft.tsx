@@ -11,7 +11,7 @@ import z from "zod";
 import { cvx } from "@/lib/convex/queries";
 import type { MaybePromise } from "@/lib/utils";
 import { useCvxQueryCached } from "./queries/convex/utils/use-convex-query-2-cached";
-import { ChatNavRerenderTrigger, useChatNav } from "./use-chat-nav";
+import { useChatNav } from "./use-chat-nav";
 import { useUserCacheEntry } from "./use-user-cache";
 import { useSaveToClipboard } from "./utils/uas-save-to-clipboard";
 import { useDebouncedCallback } from "./utils/use-debounced-callback";
@@ -123,12 +123,18 @@ export function useChatDraftActions() {
 
 function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
   const { isNew, id } = useChatNav();
+  const threadIdentity = isNew ? "__new__" : id;
 
   const saveToClipboard = useSaveToClipboard();
   const [saveStatus, setSaveStatus] =
     useState<DraftState["saveStatus"]>("initial");
   const [deleteStatus, setDeleteStatus] =
     useState<DraftState["deleteStatus"]>("initial");
+
+  useEffect(() => {
+    setSaveStatus("initial");
+    setDeleteStatus("initial");
+  }, [threadIdentity]);
 
   const newChatDraft = useNewChatDraft({
     skip: !isNew,
@@ -146,14 +152,23 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
 
   // create new abort controller on nav change
   // biome-ignore lint/correctness/useExhaustiveDependencies: read above
-  const abortController = useMemo(() => new AbortController(), [id]);
+  const abortController = useMemo(
+    () => new AbortController(),
+    [threadIdentity]
+  );
+
+  useEffect(
+    () => () => {
+      abortController.abort();
+    },
+    [abortController]
+  );
 
   const { debounced: setDraftDebounced, commit: commitSetDraft } =
     useDebouncedCallback(
       async (data: string) => {
         // skip if draft is already the same
         if (draft === data) return;
-        console.log("saving draft", { id, data, isNew });
         setSaveStatus("saving");
         try {
           if (isNew) {
@@ -165,7 +180,6 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
             });
           }
           setSaveStatus("saved");
-          console.log("draft saved", { id, data, isNew });
         } catch (error) {
           setSaveStatus("error");
           console.error("Save draft failed", { id, error, data, isNew });
@@ -189,7 +203,6 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
     async () => {
       setDeleteStatus("deleting");
       abortController.abort();
-      console.log("delDraft", { id, isNew });
       try {
         if (isNew) {
           await newChatDraft.delDraft();
@@ -200,7 +213,6 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
           });
         }
         setDeleteStatus("deleted");
-        console.log("draft deleted", { id, isNew });
       } catch (error) {
         setDeleteStatus("error");
         console.error("Delete draft failed", { id, error, isNew });
@@ -214,7 +226,7 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
       id,
       abortController,
     ],
-    { delay: 2000, immediate: true }
+    { delay: 2000, immediate: true, abortController }
   );
 
   const setDraft = useCallback(
@@ -257,10 +269,6 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
     [commitSetDraft, setDraft, delDraft]
   ) satisfies DraftActions;
 
-  useEffect(() => {
-    console.log("draft status changed", { status, id });
-  }, [status, id]);
-
   return (
     <DraftActionsContext.Provider value={actions}>
       <DraftStateContext.Provider value={state}>
@@ -270,11 +278,6 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// TODO: perhaps there is a better way to handle this
 export function ChatDraftProvider({ children }: { children: React.ReactNode }) {
-  const Outlet = useCallback(
-    () => <INTERNAL_DraftProvider>{children}</INTERNAL_DraftProvider>,
-    [children]
-  );
-  return <ChatNavRerenderTrigger Outlet={Outlet} />;
+  return <INTERNAL_DraftProvider>{children}</INTERNAL_DraftProvider>;
 }

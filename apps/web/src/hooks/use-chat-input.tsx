@@ -38,7 +38,6 @@ export function ChatInputProvider({ children }: { children: React.ReactNode }) {
   const inputRef = useHotkeys<HTMLTextAreaElement>(
     ["mod+s"],
     () => {
-      console.log("commitSave");
       draftActions.commitSave();
     },
     [draftActions.commitSave],
@@ -50,17 +49,10 @@ export function ChatInputProvider({ children }: { children: React.ReactNode }) {
 
   // goal: only set input state once first when draft ready and ignore further changes
   useEffect(() => {
-    console.log("draft", {
-      draft: draftState.draft,
-      status: draftState.status,
-    });
     if (!draftState.draft) return;
     if (!inputRef.current) return;
     if (inputRef.current.value === draftState.draft) return;
     if (draftState.status === "fresh" && inputRef.current.value.length > 0) {
-      console.warn(
-        "draft received but input not empty. Ignoring draft for now..."
-      );
       return;
     }
     _setInput(draftState.draft);
