@@ -320,6 +320,7 @@ function RouteComponent() {
                   key={`${threadUuid}:${layoutRemountKey}`}
                   messages={messages}
                   pendingAutoScrollMessageId={undefined}
+                  threadUuid="123"
                 />
               </ScrollToBottomProvider>
             </div>

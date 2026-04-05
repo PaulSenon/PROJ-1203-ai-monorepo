@@ -1,5 +1,4 @@
 import { ChatNavProvider } from "@/hooks/chat/use-chat-nav";
-import { SidebarProvider } from "../ui/sidebar";
 
 /**
  * This is where you want to manually register all your context providers for
@@ -15,11 +14,7 @@ function ChatAppRootScopeExternalProviders({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <ChatNavProvider>
-      <SidebarProvider>{children}</SidebarProvider>
-    </ChatNavProvider>
-  );
+  return <ChatNavProvider>{children}</ChatNavProvider>;
 }
 
 /**

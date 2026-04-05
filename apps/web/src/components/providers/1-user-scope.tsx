@@ -5,7 +5,7 @@ import { UserCacheProvider } from "@/hooks/use-user-cache";
 import { TanstackQueryClientProvider } from "@/utils/tanstack-query/query-client-provider";
 
 interface UserScopeContext {
-  userId: string;
+  UNVERIFIED_userId: string;
 }
 const UserScopeContext = createContext<UserScopeContext | null>(null);
 
@@ -32,7 +32,7 @@ export function useUserScope() {
  */
 function UserScopeExternalProviders({
   children,
-  userId,
+  UNVERIFIED_userId,
 }: {
   children: React.ReactNode;
 } & UserScopeContext) {
@@ -43,7 +43,9 @@ function UserScopeExternalProviders({
       maxIdleEntries={100}
     >
       <TanstackQueryClientProvider>
-        <UserCacheProvider userId={userId}>{children}</UserCacheProvider>
+        <UserCacheProvider userId={UNVERIFIED_userId}>
+          {children}
+        </UserCacheProvider>
       </TanstackQueryClientProvider>
     </ConvexQueryCacheProvider>
   );
@@ -61,21 +63,21 @@ function UserScopeExternalProviders({
  * ! This is internal wrapper, do not modify
  */
 function UserScopeContextProvider({
-  userId,
+  UNVERIFIED_userId,
   children,
 }: {
   children: React.ReactNode;
 } & UserScopeContext) {
   const userContextValue = useMemo(
     () => ({
-      userId,
+      UNVERIFIED_userId,
     }),
-    [userId]
+    [UNVERIFIED_userId]
   );
 
   return (
     <UserScopeContext.Provider value={userContextValue}>
-      <UserScopeExternalProviders userId={userId}>
+      <UserScopeExternalProviders UNVERIFIED_userId={UNVERIFIED_userId}>
         {children}
       </UserScopeExternalProviders>
     </UserScopeContext.Provider>
@@ -96,13 +98,16 @@ function UserScopeContextProvider({
  * ! This is internal wrapper, do not modify
  */
 const UserScope = React.memo(function _UserScope({
-  userId,
+  UNVERIFIED_userId,
   children,
 }: {
   children: React.ReactNode;
 } & UserScopeContext) {
   return (
-    <UserScopeContextProvider key={userId} userId={userId}>
+    <UserScopeContextProvider
+      key={UNVERIFIED_userId}
+      UNVERIFIED_userId={UNVERIFIED_userId}
+    >
       {children}
     </UserScopeContextProvider>
   );
@@ -128,7 +133,7 @@ const lastLoggedInUserIdCache = {
 export function UserScopeFromAuth({ children }: { children: React.ReactNode }) {
   const { clerkUser, isLoadingClerk } = useAuth();
 
-  const userId = useMemo(() => {
+  const optimisticUserId = useMemo(() => {
     const lastLoggedInUser = lastLoggedInUserIdCache.get();
 
     // 1. fast cached returning user
@@ -140,9 +145,9 @@ export function UserScopeFromAuth({ children }: { children: React.ReactNode }) {
 
   // persist any last loggedIn userId to cache
   useEffect(() => {
-    if (!userId) return;
-    lastLoggedInUserIdCache.set(userId);
-  }, [userId]);
+    if (!optimisticUserId) return;
+    lastLoggedInUserIdCache.set(optimisticUserId);
+  }, [optimisticUserId]);
 
-  return <UserScope userId={userId}>{children}</UserScope>;
+  return <UserScope UNVERIFIED_userId={optimisticUserId}>{children}</UserScope>;
 }
