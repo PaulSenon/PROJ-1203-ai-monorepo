@@ -5,10 +5,15 @@ const createdAtFormatter = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
+export function DebugMessageId({ messageId }: { messageId?: string }) {
+  if (!messageId) return null;
+  return (
+    <span className="font-medium text-muted-foreground">id: {messageId}</span>
+  );
+}
+
 export function ModelInfo({ modelId }: { modelId?: string }) {
-  if (!modelId) {
-    return null;
-  }
+  if (!modelId) return null;
 
   return <span className="font-medium text-muted-foreground">{modelId}</span>;
 }

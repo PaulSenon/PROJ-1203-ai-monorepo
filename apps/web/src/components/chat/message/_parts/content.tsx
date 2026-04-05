@@ -34,7 +34,8 @@ export function MessageContentParts({
               consolidate={consolidate}
               enableCodeHighlighting={enableCodeHighlighting}
               key={key}
-              part={part}
+              state={part.state}
+              text={part.text}
             />
           );
         }

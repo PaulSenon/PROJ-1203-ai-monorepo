@@ -4,12 +4,12 @@
 // TODO: it's not a hook, move it elsewhere
 
 import { deferSyncTask } from "@/helpers/defer-sync-task";
+import { appReadyPromise } from "@/hooks/chat/app-ready/app-ready-promise";
 import { cvx } from "@/lib/convex/queries";
 import { ensureQueryCached } from "./queries/convex/utils/use-convex-query-2-cached";
-import { appLoadPromise } from "./use-app-load-status";
 
 async function deferWhenInitialAppReadyAndCpuIdle<T>(task: () => Promise<T>) {
-  await appLoadPromise.wait();
+  await appReadyPromise();
   return deferSyncTask(task);
 }
 

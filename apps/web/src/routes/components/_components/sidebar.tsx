@@ -131,6 +131,7 @@ function RouteComponent() {
   return (
     <ScrollToBottomProvider>
       <ChatSidebarLayout
+        currentThreadUuid={_threads[0]?.uuid ?? ""}
         onLoadMore={() => {
           // demo no-op
         }}

@@ -1,178 +1,191 @@
-# PRD - LegendList Virtualization (Sidebar First, Conversation Second)
+# PRD - Phase 1: Instant Chat Navigation Feedback With Deferred Conversation Rendering
 
 ## Problem Statement
 
-Chat MVP needs invisible virtualization quality, but current list strategy is split and fragile:
+When a user clicks a thread in the chat sidebar, the app does not acknowledge navigation instantly. The target URL, selected sidebar state, and conversation-area feedback are coupled to the render cost of the destination conversation. As thread complexity grows, the click interaction feels delayed even if data is already available.
 
-- Sidebar uses pseudo-virtualization (`content-visibility` + React `Activity`) instead of true range virtualization.
-- Conversation renders full message list in window scroll; older-message pagination is available in data layer but not wired to UI boundary triggers.
-- Scroll behavior has strict UX constraints (open behavior, submit auto-scroll, streaming growth, prepend stability) that must remain deterministic.
+This is a core INP problem. The app must make navigation feel instant even when destination conversation rendering is expensive and treated as a black box.
 
-If we keep current approach as list sizes grow, we risk INP regressions, missed pagination triggers, and visible scroll instability.
+The required UX for thread-link clicks is:
+
+1. The URL changes immediately.
+2. The clicked sidebar item becomes selected immediately.
+3. The previously selected sidebar item becomes unselected immediately.
+4. The conversation area blacks out immediately.
+5. The input becomes disabled immediately.
+6. Heavy conversation rendering is allowed to catch up later, without blocking the feedback above.
+
+The current architecture relies heavily on current-thread-derived state and keyed resets. That creates too much synchronous work on navigation and makes shell reactivity depend on conversation complexity.
 
 ## Solution
 
-Adopt LegendList in 2 phases with strict anti-feature-creep scope:
+Introduce a two-lane navigation model for chat thread switches:
 
-1. **Phase A: Sidebar**
-   - Replace pseudo-virtualization with true LegendList virtualization in existing sidebar scroll container.
-   - Keep existing sidebar UX shell (header/footer overlays, mobile persisted mount behavior, deferred thread input).
-   - Preserve stable behavior for active row, context menu interactions, and top insertions.
+1. **Urgent lane**
+   - Owns immediate UI feedback.
+   - Updates the target thread identity instantly on click.
+   - Updates URL instantly.
+   - Updates sidebar selected state instantly.
+   - Shows blackout instantly.
+   - Disables input instantly.
 
-2. **Phase B: Conversation**
-   - Replace plain message mapping with LegendList window-scroll virtualization.
-   - Keep current business UX rules (optimistic assistant shell, reserve-space latch).
-   - Add reliable top-boundary load-more for older messages.
-   - Keep deterministic submit-to-bottom and stable viewport during prepend/append/stream growth.
+2. **Deferred lane**
+   - Owns heavy conversation rendering.
+   - Lags behind the urgent target thread identity.
+   - Renders the destination conversation after urgent shell feedback has already committed.
 
-> IMPORTANT: we skip phase A for now. We only want to do phase B (conversation virtualization.)
+Phase 1 intentionally does **not** redesign the whole chat architecture. It introduces the smallest viable decoupling layer that makes navigation feedback instant while preserving the current routing model and most current provider boundaries.
 
-Library truth source for this work: local reverse-engineered LegendList source/docs already captured in project planning docs.
+The baseline switching signal for this phase is derived, not separately stored:
+
+- `isSwitching = instantThreadId !== deferredThreadId`
+
+The heavy conversation path must consume the deferred thread identity only. The shell and sidebar must consume the instant thread identity only.
+
+The previous conversation stays mounted underneath a blackout overlay while the deferred conversation catches up. We do not change scroll position, do not reset scroll, and do not change overflow behavior in a way that would cause unnecessary virtualizer recomputation or costly re-layout of the previous conversation.
+
+The new-chat route is expected to remain effectively instant because it is cheap. Phase 1 should not add special complexity for it unless actual UX regression appears.
 
 ## User Stories
 
-1. As a chat user, I want sidebar scrolling to stay smooth with long history, so navigation feels instant.
-2. As a chat user, I want thread list pagination to always trigger at the bottom boundary, so history never gets stuck.
-3. As a chat user, I want no blank holes or jump artifacts while scrolling sidebar, so UI feels native.
-4. As a chat user, I want active thread highlighting and selection behavior unchanged after virtualization.
-5. As a chat user, I want mobile drawer/sheet behavior unchanged, so touch UX stays consistent.
-6. As a chat user, I want conversation open behavior deterministic, so I resume context immediately.
-7. As a chat user, I want submit to always bring me to latest exchange, so I can follow answer flow.
-8. As a chat user, I want no autonomous viewport movement when I scroll away from bottom during streaming.
-9. As a chat user, I want streaming growth to avoid visual jitter, so reading stays comfortable.
-10. As a chat user, I want older messages to load reliably when reaching top boundary, so full history is reachable.
-11. As a chat user, I want prepend loading to preserve my current viewport position, so context does not shift.
-12. As a chat user, I want scroll-to-bottom affordance behavior unchanged in intent, so controls stay predictable.
-13. As a developer, I want one clear virtualization source of truth per surface, so list behavior is maintainable.
-14. As a developer, I want deterministic load-more gating, so fast scroll cannot miss or spam requests.
-15. As a developer, I want no RAF/timeout correction loops for core scroll behavior, so architecture stays clean.
-16. As a maintainer, I want phased rollout with hard QA gates, so risk is controlled.
+1. As a chat user, I want a thread click to acknowledge immediately, so that navigation feels responsive.
+2. As a chat user, I want the URL to update immediately on thread click, so that browser history and deep-linking stay truthful.
+3. As a chat user, I want the clicked sidebar thread to highlight immediately, so that I know my click was received.
+4. As a chat user, I want the previous sidebar highlight to clear immediately, so that selection state is never ambiguous.
+5. As a chat user, I want the conversation pane to black out immediately after thread click, so that I do not mistake stale content for the new thread.
+6. As a chat user, I want the input to disable immediately during a thread switch, so that I cannot type into the wrong conversation context.
+7. As a chat user, I want the previous conversation scroll position to remain untouched while switching, so that the app does not do unnecessary work or visual jumping.
+8. As a chat user, I want the previous conversation not to visibly reflow during the blackout phase, so that the transition feels stable.
+9. As a chat user, I want the destination conversation to appear only when ready to render, so that the app feels deliberate instead of glitchy.
+10. As a chat user, I want repeated fast thread clicks to remain responsive, so that I can change my mind without waiting for a prior heavy render to finish.
+11. As a chat user, I want the app to always reflect the latest clicked thread, so that abandoned intermediate renders do not confuse navigation state.
+12. As a chat user, I want mobile and desktop sidebar behavior to remain consistent after this change, so that navigation quality improves everywhere.
+13. As a chat user, I want keyboard and pointer interactions to keep the same semantics, so that performance work does not degrade usability.
+14. As a chat user, I want the new-chat entry path to remain instant, so that starting a fresh conversation feels lightweight.
+15. As a developer, I want shell feedback state separated from heavy conversation render state, so that navigation performance no longer depends on conversation complexity.
+16. As a developer, I want a single derived switching rule, so that phase 1 stays small and understandable.
+17. As a developer, I want the heavy conversation path to subscribe only to deferred thread identity, so that urgent shell updates stay cheap.
+18. As a developer, I want the sidebar path to subscribe only to instant thread identity, so that active-row feedback never waits on conversation work.
+19. As a maintainer, I want this phase to avoid a broad routing rewrite, so that risk stays controlled.
+20. As a maintainer, I want this phase to be reversible and easy to reason about, so that later architecture cleanup can build on it safely.
 
 ## 'Polishing' Requirements
 
-1. No visible virtualization artifacts (blank, flash, jump-correction feel).
-2. Sidebar and conversation interaction smoothness at least equal to current baseline.
-3. Open/submit/stream/prepend feel deterministic on desktop and mobile.
-4. Existing visual polish (header/footer overlays, sticky input, spacing rhythm) preserved.
-5. Keyboard/focus/context-menu semantics unchanged.
-6. Debug logs and temporary instrumentation removed before merge.
+1. A thread click must feel instant on desktop and mobile even when destination conversation render is heavy.
+2. No visible blank flash between click and destination reveal.
+3. No visible scroll jump in the previous conversation during switching.
+4. No overflow-mode flicker, scrollbar jump, or layout shift caused by blackout logic.
+5. Sidebar active-state visuals must remain stable during rapid repeated clicks.
+6. Input disabled styling must feel intentional, not broken or stuck.
+7. Overlay and disabled states must be visually minimal and coherent with current design.
+8. Temporary debug logs, instrumentation, and transition experiments must be removed before merge.
 
 ## Implementation Decisions
 
-1. **Phased execution (hard gate)**
-   - Phase A sidebar shipped and QA-signed before Phase B conversation starts.
+1. **Two identities**
+   - Introduce an urgent thread identity for shell/sidebar/URL feedback.
+   - Introduce a deferred thread identity for heavy conversation rendering.
 
-2. **Dependency decision**
-   - Add LegendList web package usage and retire current virtualization placeholder dependency for this surface.
+2. **Derived switching policy**
+   - Phase 1 uses a derived switching signal:
+     - `isSwitching = instantThreadId !== deferredThreadId`
+   - Do not introduce a second independent boolean unless phase 1 reveals a concrete gap.
 
-3. **Sidebar virtualization module design**
-   - Introduce a sidebar virtual list controller that owns:
-     - LegendList props configuration,
-     - key extraction policy,
-     - bottom boundary load-more callback,
-     - request dedupe/in-flight guard,
-     - top-insert stability policy.
-   - Keep existing sidebar composition shell unchanged (provider, overlays, mobile persisted behavior).
+3. **Deferral mechanism**
+   - Use `useDeferredValue` as the primary mechanism in phase 1.
+   - Do not start with a custom transition orchestration layer.
+   - This keeps the implementation smaller and easier to validate.
 
-4. **Sidebar row rendering policy**
-   - Keep existing thread row component and interaction logic.
-   - Remove pseudo-virtual row mechanics from row path (`content-visibility` event gating and React `Activity` row hiding).
-   - Keep non-conflicting lightweight CSS containment where beneficial.
+4. **Navigation ownership**
+   - The chat navigation coordinator becomes responsible for exposing:
+     - instant thread identity,
+     - deferred thread identity,
+     - switching status,
+     - navigation helpers.
+   - Routing remains the canonical URL source.
+   - Shell feedback is allowed to lead heavy content.
 
-5. **Sidebar boundary trigger policy**
-   - Use LegendList end-threshold callback as primary trigger.
-   - Add app-level gating to enforce: one in-flight load per boundary cycle, no duplicate bursts, no missed retry after settle.
+5. **Sidebar policy**
+   - Sidebar selected state must be derived from the urgent thread identity.
+   - Sidebar must not wait for deferred conversation render to reflect the user's click.
 
-6. **Conversation virtualization module design**
-   - Introduce a conversation window-virtual controller that owns:
-     - LegendList window-scroll config,
-     - list imperative handle integration,
-     - bottom-state signal derivation,
-     - prepend/append/stream anchor policy,
-     - top-boundary pagination trigger policy.
-   - Keep conversation L3 adapter/layout split; virtualization lives in layout boundary.
+6. **Conversation policy**
+   - Heavy conversation providers and renderers must read the deferred thread identity only.
+   - The heavy path must not subscribe to urgent navigation state if that would re-couple shell feedback to render cost.
 
-7. **Conversation behavior policy (LegendList)**
-   - Use window scroll mode with end alignment.
-   - Use initial end positioning strategy from list config (not manual probe scroll).
-   - Use maintain-at-end behavior for append/stream updates only when user is near end.
-   - Use maintain-visible-content-position with data+size stability for prepend and size changes.
+7. **Blackout policy**
+   - Keep the previous conversation mounted under a blackout overlay while switching.
+   - Do not unmount immediately on click.
+   - Do not render both previous and next conversations as separate active panes at once.
 
-8. **Submit/open scroll policy**
-   - Submit intent continues to trigger explicit programmatic scroll-to-end once intent message is committed.
-   - Initial open uses list initial positioning; no RAF/timeout settle loops.
-   - If initial convergence still shows one-frame instability, allow explicit short stabilization-hidden state with deterministic reveal condition (no timer fallback).
+8. **Scroll stability policy**
+   - Do not change scroll position on switch.
+   - Do not reset viewport.
+   - Do not toggle scrolling behavior in ways that trigger unnecessary heavy recomputation of the previous conversation surface.
+   - Prefer a top overlay layer that blocks interaction without changing content geometry.
 
-9. **Conversation pagination wiring decision**
-   - Wire real top-boundary load-more to existing paginated messages source now (not mocked callback).
-   - Extend active-thread message state contract to expose older-history pagination controls/status required by UI.
+9. **Reveal policy**
+   - For phase 1, reveal is tied to deferred identity catch-up.
+   - If visual testing shows a flash or premature reveal, phase 2 or a phase-1.1 follow-up may add a stronger layout-ready handshake.
 
-10. **Bottom-state source migration**
-    - Replace probe-based bottom visibility as primary source for conversation controls with virtualizer-aware state derived from list handle/state.
-    - Keep user-facing behavior equivalent.
+10. **New chat policy**
+    - New-chat flow should continue to feel instant.
+    - Do not add a dedicated special-case implementation unless actual testing proves it necessary.
 
-11. **Data and key invariants**
-    - Message/thread item keys remain stable UUIDs.
-    - No index keys.
-    - If any in-place array mutation is introduced later, explicit data-version invalidation is required.
-
-12. **Risk management**
-    - No broad refactor of chat data-layer shape in this PRD.
-    - No redesign of message/sidebar UI structure.
-    - Keep changes concentrated in list rendering + pagination control boundaries.
+11. **Scope discipline**
+    - Do not redesign draft, model, or message-session ownership in this phase.
+    - Do not rewrite route topology in this phase.
+    - Do not broadly remove all keyed resets in this phase.
+    - Only decouple immediate navigation feedback from heavy conversation rendering.
 
 ## Testing Decisions
 
 1. **Test quality bar**
-   - Validate external behavior, not implementation internals.
-   - Focus on user-visible stability and pagination correctness.
+   - Test externally visible navigation behavior.
+   - Do not test hook internals or implementation-specific state wiring.
+   - Good tests prove immediate feedback and stable reveal timing from the user's perspective.
 
-2. **Automated checks in scope**
-   - Run `pnpm run check-types` after each phase.
+2. **Primary modules to test**
+   - Chat navigation coordinator behavior.
+   - Sidebar selection behavior during switching.
+   - Conversation shell blackout/disable behavior during switching.
+   - Deferred conversation reveal behavior after switching.
 
-3. **Manual QA ownership**
-   - User runs manual QA; implementation handoff must include explicit scenario checklist and pass criteria.
+3. **Behavioral scenarios to validate**
+   - Click a heavy thread from another heavy thread; confirm immediate URL, highlight, blackout, and input disable.
+   - Click multiple different threads rapidly; confirm latest click wins and sidebar feedback stays instant.
+   - Switch from heavy thread to new chat; confirm new chat remains effectively instant.
+   - Confirm previous conversation scroll position does not visibly move during switching.
+   - Confirm no overflow flicker or layout shift caused by blackout overlay.
+   - Confirm input re-enables when switching ends.
+   - Confirm browser history remains correct after thread switches.
 
-4. **Sidebar QA checklist**
-   - Long history fast scroll down/up; confirm no blank/jump artifacts.
-   - Repeated bottom reaches; confirm load-more always fires when needed.
-   - Confirm duplicate call prevention while load in-flight.
-   - Validate active row + context menu + desktop/mobile sidebar behaviors unchanged.
+4. **Automated checks**
+   - Run `pnpm run check-types`.
 
-5. **Conversation QA checklist**
-   - Open long thread; confirm deterministic initial anchor behavior.
-   - Submit repeatedly; confirm each submit reaches end deterministically.
-   - Scroll away from end during streaming; confirm no autonomous movement.
-   - Reach top repeatedly; confirm older-history load-more reliability.
-   - During prepend loads, confirm viewport pixel-stable (no visible jump).
-   - Validate scroll-to-bottom control behavior parity.
+5. **Manual QA emphasis**
+   - Manual QA is critical because this work targets interaction feel and render coupling.
+   - QA should include desktop and mobile, slow machine simulation if available, and long-conversation threads.
 
-6. **QA report format required from user**
-   - scenario, expected, observed, pass/fail, notes (optionally video).
+6. **Prior art**
+   - Prefer existing behavior-driven tests around chat navigation, sidebar selection, and shell state if present.
+   - Reuse existing testing style in the repo rather than introducing a new testing pattern.
 
 ## Out of Scope
 
-1. Full scroll restoration across route/app reload.
-2. Virtualization rollout to other surfaces.
-3. Full chat architecture/data pipeline rewrite.
-4. Visual redesign of sidebar/message components.
-5. New non-virtualization features.
+1. Full redesign of chat routing.
+2. Full rewrite of thread/session/provider architecture.
+3. Full removal of all thread-keyed resets across the app.
+4. New data loading architecture.
+5. Deferred loader or `<Await>` based designs.
+6. Visual redesign of sidebar, conversation, or input.
+7. Scroll restoration across browser reloads or back/forward restore.
+8. General performance optimization unrelated to navigation feedback.
+9. Virtualizer redesign or list-rendering redesign outside what is necessary to preserve stability.
 
 ## Further Notes
 
-1. This PRD intentionally keeps scope tight to MVP-critical virtualization correctness.
-2. LegendList defaults/behaviors must follow local reverse-engineered documentation already produced for this repo context.
-3. If any rule here conflicts with MVP anchor policy decisions, anchor policy must be resolved first before coding conversation phase.
-
-## Unresolved Questions
-
-- Initial open anchor final rule: force end always, or restore alternate anchor (last-read / last-user) when available?
-  - => for now, force end always.
-- If alternate anchor is desired later, should this PRD still ship force-end now as MVP baseline?
-  - => force-end.
-
-## Resources
-
-- You must always read this documentation first: @.llms/plan/virtualization/0-legendlist-documentation.md
-- If adhoc need of specific deeper answers, you must then ask a sub-agent to browser source code at: @.llms/git-references/legendlist for legendlist source code and examples and git history (browse with sub-agent) (N.B. the react web part is not documented and is the only part we care about (the lib cas initially designed for react native))
-- DO NOT use web or context7 for legendlist related question. The library is in beta and undocumented yet.
+1. This phase intentionally optimizes for low-risk impact: instant feedback first, broader architecture later.
+2. The main success criterion is subjective feel backed by objective behavior: a click must acknowledge immediately even if destination conversation render is expensive.
+3. If phase 1 succeeds, it creates a safe seam for later cleanup rather than forcing a risky all-at-once refactor.
+4. If phase 1 reveals that deferred catch-up alone is not sufficient for elegant reveal timing, the next increment should add an explicit layout-ready handshake rather than expanding scope indiscriminately.

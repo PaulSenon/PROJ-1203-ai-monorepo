@@ -1,14 +1,19 @@
 "use client";
 
-import { useCallback, useLayoutEffect } from "react";
-import { useAppLoadStatusActions } from "@/hooks/use-app-load-status";
-import { useChatNav } from "@/hooks/use-chat-nav";
+import { type CSSProperties, useCallback, useMemo } from "react";
+import {
+  useAppReadySignalAction,
+  useAppReadyState,
+} from "@/hooks/chat/app-ready/app-ready-visibility";
+import { useChatNav, useChatNavActions } from "@/hooks/chat/use-chat-nav";
+import { cn } from "@/lib/utils";
 import { useMobileSidebarAutoclose } from "./_hooks/use-mobile-sidebar-autoclose";
 import { useSidebarThreads } from "./_hooks/use-sidebar-threads";
 import { ChatSidebarLayout } from "./sidebar-layout";
 
 function MobileSidebarAutoclose() {
-  useMobileSidebarAutoclose();
+  const { currentThreadUuid } = useChatNav();
+  useMobileSidebarAutoclose(currentThreadUuid);
   return null;
 }
 
@@ -19,32 +24,63 @@ export function ChatSidebar({
   className?: string;
   children?: React.ReactNode;
 }) {
-  const appUiStatus = useAppLoadStatusActions();
-  const chatNav = useChatNav();
+  const { openNewChat } = useChatNavActions();
+  const { currentThreadUuid } = useChatNav();
 
   const sidebarThreads = useSidebarThreads();
+  // TODO: not this
+  const transition = useAppReadyState("sidebar");
+  const { markReady } = useAppReadySignalAction({
+    checkpoint: "sidebar-layout",
+  });
 
-  useLayoutEffect(() => {
-    if (sidebarThreads.isPending) return;
-    appUiStatus.setSidebarUIReady();
-  }, [sidebarThreads.isPending, appUiStatus.setSidebarUIReady]);
+  const sidebarContentClassName = cn(
+    className,
+    "transition-opacity",
+    transition.hidden ? "pointer-events-none opacity-0" : "opacity-100"
+  );
+
+  const sidebarContentStyle: CSSProperties = useMemo(
+    () => ({
+      transitionDuration: `${transition.durationMs}ms`,
+      transitionTimingFunction: transition.easing,
+    }),
+    [transition.durationMs, transition.easing]
+  );
+
+  const sidebarFloatingActionsClassName = cn(
+    "transition-opacity",
+    transition.hidden ? "pointer-events-none opacity-0" : "opacity-100"
+  );
+
+  const sidebarFloatingActionsStyle: CSSProperties = useMemo(
+    () => ({
+      transitionDuration: `${transition.durationMs}ms`,
+      transitionTimingFunction: transition.easing,
+    }),
+    [transition.durationMs, transition.easing]
+  );
 
   const handleNewChat = useCallback(() => {
-    chatNav.openNewChat();
-  }, [chatNav.openNewChat]);
+    openNewChat();
+  }, [openNewChat]);
 
   return (
     <ChatSidebarLayout
-      activeThreadId={chatNav.id}
       canLoadMore={sidebarThreads.canLoadMore}
-      className={className}
+      className={sidebarContentClassName}
+      currentThreadUuid={currentThreadUuid}
       isLoadingMore={sidebarThreads.isLoadingMore}
+      onLayoutReady={markReady}
       onLoadMore={sidebarThreads.loadMore}
       onNewChat={handleNewChat}
+      sidebarFloatingActionsClassName={sidebarFloatingActionsClassName}
+      sidebarFloatingActionsStyle={sidebarFloatingActionsStyle}
+      style={sidebarContentStyle}
       threads={sidebarThreads.threads}
     >
       {children}
-      <MobileSidebarAutoclose key={chatNav.id ?? "new"} />
+      <MobileSidebarAutoclose />
     </ChatSidebarLayout>
   );
 }

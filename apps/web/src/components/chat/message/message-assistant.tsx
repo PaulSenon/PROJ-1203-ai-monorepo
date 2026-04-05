@@ -116,6 +116,7 @@ export function ChatMessageAssistant({
         <Message.Footer>
           <MessageFooterAssistant
             isStreaming={isStreaming}
+            messageId={message.id}
             modelId={message.metadata?.modelId}
             onAction={handleFooterAction}
           />
