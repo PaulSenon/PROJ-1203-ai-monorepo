@@ -37,13 +37,20 @@ export function useChatSessionScope() {
 function ChatSessionScopeExternalProviders({
   children,
   sessionId,
+  // isNew,
 }: {
   children: React.ReactNode;
-} & Pick<ChatSessionScopeContext, "sessionId">) {
+} & ChatSessionScopeContext) {
   return (
-    <AiSdkChatProvider sessionId={sessionId}>
-      <ActiveThreadProvider>{children}</ActiveThreadProvider>
-    </AiSdkChatProvider>
+    <ChatDraftProvider>
+      <ModelSelectorProvider>
+        <ChatInputProvider>
+          <AiSdkChatProvider sessionId={sessionId}>
+            <ActiveThreadProvider>{children}</ActiveThreadProvider>
+          </AiSdkChatProvider>
+        </ChatInputProvider>
+      </ModelSelectorProvider>
+    </ChatDraftProvider>
   );
 }
 
@@ -75,7 +82,7 @@ function ChatSessionScopeContextProvider({
 
   return (
     <ChatSessionScopeContext.Provider value={chatSessionContextValue}>
-      <ChatSessionScopeExternalProviders sessionId={sessionId}>
+      <ChatSessionScopeExternalProviders isNew={isNew} sessionId={sessionId}>
         {children}
       </ChatSessionScopeExternalProviders>
     </ChatSessionScopeContext.Provider>

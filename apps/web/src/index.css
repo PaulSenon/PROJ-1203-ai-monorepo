@@ -255,23 +255,19 @@ html body[data-scroll-locked][style] {
 
 @keyframes opacity-in {
   from {
-    opacity: 1%;
-    backdrop-filter: blur(0px);
+    opacity: 0%;
   }
   to {
     opacity: 100%;
-    backdrop-filter: blur(3px);
   }
 }
 
 @keyframes opacity-out {
   from {
     opacity: 100%;
-    backdrop-filter: blur(3px);
   }
   to {
     opacity: 0%;
-    backdrop-filter: blur(0px);
   }
 }
 
@@ -298,7 +294,7 @@ html body[data-scroll-locked][style] {
 }
 
 [data-streamdown="code-block"] {
-  contain: content;
+  contain: content paint;
   content-visibility: visible !important;
   contain-intrinsic-size: none !important;
 }

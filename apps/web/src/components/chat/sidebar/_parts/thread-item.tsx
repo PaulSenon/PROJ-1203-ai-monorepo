@@ -1,9 +1,11 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
+import { Link } from "@tanstack/react-router";
 import { MoreVerticalIcon } from "lucide-react";
 import {
   type ButtonHTMLAttributes,
   type ElementType,
   memo,
+  type PointerEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   useCallback,
@@ -24,16 +26,13 @@ import {
   type SidebarItemRootProps,
 } from "@/components/ui-custom/sidebar/sidebar-item";
 import { Tooltip } from "@/components/ui-custom/tooltip";
-import {
-  getExistingChatHref,
-  useChatNavActions,
-  useIsSidebarThreadActive,
-} from "@/hooks/use-chat-nav";
+import { useChatNavActions } from "@/hooks/chat/use-chat-nav";
 import { cn } from "@/lib/utils";
 import {
   type LiveStateIndicatorVariant,
   useThreadItemState,
 } from "../_hooks/use-thread-item-state";
+import { INP_DATA_ATTRIBUTE } from "../sidebar-layout";
 import {
   getThreadMenuActions,
   getThreadQuickActions,
@@ -109,6 +108,7 @@ function ThreadActionButton({
   className,
   variant = "default",
   isMobile,
+  ...props
 }: {
   icon: ElementType;
   label: string;
@@ -116,10 +116,11 @@ function ThreadActionButton({
   className?: string;
   variant?: "default" | "destructive";
   isMobile: boolean;
-}) {
+} & React.ComponentProps<"button">) {
   return (
     <Tooltip asChild isMobile={isMobile} tooltip={label}>
       <Button
+        {...props}
         className={cn(
           "h-7 w-7 rounded-md bg-transparent p-1.5 text-foreground hover:text-foreground",
           variant === "default" &&
@@ -153,6 +154,12 @@ function ThreadQuickActions({
   isMobile: boolean;
   className?: string;
 }) {
+  const dismissPointerDown = useCallback(
+    (e: PointerEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+    },
+    []
+  );
   if (actions.length === 0) {
     return null;
   }
@@ -169,6 +176,7 @@ function ThreadQuickActions({
           onClick={() => {
             action.callback();
           }}
+          onPointerDown={dismissPointerDown}
           variant={action.variant === "destructive" ? "destructive" : "default"}
         />
       ))}
@@ -222,9 +230,10 @@ const ThreadLinkBody = memo(function ThreadLinkBody({
         <>
           <div
             className={cn(
-              "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100"
+              "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 bg-sidebar-accent opacity-0 transition-[opacity;transform] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:opacity-100"
             )}
           >
+            {/* gradient to fade quick action bg */}
             <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
             <MemoThreadQuickActions
               actions={quickActions}
@@ -341,6 +350,7 @@ type ThreadItemRootProps = {
   as?: SidebarItemRootProps["as"];
   isMobile?: boolean;
   actionHandlers?: ThreadItemActionHandlers;
+  isActive?: boolean;
 };
 
 function ThreadItemRootImpl({
@@ -349,9 +359,10 @@ function ThreadItemRootImpl({
   as = "li",
   isMobile = false,
   actionHandlers,
+  isActive,
 }: ThreadItemRootProps) {
+  // TODO: move this to props. No external hooks here
   const { openExistingChat } = useChatNavActions();
-  const isActive = useIsSidebarThreadActive(thread.uuid);
   const { indicatorVariant, isLoading, tooltip } = useThreadItemState(thread);
 
   const quickActions = useMemo(
@@ -372,6 +383,7 @@ function ThreadItemRootImpl({
       }
 
       event.preventDefault();
+      // TODO: move this to props. No external hooks here
       openExistingChat(thread.uuid);
     },
     [openExistingChat, thread.uuid]
@@ -381,7 +393,7 @@ function ThreadItemRootImpl({
     <SidebarItem.Root as={as} className={className}>
       <ThreadContextMenu actions={menuActions}>
         <SidebarItem.Button asChild>
-          <a
+          <Link
             className={cn(
               "-webkit-touch-callout-none group/link relative flex h-10 w-full items-center gap-0! overflow-hidden transition-background-color duration-500 ease-(--ease-default) md:h-9",
               "focus-visible:box-shadow-none focus-visible:bg-sidebar-accent focus-visible:ring-0!",
@@ -389,8 +401,11 @@ function ThreadItemRootImpl({
               "group-data-[state=open]/cm:bg-sidebar-accent",
               isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
             )}
-            href={getExistingChatHref(thread.uuid)}
-            onClick={handleLinkClick}
+            onPointerDown={handleLinkClick}
+            params={{ id: thread.uuid }}
+            to="/chat/{-$id}"
+            // DEBUG
+            {...{ [INP_DATA_ATTRIBUTE]: thread.uuid }}
           >
             <ThreadLinkBody
               indicatorVariant={indicatorVariant}
@@ -400,7 +415,7 @@ function ThreadItemRootImpl({
               text={thread.title}
               tooltip={tooltip}
             />
-          </a>
+          </Link>
         </SidebarItem.Button>
       </ThreadContextMenu>
     </SidebarItem.Root>
@@ -413,6 +428,7 @@ const ThreadItemRoot = memo(
     previousProps.className === nextProps.className &&
     previousProps.as === nextProps.as &&
     previousProps.isMobile === nextProps.isMobile &&
+    previousProps.isActive === nextProps.isActive &&
     previousProps.actionHandlers === nextProps.actionHandlers &&
     previousProps.thread.uuid === nextProps.thread.uuid &&
     previousProps.thread.title === nextProps.thread.title &&

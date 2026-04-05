@@ -5,7 +5,7 @@ import {
   type LegendListRef,
   type LegendListRenderItemProps,
 } from "@legendapp/list/react";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { ChatMessage } from "@/components/chat/message/message";
 import {
   ScrollEdgeProbe,
@@ -27,7 +27,7 @@ export type MessagesListVirtualProps = {
 };
 
 const ALWAYS_RENDER_CONFIG: AlwaysRenderConfig = {
-  bottom: 2,
+  bottom: 3,
 };
 
 function SeparatorComponent() {
@@ -69,6 +69,17 @@ export function MessagesListVirtual({
     rootMargin: "100%",
   });
 
+  // This is currently a hack to trigger ready on activity that
+  // does not remount.
+  // we absolutely need to skip this on real first mount (not ready)
+  // and we only want to trigger it when layout ready on activity remount (already ready)
+  useEffect(() => {
+    if (!isReady.current) return;
+    requestAnimationFrame(() => {
+      onLayoutReady?.();
+    });
+  }, [onLayoutReady]);
+
   /**
    * Two little hacks here.
    * - we want initial scroll to be as window end, not list end
@@ -87,8 +98,7 @@ export function MessagesListVirtual({
     }
 
     // on first load we trigger ready event
-    cancelAnimationFrame(raf.current);
-    raf.current = requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
       isReady.current = true;
       onLayoutReady?.();
     });
@@ -99,7 +109,11 @@ export function MessagesListVirtual({
   // state. So we also handle onLoad that runs later than layout but I guess it's less
   // framerate dependent.
   const handleLoad = useCallback(() => {
-    onLayoutReady?.();
+    if (isReady.current) return;
+    requestAnimationFrame(() => {
+      isReady.current = true;
+      onLayoutReady?.();
+    });
   }, [onLayoutReady]);
 
   const renderItem = useCallback(
@@ -109,6 +123,12 @@ export function MessagesListVirtual({
       const isDynamic = isLast && shouldReserveLastAssistantSpace;
       const shouldReserveForAssistant =
         item.role === "assistant" && isDynamic && isFollowup;
+
+      // DEBUG force slow message components render
+      // const startTime = performance.now();
+      // while (performance.now() - startTime < 100) {
+      //   // Do nothing for 5 ms per item to emulate extremely slow code
+      // }
 
       return (
         <div
@@ -137,6 +157,8 @@ export function MessagesListVirtual({
       <LegendList<MyUIMessage>
         alignItemsAtEnd={true}
         alwaysRender={ALWAYS_RENDER_CONFIG}
+        // Important while we cannot handle initial window scroll to bottom natively with legendList:
+        className={cn(!isReady.current && "opacity-0")}
         data={messages}
         getItemType={messageTypeExtractor}
         ItemSeparatorComponent={SeparatorComponent}
@@ -150,9 +172,15 @@ export function MessagesListVirtual({
         renderItem={renderItem}
         suggestEstimatedItemSize
         useWindowScroll
-        waitForInitialLayout={false}
+        waitForInitialLayout={true}
       />
       <ScrollEdgeProbe ref={bottomRef} />
     </>
   );
 }
+
+/**
+ * LegendList wishlist:
+ * - a feature to have initial scroll bottom of full page (when using window scroll) rather than final index.
+ * - safari/ios scroll up fixes
+ */

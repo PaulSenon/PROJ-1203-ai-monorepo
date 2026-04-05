@@ -1,5 +1,6 @@
 import type { Doc } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import {
+  type AlwaysRenderConfig,
   LegendList,
   type LegendListRef,
   type LegendListRenderItemProps,
@@ -15,6 +16,10 @@ type ListSupplementalComponent =
   | React.ComponentType<unknown>
   | React.ReactElement;
 
+const ALWAYS_RENDER_CONFIG: AlwaysRenderConfig = {
+  top: 20,
+};
+
 export function SidebarVirtualThreadList({
   threads,
   isMobile,
@@ -22,15 +27,19 @@ export function SidebarVirtualThreadList({
   isLoadingMore,
   onLoadMore,
   onEdgeStateChange,
+  onLayoutReady,
   header,
   footer,
+  activeThreadUuid,
 }: {
   threads: ThreadDoc[];
+  activeThreadUuid: string;
   isMobile: boolean;
   canLoadMore: boolean;
   isLoadingMore: boolean;
   onLoadMore?: () => void;
   onEdgeStateChange?: (isAtTop: boolean, isAtBottom: boolean) => void;
+  onLayoutReady?: () => void;
   header?: ListSupplementalComponent;
   footer?: ListSupplementalComponent;
 }) {
@@ -85,11 +94,14 @@ export function SidebarVirtualThreadList({
     [setEdgeState]
   );
 
+  const activeThreadUuidRef = useRef(activeThreadUuid);
+  activeThreadUuidRef.current = activeThreadUuid;
   const renderThreadItem = useCallback(
     ({ item: thread, index }: LegendListRenderItemProps<ThreadDoc>) => (
       <ThreadItem.Root
         as="div"
         className={cn("px-4", index > 0 && "pt-1.5")}
+        isActive={thread.uuid === activeThreadUuidRef.current}
         isMobile={isMobile}
         thread={thread}
       />
@@ -97,10 +109,14 @@ export function SidebarVirtualThreadList({
     [isMobile]
   );
 
+  // resync edge on list size change
+  // TODO: is this still useful ?
+  // biome-ignore lint/correctness/useExhaustiveDependencies: update on threadCount changes
   useLayoutEffect(() => {
     syncEdgeStateFromList();
   }, [syncEdgeStateFromList, threadCount]);
 
+  // Handle mobile open restore position to selected item
   useLayoutEffect(() => {
     if (!(isMobile && openMobile)) {
       return;
@@ -115,12 +131,19 @@ export function SidebarVirtualThreadList({
     });
   }, [isMobile, openMobile]);
 
+  // trigger ready event
+  useLayoutEffect(() => {
+    onLayoutReady?.();
+  }, [onLayoutReady]);
+
   return (
     <LegendList<ThreadDoc>
+      alwaysRender={ALWAYS_RENDER_CONFIG}
       className="flex min-h-0 flex-1 flex-col gap-0 overscroll-contain p-0"
       data={threads}
-      drawDistance={180}
+      drawDistance={1000}
       estimatedItemSize={44}
+      extraData={activeThreadUuidRef.current}
       keyExtractor={(thread) => thread.uuid}
       ListFooterComponent={footer}
       ListHeaderComponent={header}

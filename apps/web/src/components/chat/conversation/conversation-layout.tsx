@@ -5,12 +5,14 @@ import {
   useScrollToBottomActions,
   useScrollToBottomState,
 } from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
-import { useAppReadySignalAction } from "@/hooks/use-app-ready";
+import { useAppReadySignalAction } from "@/hooks/chat/app-ready/app-ready-visibility";
 import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
+import { yieldNextPaint } from "@/lib/schedule-work";
 import { cn } from "@/lib/utils";
 import { MessagesList } from "./_parts/messages-list/messages-list";
 
 export type ChatConversationLayoutProps = {
+  threadUuid: string;
   messages: MyUIMessage[];
   isThreadSettled: boolean;
   isPending: boolean;
@@ -18,21 +20,21 @@ export type ChatConversationLayoutProps = {
   onStartReached?: () => void;
 };
 
-function raf() {
-  return new Promise((resolve) => requestAnimationFrame(resolve));
-}
-
 export const ChatConversationLayout = React.memo(
   function _ChatConversationLayout({
     messages,
     isThreadSettled,
     pendingAutoScrollMessageId,
     isPending,
+    threadUuid,
     onStartReached,
   }: ChatConversationLayoutProps) {
     const { bottomRef } = useScrollToBottomState();
     const { scrollToBottom } = useScrollToBottomActions();
-    const { ready: markReady } = useAppReadySignalAction("conversation-layout");
+    const { markReady } = useAppReadySignalAction({
+      checkpoint: "conversation-layout",
+      runKey: threadUuid,
+    });
     const pendingAutoScrollMessageIdRef = useRef(pendingAutoScrollMessageId);
     pendingAutoScrollMessageIdRef.current = pendingAutoScrollMessageId;
     const shouldReserveLastAssistantSpace = useShouldReserveLastAssistantSpace({
@@ -49,14 +51,14 @@ export const ChatConversationLayout = React.memo(
         if (pendingId !== lastItemKey) return;
 
         lastHandledIntentIdRef.current = pendingId;
-        await raf();
+        await yieldNextPaint();
         scrollToBottom("snappy");
       },
       [scrollToBottom]
     );
 
     const handleReady = useCallback(async () => {
-      await raf();
+      await yieldNextPaint();
       scrollToBottom("instant");
       markReady();
     }, [markReady, scrollToBottom]);
@@ -66,6 +68,7 @@ export const ChatConversationLayout = React.memo(
         className={cn(
           "relative mx-auto mb-[130px] w-full max-w-3xl flex-1 p-6 md:mb-0"
         )}
+        id="overlay-conversation2"
       >
         <Conversation.List>
           <MessagesList

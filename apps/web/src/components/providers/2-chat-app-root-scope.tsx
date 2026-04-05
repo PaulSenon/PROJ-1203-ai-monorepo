@@ -1,5 +1,4 @@
 import { ChatNavProvider } from "@/hooks/chat/use-chat-nav";
-import { AppReadyProvider } from "@/hooks/use-app-ready";
 import { SidebarProvider } from "../ui/sidebar";
 
 /**
@@ -18,9 +17,7 @@ function ChatAppRootScopeExternalProviders({
 }) {
   return (
     <ChatNavProvider>
-      <AppReadyProvider>
-        <SidebarProvider>{children}</SidebarProvider>
-      </AppReadyProvider>
+      <SidebarProvider>{children}</SidebarProvider>
     </ChatNavProvider>
   );
 }

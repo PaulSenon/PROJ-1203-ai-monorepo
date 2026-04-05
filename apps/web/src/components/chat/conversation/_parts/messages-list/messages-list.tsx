@@ -18,8 +18,9 @@ export const MessagesList = memo(function _MessagesList({
 }: MessagesListProps) {
   const isEmpty = !isPending && messages.length === 0;
 
+  // Handle ready event signal for empty list only.
+  // When list not empty the ready signal is sync with layout logic.
   useEffect(() => {
-    console.log("READY", { isEmpty, onReady });
     if (!isEmpty) return;
     onReady?.();
   }, [isEmpty, onReady]);

@@ -1,5 +1,4 @@
 import { cvx } from "@/lib/convex/queries";
-import { useRenderChatNav } from "../use-chat-nav";
 import { useCvxQueryCached } from "./convex/utils/use-convex-query-2-cached";
 
 export function useThread(threadUuid: string | "skip") {
@@ -8,16 +7,3 @@ export function useThread(threadUuid: string | "skip") {
     ...cvx.query.getThread({ threadUuid }).options.skipWhen(isSkip)
   );
 }
-// TODO change for useThread
-export function useActiveThreadQuery({ skip }: { skip?: boolean } = {}) {
-  const chatNav = useRenderChatNav();
-  const isSkip = chatNav.isNew ?? skip ?? false;
-  return useCvxQueryCached(
-    ...cvx.query.getThread({ threadUuid: chatNav.id }).options.skipWhen(isSkip)
-  );
-}
-
-// export function useActiveThreadMutation() {
-//   // TODO: never used yet, might be broken
-//   return cvx.mutationV3.threads.upsert.options();
-// }

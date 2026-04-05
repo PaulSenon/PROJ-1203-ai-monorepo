@@ -8,10 +8,10 @@ import {
 } from "react";
 import { toast } from "sonner";
 import z from "zod";
+import { useChatSessionScope } from "@/components/providers/4-chat-session-scope";
 import { cvx } from "@/lib/convex/queries";
 import type { MaybePromise } from "@/lib/utils";
 import { useCvxQueryCached } from "./queries/convex/utils/use-convex-query-2-cached";
-import { ChatNavRerenderTrigger, useRenderChatNav } from "./use-chat-nav";
 import { useUserCacheEntry } from "./use-user-cache";
 import { useSaveToClipboard } from "./utils/uas-save-to-clipboard";
 import { useDebouncedCallback } from "./utils/use-debounced-callback";
@@ -121,8 +121,8 @@ export function useChatDraftActions() {
   return actions;
 }
 
-function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
-  const { isNew, id } = useRenderChatNav();
+export function ChatDraftProvider({ children }: { children: React.ReactNode }) {
+  const { isNew, sessionId: id } = useChatSessionScope();
 
   const saveToClipboard = useSaveToClipboard();
   const [saveStatus, setSaveStatus] =
@@ -268,13 +268,4 @@ function INTERNAL_DraftProvider({ children }: { children: React.ReactNode }) {
       </DraftStateContext.Provider>
     </DraftActionsContext.Provider>
   );
-}
-
-// TODO: perhaps there is a better way to handle this
-export function ChatDraftProvider({ children }: { children: React.ReactNode }) {
-  const Outlet = useCallback(
-    () => <INTERNAL_DraftProvider>{children}</INTERNAL_DraftProvider>,
-    [children]
-  );
-  return <ChatNavRerenderTrigger mode="deferred" Outlet={Outlet} />;
 }

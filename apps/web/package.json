@@ -9,6 +9,7 @@
     "start": "vite",
     "dev:bare": "vite",
     "check-types": "tsc --noEmit",
+    "test": "vitest run",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "generate-pwa-assets": "pwa-assets-generator"
@@ -118,6 +119,7 @@
     "typescript": "catalog:",
     "vite": "^6.2.2",
     "vite-bundle-analyzer": "^1.2.3",
-    "vite-plugin-inspect": "^11.3.3"
+    "vite-plugin-inspect": "^11.3.3",
+    "vitest": "^4.1.2"
   }
 }

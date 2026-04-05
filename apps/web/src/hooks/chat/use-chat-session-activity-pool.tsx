@@ -1,3 +1,4 @@
+import type React from "react";
 import { createContext, useContext, useMemo, useRef } from "react";
 import type { ChatSessionScopeContext } from "@/components/providers/4-chat-session-scope";
 import { useChatNav } from "./use-chat-nav";
@@ -8,15 +9,15 @@ const ChatSessionActivityPoolContext =
   createContext<ChatSessionActivityPoolContext | null>(null);
 
 export function useChatSessionActivityPool() {
-  const ctx = useContext(ChatSessionActivityPoolContext);
+  const pool = useContext(ChatSessionActivityPoolContext);
 
-  if (ctx === null) {
+  if (pool === null) {
     throw new Error(
       "[useChatSessionActivityPool()] must be used under [ChatSessionActivityPoolContext] (provided by [ChatSessionActivityPoolContextProvider])"
     );
   }
 
-  return ctx;
+  return pool;
 }
 
 // TODO: move to utils ?
@@ -54,6 +55,29 @@ function isUuidEqual(
   return prev.sessionId === next.sessionId;
 }
 
+function normalizePool(
+  sessions: (ChatSessionScopeContext | undefined)[]
+): ChatSessionScopeContext[] {
+  const dedupedSessions = new Map<string, ChatSessionScopeContext>();
+
+  for (const session of sessions) {
+    if (!session) continue;
+
+    const existingSession = dedupedSessions.get(session.sessionId);
+
+    if (!existingSession) {
+      dedupedSessions.set(session.sessionId, session);
+      continue;
+    }
+
+    if (existingSession.isNew && !session.isNew) {
+      dedupedSessions.set(session.sessionId, session);
+    }
+  }
+
+  return [...dedupedSessions.values()];
+}
+
 export function ChatSessionActivityPoolContextProvider({
   children,
 }: {
@@ -83,10 +107,7 @@ export function ChatSessionActivityPoolContextProvider({
   ) satisfies ChatSessionScopeContext | undefined;
 
   const activityPoolContextValue = useMemo(
-    () =>
-      [currentSession, previousSession, nextNewSession].filter(
-        (v): v is ChatSessionScopeContext => Boolean(v)
-      ),
+    () => normalizePool([currentSession, previousSession, nextNewSession]),
     [currentSession, previousSession, nextNewSession]
   ) satisfies ChatSessionActivityPoolContext;
 

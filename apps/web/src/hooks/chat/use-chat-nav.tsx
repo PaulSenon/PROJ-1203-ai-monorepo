@@ -7,7 +7,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useTransition,
 } from "react";
 import { createStableIdGenerator } from "@/lib/utils";
 import { Route as ChatRoute } from "@/routes/_chat/chat.{-$id}";
@@ -16,7 +15,6 @@ interface ChatNavContextState {
   currentThreadUuid: string;
   isNew: boolean;
   nextNewThreadUuid?: string;
-  isTransitioning: boolean;
 }
 interface ChatNavContextActions {
   persistNewChatIdToUrl: () => void;
@@ -58,26 +56,21 @@ export function ChatNavProvider({ children }: { children: React.ReactNode }) {
   const routeThreadUuid = params.id;
   const isNew = routeThreadUuid === undefined;
   const currentThreadUuid = routeThreadUuid ?? newIds.current;
-  const [isTransitioning, startTransition] = useTransition();
 
   const openExistingChat = useCallback(
-    (id: string) => {
-      startTransition(() => {
-        router.navigate({
-          to: "/chat/{-$id}",
-          params: { id },
-        });
+    async (id: string) => {
+      router.navigate({
+        to: "/chat/{-$id}",
+        params: { id },
       });
     },
     [router]
   );
 
   const openNewChat = useCallback(() => {
-    startTransition(() => {
-      router.navigate({
-        to: "/chat/{-$id}",
-        params: { id: undefined },
-      });
+    router.navigate({
+      to: "/chat/{-$id}",
+      params: { id: undefined },
     });
   }, [router]);
 
@@ -89,12 +82,11 @@ export function ChatNavProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const id = newIds.consume();
-    startTransition(() => {
-      router.navigate({
-        replace: true,
-        to: "/chat/{-$id}",
-        params: { id },
-      });
+
+    router.navigate({
+      replace: true,
+      to: "/chat/{-$id}",
+      params: { id },
     });
   }, [router, newIds]);
 
@@ -112,9 +104,8 @@ export function ChatNavProvider({ children }: { children: React.ReactNode }) {
       currentThreadUuid,
       isNew,
       nextNewThreadUuid: isNew ? undefined : newIds.current,
-      isTransitioning,
     }),
-    [currentThreadUuid, isNew, newIds.current, isTransitioning]
+    [currentThreadUuid, isNew, newIds.current]
   ) satisfies ChatNavContextState;
 
   return (

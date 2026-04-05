@@ -4,9 +4,9 @@ import type {
   PromptInputSubmitProps,
 } from "@/components/ai-elements/prompt-input";
 import { ChatInput as Input } from "@/components/ui-custom/chat/chat-input";
+import { useAppReadyState } from "@/hooks/chat/app-ready/app-ready-visibility";
 import { useActiveThreadActions } from "@/hooks/use-chat-active";
 import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
-import { useChatNavSwitching } from "@/hooks/use-chat-nav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useModelSelectorState } from "@/hooks/use-user-preferences";
 import { cn } from "@/lib/utils";
@@ -17,9 +17,10 @@ export function ChatInput() {
   const inputState = useChatInputState();
   const inputActions = useChatInputActions();
   const { sendMessage } = useActiveThreadActions();
-  const isSwitching = useChatNavSwitching();
+  const { hidden: isSwitching } = useAppReadyState("conversation");
+  // const { markReady } = useAppReadySignalAction({checkpoint: 'prompt-input-data', runKey: })
   const { selectedModelId } = useModelSelectorState();
-  const isInputPending = inputState.isPending || isSwitching;
+  const isInputPending = inputState.isPending;
   const isInputDisabled = inputState.disabled || isSwitching;
   const handleSubmit: PromptInputProps["onSubmit"] = (message, event) => {
     if (!message.text || message.text.trim() === "") return;
@@ -38,6 +39,8 @@ export function ChatInput() {
     if (isInputPending) return;
     inputActions.focus();
   }, [isInputPending, inputActions.focus]);
+
+  // useEffect(() => {}, [markReady]);
 
   // TODO: status not implemented yet
   const submitButtonStatus: PromptInputSubmitProps["status"] = "ready";
