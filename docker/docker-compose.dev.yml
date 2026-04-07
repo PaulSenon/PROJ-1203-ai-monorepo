@@ -9,19 +9,23 @@ services:
     volumes:
       - ../:/app:delegated # Source code mounting
       - volume-pnpm-store:/app/.pnpm-store # Package cache persistence
+      - volume-npm-cache:/root/.npm # npx/npm cache for latest CLI downloads
       - volume-convex-auth:/root/.convex
-      - ~/.local/share/opencode:/root/.local/share/opencode # https://opencode.ai/docs/providers/#credentials
-      - ~/.config/opencode:/root/.config/opencode # https://opencode.ai/docs/config/#global
-      - ~/.claude:/root/.claude # Claude Code cache persistence
-      - ~/.claude.json:/root/.claude.json # Claude Code cache persistence
-      - ~/.codex:/root/.codex # OpenAI cache persistence
-      - ~/.alchemy:/root/.alchemy
+      - volume-t3-home:/root/.t3 # T3 home: state db, worktrees, logs, attachments
+      - volume-codex-home:/root/.codex # Codex auth/config/history via CODEX_HOME
+      - volume-opencode-data:/root/.local/share/opencode
+      - volume-opencode-config:/root/.config/opencode
+      - ${HOME}/.config/opencode/opencode.jsonc:/root/.config/opencode/opencode.jsonc:ro
+      - ${HOME}/.local/share/opencode/mcp-auth.json:/root/.local/share/opencode/mcp-auth.json:ro
+      - ${HOME}/.local/share/opencode/auth.json:/root/.local/share/opencode/auth.json:ro
+      - ${HOME}/.alchemy:/root/.alchemy:ro
 
     working_dir: /app
     ports:
       - "3000:3000" # apps/server
       - "3001:3001" # apps/web
-      - "8888:8888" # vite bundler analyser
+      - "3773:3773" # t3 remote web/app server
+      - "8888:8888" # vite bundler analyzer
       - "4096:4096" # opencode web ui port (hard codded in makefile)
     env_file:
       - ./.env.local
@@ -69,5 +73,10 @@ networks:
 
 volumes:
   volume-pnpm-store: # Persist package manager cache
+  volume-npm-cache: # Persist npm/npx cache for @latest CLIs
   volume-convex-auth: # Persist Convex authentication
+  volume-t3-home: # Persist T3 home directory
+  volume-codex-home: # Persist Codex auth/config/history
+  volume-opencode-data: # Opencode auth/db/worktrees
+  volume-opencode-config: # Opencode global config
   # volume-convex-data:     # Persist local Convex data

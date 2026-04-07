@@ -263,8 +263,8 @@ importers:
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.65.0(react@19.2.1))
       '@legendapp/list':
-        specifier: 3.0.0-beta.43
-        version: 3.0.0-beta.43(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+        specifier: 3.0.0-beta.44
+        version: 3.0.0-beta.44(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.13.5(@opentelemetry/api@1.9.0)
@@ -2371,8 +2371,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@legendapp/list@3.0.0-beta.43':
-    resolution: {integrity: sha512-VqVTkXMTAV/O7PZoy8xxYxEJ8RcMkVbNVza2Nbi1fGBUlrgtKbFrb91NxQ4uIaWgMtUjcjr+6pOsIRrEJrjiow==}
+  '@legendapp/list@3.0.0-beta.44':
+    resolution: {integrity: sha512-loGRve78NuZ5k8Z54ZSDNOtv3dVBM1SeBCRtm1EYtZiDIZ8SyMVcYpUGgFpGuNKk71+9/NuM9hvScrgf7+4E+A==}
     peerDependencies:
       react: '*'
       react-dom: '*'
@@ -9695,7 +9695,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@legendapp/list@3.0.0-beta.43(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+  '@legendapp/list@3.0.0-beta.44(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
     dependencies:
       react: 19.2.1
       use-sync-external-store: 1.6.0(react@19.2.1)

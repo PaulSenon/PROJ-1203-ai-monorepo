@@ -58,6 +58,15 @@ opencode-serve:
 opencode:
 	$(call run_in_container_smart,app,pnpm exec opencode attach $(OPENCODE_ATTACH_URL))
 
+t3-serve: ## Update Codex globally, then start latest T3 server
+	$(call run_in_container_smart,app,bash -lc 'npm i -g @openai/codex@latest && export T3CODE_NO_BROWSER=1; npx -y t3@latest')
+
+codex: ## Update and run Codex CLI inside container
+	$(call run_in_container_smart,app,bash -lc 'npm i -g @openai/codex@latest && codex')
+
+codex-login: ## Headless Codex login inside container volume
+	$(call run_in_container_smart,app,bash -lc 'npm i -g @openai/codex@latest && codex login --device-auth')
+
 ralph-once: ## Run one Ralph iteration via opencode run --attach
 	bash -lc "OPENCODE_ATTACH_URL='$(OPENCODE_ATTACH_URL)' RALPH_ALLOW_LOCAL_FALLBACK='$(RALPH_ALLOW_LOCAL_FALLBACK)' ./.llms/ralph/once.sh"
 
