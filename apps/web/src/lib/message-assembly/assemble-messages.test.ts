@@ -6,6 +6,7 @@ import {
 } from "./assemble-messages";
 import {
   makeAssistantMessage,
+  makeReasoningPart,
   makeUserMessage,
 } from "./message-assembly.fixtures";
 
@@ -39,6 +40,7 @@ describe("assembleMessages", () => {
       optimistic: normalizeMessages([], { debugLabel: "optimistic" }),
       resumed: normalizeMessages([], { debugLabel: "convex-stream" }),
       http: normalizeMessages([], { debugLabel: "http-stream" }),
+      enableDebugDataSource: true,
     });
 
     expect(messages).toHaveLength(1);
@@ -78,6 +80,7 @@ describe("assembleMessages", () => {
       optimistic: normalizeMessages([optimistic], { debugLabel: "optimistic" }),
       resumed: normalizeMessages([], { debugLabel: "convex-stream" }),
       http: normalizeMessages([], { debugLabel: "http-stream" }),
+      enableDebugDataSource: true,
     });
 
     expect(messages).toHaveLength(1);
@@ -114,6 +117,7 @@ describe("assembleMessages", () => {
       optimistic: normalizeMessages([optimistic], { debugLabel: "optimistic" }),
       resumed: normalizeMessages([], { debugLabel: "convex-stream" }),
       http: normalizeMessages([], { debugLabel: "http-stream" }),
+      enableDebugDataSource: true,
     });
 
     expect(messages.map((message) => message.id)).toEqual(["m1", "m2"]);
@@ -162,6 +166,7 @@ describe("assembleMessages", () => {
       optimistic: normalizeMessages([], { debugLabel: "optimistic" }),
       resumed: normalizeMessages([resumed], { debugLabel: "convex-stream" }),
       http: normalizeMessages([http], { debugLabel: "http-stream" }),
+      enableDebugDataSource: true,
     });
 
     expect(messages).toHaveLength(1);
@@ -207,6 +212,7 @@ describe("assembleMessages", () => {
       optimistic: normalizeMessages([], { debugLabel: "optimistic" }),
       resumed: normalizeMessages([], { debugLabel: "convex-stream" }),
       http: normalizeMessages([], { debugLabel: "http-stream" }),
+      enableDebugDataSource: true,
     });
 
     expect(messages.map((message) => message.id)).toEqual(["m1"]);
@@ -259,6 +265,7 @@ describe("assembleMessages", () => {
       optimistic: normalizeMessages([], { debugLabel: "optimistic" }),
       resumed: normalizeMessages([], { debugLabel: "convex-stream" }),
       http: normalizeMessages([], { debugLabel: "http-stream" }),
+      enableDebugDataSource: true,
     });
 
     expect(messages.map((message) => message.id)).toEqual([
@@ -267,5 +274,199 @@ describe("assembleMessages", () => {
       "m2",
       "m3",
     ]);
+  });
+
+  it("reuses a row across cache to persisted handoff when visible output is unchanged", () => {
+    const cached = makeAssistantMessage({
+      id: "m1",
+      metadata: {
+        createdAt: 10,
+        updatedAt: 10,
+        liveStatus: "completed",
+        lifecycleState: "active",
+      },
+    });
+    const persisted = makeAssistantMessage({
+      id: "m1",
+      metadata: {
+        createdAt: 10,
+        updatedAt: 99,
+        liveStatus: "completed",
+        lifecycleState: "active",
+        usage: { totalTokens: 123 },
+      },
+    });
+
+    const previous = assembleMessages({
+      cache: normalizeMessages([cached]),
+      persisted: normalizeMessages([]),
+      optimistic: normalizeMessages([]),
+      resumed: normalizeMessages([]),
+      http: normalizeMessages([]),
+    });
+    const next = assembleMessages({
+      cache: normalizeMessages([cached]),
+      persisted: normalizeMessages([persisted], { reverse: true }),
+      optimistic: normalizeMessages([]),
+      resumed: normalizeMessages([]),
+      http: normalizeMessages([]),
+      previous,
+    });
+
+    expect(next[0]).toBe(previous[0]);
+    expect(next[0]?.metadata).toBe(previous[0]?.metadata);
+  });
+
+  it("breaks reuse in debug mode when datasource ownership changes", () => {
+    const cached = makeAssistantMessage({ id: "m1" });
+    const persisted = makeAssistantMessage({ id: "m1" });
+
+    const previous = assembleMessages({
+      cache: normalizeMessages([cached]),
+      persisted: normalizeMessages([]),
+      optimistic: normalizeMessages([]),
+      resumed: normalizeMessages([]),
+      http: normalizeMessages([]),
+      enableDebugDataSource: true,
+    });
+    const next = assembleMessages({
+      cache: normalizeMessages([cached]),
+      persisted: normalizeMessages([persisted], { reverse: true }),
+      optimistic: normalizeMessages([]),
+      resumed: normalizeMessages([]),
+      http: normalizeMessages([]),
+      previous,
+      enableDebugDataSource: true,
+    });
+
+    expect(next[0]).not.toBe(previous[0]);
+    expect(next[0]?.metadata?.debug?.dataSource).toBe("convex-persisted");
+  });
+
+  it("keeps settled neighbors stable when only the active tail changes", () => {
+    const stable = makeUserMessage({ id: "m1" });
+    const tailBefore = makeAssistantMessage({
+      id: "m2",
+      parts: [{ type: "text", text: "hel", state: "streaming" }],
+      metadata: {
+        createdAt: 20,
+        updatedAt: 20,
+        liveStatus: "streaming",
+        lifecycleState: "active",
+      },
+    });
+    const tailAfter = makeAssistantMessage({
+      id: "m2",
+      parts: [{ type: "text", text: "hello", state: "streaming" }],
+      metadata: {
+        createdAt: 20,
+        updatedAt: 21,
+        liveStatus: "streaming",
+        lifecycleState: "active",
+      },
+    });
+
+    const previous = assembleMessages({
+      cache: normalizeMessages([stable, tailBefore]),
+      persisted: normalizeMessages([]),
+      optimistic: normalizeMessages([]),
+      resumed: normalizeMessages([]),
+      http: normalizeMessages([]),
+    });
+    const next = assembleMessages({
+      cache: normalizeMessages([stable, tailAfter]),
+      persisted: normalizeMessages([]),
+      optimistic: normalizeMessages([]),
+      resumed: normalizeMessages([]),
+      http: normalizeMessages([]),
+      previous,
+    });
+
+    expect(next[0]).toBe(previous[0]);
+    expect(next[1]).not.toBe(previous[1]);
+  });
+
+  it("reuses unchanged parts when another part grows", () => {
+    const before = makeAssistantMessage({
+      id: "m1",
+      parts: [makeReasoningPart("plan"), { type: "text", text: "hel", state: "streaming" }],
+      metadata: {
+        createdAt: 10,
+        updatedAt: 10,
+        liveStatus: "streaming",
+        lifecycleState: "active",
+      },
+    });
+    const after = makeAssistantMessage({
+      id: "m1",
+      parts: [makeReasoningPart("plan"), { type: "text", text: "hello", state: "streaming" }],
+      metadata: {
+        createdAt: 10,
+        updatedAt: 11,
+        liveStatus: "streaming",
+        lifecycleState: "active",
+      },
+    });
+
+    const previous = assembleMessages({
+      cache: normalizeMessages([before]),
+      persisted: normalizeMessages([]),
+      optimistic: normalizeMessages([]),
+      resumed: normalizeMessages([]),
+      http: normalizeMessages([]),
+    });
+    const next = assembleMessages({
+      cache: normalizeMessages([after]),
+      persisted: normalizeMessages([]),
+      optimistic: normalizeMessages([]),
+      resumed: normalizeMessages([]),
+      http: normalizeMessages([]),
+      previous,
+    });
+
+    expect(next[0]).not.toBe(previous[0]);
+    expect(next[0]?.parts[0]).toBe(previous[0]?.parts[0]);
+    expect(next[0]?.parts[1]).not.toBe(previous[0]?.parts[1]);
+  });
+
+  it("reuses a row across http to persisted handoff when visible output is unchanged", () => {
+    const http = makeAssistantMessage({
+      id: "m1",
+      parts: [{ type: "text", text: "done", state: "done" }],
+      metadata: {
+        createdAt: 10,
+        updatedAt: 10,
+        liveStatus: "completed",
+        lifecycleState: "active",
+      },
+    });
+    const persisted = makeAssistantMessage({
+      id: "m1",
+      parts: [{ type: "text", text: "done", state: "done" }],
+      metadata: {
+        createdAt: 10,
+        updatedAt: 999,
+        liveStatus: "completed",
+        lifecycleState: "active",
+      },
+    });
+
+    const previous = assembleMessages({
+      cache: normalizeMessages([]),
+      persisted: normalizeMessages([]),
+      optimistic: normalizeMessages([]),
+      resumed: normalizeMessages([]),
+      http: normalizeMessages([http]),
+    });
+    const next = assembleMessages({
+      cache: normalizeMessages([]),
+      persisted: normalizeMessages([persisted], { reverse: true }),
+      optimistic: normalizeMessages([]),
+      resumed: normalizeMessages([]),
+      http: normalizeMessages([]),
+      previous,
+    });
+
+    expect(next[0]).toBe(previous[0]);
   });
 });

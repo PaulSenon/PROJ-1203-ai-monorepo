@@ -13,6 +13,7 @@ Durable decisions that apply across all phases:
 - **Source precedence**: Cache < persisted Convex transcript < optimistic local patches < resumed Convex stream < live HTTP stream. This precedence becomes explicit contract, not incidental array order.
 - **Two-tier assembly shape**: Preserve the current low-frequency vs high-frequency split. Rarely changing layers assemble first; streaming layers apply last on the hot path.
 - **Stabilization scope**: Reuse is narrow and schema-aware only: message object, `metadata`, and unchanged `parts`. No generic deep-equality reuse engine.
+- **Deferred selector policy**: Start with one simple metadata reuse rule. Only add source-aware hot-vs-cold metadata selectors later if a measured need or real metadata consumer appears.
 - **Debug metadata policy**: Debug origin tagging must never force production hot-path clones. Any source-origin decoration must be dev-only or separately layered.
 - **Resumed stream policy**: Resumed-stream reconstruction reuses prior built state for the same stream lifecycle and resets only when stream identity changes.
 - **Cache policy**: User cache remains a recent-tail snapshot only. Cache writes become deduped by meaningful tail change instead of writing every hot merge tick.

@@ -22,6 +22,7 @@ type MessageLayer = {
 
 type MergeOptions = {
   sort?: boolean;
+  enableDebugDataSource?: boolean;
 };
 
 export type AssembleMessagesInput = {
@@ -30,6 +31,8 @@ export type AssembleMessagesInput = {
   optimistic: NormalizedMessages;
   resumed: NormalizedMessages;
   http: NormalizedMessages;
+  previous?: readonly MyUIMessage[];
+  enableDebugDataSource?: boolean;
 };
 
 const emptyNormalizedMessages: NormalizedMessages =
@@ -47,6 +50,8 @@ export function normalizeMessages(
 }
 
 export function assembleMessages(input: AssembleMessagesInput): MyUIMessage[] {
+  const enableDebugDataSource = input.enableDebugDataSource ?? false;
+
   // Keep the existing cold-vs-hot merge split so this extraction stays behavior-first.
   const baseMessages = mergeMessageLayers(
     [
@@ -54,15 +59,43 @@ export function assembleMessages(input: AssembleMessagesInput): MyUIMessage[] {
       { messages: input.persisted, dataSource: "convex-persisted" },
       { messages: input.optimistic, dataSource: "optimistic" },
     ],
-    { sort: false }
+    { sort: false, enableDebugDataSource }
   );
 
-  return mergeMessageLayers([
+  const mergedMessages = mergeMessageLayers([
     // Live overlays still win last; later slices can harden ref reuse here.
     { messages: normalizeMessages(baseMessages) },
     { messages: input.resumed, dataSource: "convex-stream" },
     { messages: input.http, dataSource: "http-stream" },
-  ]);
+  ], { enableDebugDataSource });
+
+  return stabilizeMessages(input.previous, mergedMessages, {
+    enableDebugDataSource,
+  });
+}
+
+export function stabilizeMessages(
+  previous: readonly MyUIMessage[] | undefined,
+  next: readonly MyUIMessage[],
+  options: StabilizeOptions
+): MyUIMessage[] {
+  if (!previous || previous.length === 0 || next.length === 0) {
+    return [...next];
+  }
+
+  const previousById = new Map(previous.map((message) => [message.id, message]));
+  const stabilized = next.map((message) =>
+    stabilizeMessage(previousById.get(message.id), message, options)
+  );
+
+  if (
+    previous.length === stabilized.length &&
+    stabilized.every((message, index) => message === previous[index])
+  ) {
+    return [...previous];
+  }
+
+  return stabilized;
 }
 
 function warnIfNotNormalized(messages: MyUIMessage[], label?: string) {
@@ -93,7 +126,13 @@ function mergeMessageLayers(
   const [baseLayer, ...rest] = layers;
   const baseMessages = baseLayer?.messages ?? emptyNormalizedMessages;
   const list: MyUIMessage[] = baseLayer?.dataSource
-    ? baseMessages.map((message) => withDataSource(message, baseLayer.dataSource))
+    ? baseMessages.map((message) =>
+        withDataSource(
+          message,
+          baseLayer.dataSource,
+          options.enableDebugDataSource ?? false
+        )
+      )
     : [...baseMessages];
   const indexMap = new Map<string, number>();
 
@@ -108,7 +147,11 @@ function mergeMessageLayers(
 
     for (const message of layer.messages) {
       const nextMessage = layer.dataSource
-        ? withDataSource(message, layer.dataSource)
+        ? withDataSource(
+            message,
+            layer.dataSource,
+            options.enableDebugDataSource ?? false
+          )
         : message;
       const existingIndex = indexMap.get(nextMessage.id);
 
@@ -134,10 +177,11 @@ function mergeMessageLayers(
 
 function withDataSource(
   message: MyUIMessage,
-  dataSource?: MessageDataSource
+  dataSource: MessageDataSource | undefined,
+  enableDebugDataSource: boolean
 ): MyUIMessage {
   // Datasource borders are dev-only debug UI; never clone on prod hot path for them.
-  if (!import.meta.env.DEV) return message;
+  if (!enableDebugDataSource) return message;
   if (!dataSource) return message;
 
   const currentDataSource = message.metadata?.debug?.dataSource;
@@ -153,6 +197,135 @@ function withDataSource(
       } satisfies MyUIMessageMetadata["debug"],
     } as MyUIMessageMetadata,
   } satisfies MyUIMessage;
+}
+
+export type StabilizeOptions = {
+  enableDebugDataSource: boolean;
+};
+
+function stabilizeMessage(
+  previous: MyUIMessage | undefined,
+  next: MyUIMessage,
+  options: StabilizeOptions
+): MyUIMessage {
+  if (!previous) return next;
+  if (previous.id !== next.id) return next;
+  if (previous.role !== next.role) return next;
+
+  const metadata = stabilizeMetadata(previous.metadata, next.metadata, options);
+  const parts = stabilizeParts(previous.parts, next.parts);
+
+  if (metadata === previous.metadata && parts === previous.parts) {
+    return previous;
+  }
+
+  if (metadata === next.metadata && parts === next.parts) {
+    return next;
+  }
+
+  return {
+    ...next,
+    metadata,
+    parts,
+  } satisfies MyUIMessage;
+}
+
+function stabilizeMetadata(
+  previous: MyUIMessageMetadata | undefined,
+  next: MyUIMessageMetadata | undefined,
+  options: StabilizeOptions
+): MyUIMessageMetadata | undefined {
+  if (previous === undefined || next === undefined) return next;
+
+  if (previous.createdAt !== next.createdAt) return next;
+  if (previous.liveStatus !== next.liveStatus) return next;
+  if (previous.modelId !== next.modelId) return next;
+
+  if (!isSameError(previous.error, next.error)) return next;
+
+  if (
+    options.enableDebugDataSource &&
+    previous.debug?.dataSource !== next.debug?.dataSource
+  ) {
+    return next;
+  }
+
+  return previous;
+}
+
+function stabilizeParts(
+  previous: MyUIMessage["parts"],
+  next: MyUIMessage["parts"]
+): MyUIMessage["parts"] {
+  const comparableLength = Math.min(previous.length, next.length);
+
+  let reusedAll = previous.length === next.length;
+  let reusedSome = false;
+  const stabilizedParts = next.map((part, index) => {
+    const previousPart = index < comparableLength ? previous[index] : undefined;
+    const stabilizedPart = stabilizePart(previousPart, part);
+
+    if (stabilizedPart === previousPart) {
+      reusedSome = true;
+    } else {
+      reusedAll = false;
+    }
+
+    return stabilizedPart;
+  });
+
+  if (reusedAll) return previous;
+  if (reusedSome) return stabilizedParts;
+  return next;
+}
+
+function stabilizePart(
+  previous: MyUIMessage["parts"][number] | undefined,
+  next: MyUIMessage["parts"][number]
+): MyUIMessage["parts"][number] {
+  if (!previous) return next;
+  if (previous.type !== next.type) return next;
+
+  if (previous.type === "text" && next.type === "text") {
+    if (previous.text === next.text && previous.state === next.state) {
+      return previous;
+    }
+    return next;
+  }
+
+  if (previous.type === "reasoning" && next.type === "reasoning") {
+    if (previous.text === next.text && previous.state === next.state) {
+      return previous;
+    }
+    return next;
+  }
+
+  return next;
+}
+
+function isSameError(
+  previous: MyUIMessageMetadata["error"],
+  next: MyUIMessageMetadata["error"]
+) {
+  if (previous === undefined && next === undefined) return true;
+  if (previous === undefined || next === undefined) return false;
+  if (previous.kind !== next.kind) return false;
+  if (previous.message !== next.message) return false;
+
+  if (previous.kind === "MAX_OUTPUT_TOKENS_EXCEEDED") {
+    if (next.kind !== "MAX_OUTPUT_TOKENS_EXCEEDED") return false;
+
+    const previousRetry = previous.params.retryWithSuggestedModelIds ?? [];
+    const nextRetry = next.params.retryWithSuggestedModelIds ?? [];
+
+    return (
+      previous.params.maxOutputTokens === next.params.maxOutputTokens &&
+      previousRetry.length === nextRetry.length &&
+      previousRetry.every((modelId, index) => modelId === nextRetry[index])
+    );
+  }
+
+  return true;
 }
 
 function compareMessages(a: MyUIMessage, b: MyUIMessage) {

@@ -356,6 +356,12 @@ Initial policy proposal:
 3. `metadata.liveStatus`, `metadata.error`, `metadata.usage`, `metadata.timing`
    - treat as visual or behaviorally relevant
    - must break reuse when the rendered result depends on them
+4. deferred selector policy
+   - if global non-visual metadata reuse proves too blunt, add explicit source-aware selectors later
+   - intended future split:
+     - hot sources: `http-stream`, `resumed-stream` can ignore non-hot metadata fields during streaming
+     - cold sources: `cache`, `persisted`, `optimistic` can refresh broader metadata while still avoiding avoidable row/parts churn
+   - do not introduce this selector architecture until a real consumer or measured need justifies the added complexity
 
 ## Part Stabilization Policy
 

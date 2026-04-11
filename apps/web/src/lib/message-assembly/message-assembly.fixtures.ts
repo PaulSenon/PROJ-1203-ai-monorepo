@@ -11,6 +11,16 @@ export function makeTextPart(text: string): MyUIMessage["parts"][number] {
   } satisfies Extract<MyUIMessage["parts"][number], { type: "text" }>;
 }
 
+export function makeReasoningPart(
+  text: string
+): MyUIMessage["parts"][number] {
+  return {
+    type: "reasoning",
+    text,
+    state: "done",
+  } satisfies Extract<MyUIMessage["parts"][number], { type: "reasoning" }>;
+}
+
 export function makeMetadata(
   overrides: Partial<MyUIMessageMetadata> = {}
 ): MyUIMessageMetadata {

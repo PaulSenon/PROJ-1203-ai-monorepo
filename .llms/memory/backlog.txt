@@ -1,4 +1,24 @@
 ----
+[id] message-stability-hot-cold-metadata-selectors
+[status] parked
+[captured_at] 2026-04-11
+[context] While shipping message-stability ownership handoff stabilization, we discussed that one global metadata reuse rule may be too blunt for future metadata consumers.
+[why_deferred] Current simpler rule is enough for the active UI and keeps the stabilization slice bounded. Source-aware selectors would add meaningful architecture and policy complexity too early.
+[rough_spec]
+- Add explicit metadata selector policy by source class.
+- Hot sources: `http-stream` and `resumed-stream` ignore non-hot metadata during streaming merges.
+- Cold sources: `cache`, `convex-persisted`, and `optimistic` may refresh broader metadata without forcing avoidable row/parts churn.
+- Keep selector policy explicit and schema-aware; no generic deep diff.
+[decisions]
+- Do not implement in current stabilization slice.
+- Current shipped rule ignores `updatedAt`/`usage`/`timing` globally for reuse.
+- DEV `debug.dataSource` still breaks reuse when debug tagging is enabled.
+[open_questions]
+- Which exact metadata fields need cold-path freshness first?
+- Should cold-path metadata refresh preserve row ref while swapping only metadata ref, or intentionally replace the whole message row?
+- Do any future consumers need `usage` or `timing` hot during streaming, or only after settle/persist?
+[next_trigger] Revisit only if a real metadata consumer lands or profiling shows the global rule is too blunt.
+----
 [id] sidebar-pagination-placeholder-prefill
 [status] parked
 [captured_at] 2026-03-02

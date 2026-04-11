@@ -1,4 +1,3 @@
-import { createUiMessageFromChunks } from "@ai-monorepo/ai/libs/createUiMessageFromChunks";
 import type {
   MyUIMessage,
   MyUIMessageChunk,
@@ -12,6 +11,10 @@ import {
   assembleMessages,
   normalizeMessages,
 } from "@/lib/message-assembly/assemble-messages";
+import {
+  rebuildResumedStreamMessage,
+  type ResumedStreamBuildSnapshot,
+} from "@/lib/message-assembly/rebuild-resumed-stream-message";
 import {
   useAiSdkChatMessages,
   useAiSdkChatState,
@@ -119,6 +122,7 @@ function useStreamingUiMessageChunks(threadUuid: string | "skip") {
 function useStreamingUiMessage(threadUuid: string | "skip") {
   const isSkip = threadUuid === "skip";
   const stream = useStreamingUiMessageChunks(threadUuid);
+  const previousSnapshotRef = useRef<ResumedStreamBuildSnapshot | null>(null);
 
   const throttledMessageChunks = useFpsThrottledValue(
     isSkip ? "skip" : stream.messageChunks,
@@ -141,6 +145,7 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
 
   useEffect(() => {
     if (!canBuildMessage) {
+      previousSnapshotRef.current = null;
       setStreamed(null);
       return;
     }
@@ -155,11 +160,21 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
     let cancelled = false;
 
     (async () => {
-      const message = await createUiMessageFromChunks<MyUIMessage>(chunks);
-      if (!message) return;
+      const snapshot = await rebuildResumedStreamMessage({
+        streamId: streamIdAtStart,
+        chunks,
+        previous: previousSnapshotRef.current,
+      });
+      if (!snapshot) {
+        previousSnapshotRef.current = null;
+        return;
+      }
       if (cancelled) return;
       if (stream.streamId !== streamIdAtStart) return;
-      setStreamed({ streamId: streamIdAtStart, message });
+
+      // Reuse the previously built message when the stream lifecycle is unchanged.
+      previousSnapshotRef.current = snapshot;
+      setStreamed({ streamId: streamIdAtStart, message: snapshot.message });
     })();
 
     return () => {
@@ -203,6 +218,9 @@ export function useMessages({
   resumeStreamEnabled,
 }: UseMessagesParams) {
   const isSkip = threadUuid === "skip";
+  const previousMessagesRef = useRef<readonly MyUIMessage[] | undefined>(
+    undefined
+  );
 
   const paginatedMessages = usePersistedMessages(threadUuid);
   const resumedMessages = useStreamingUiMessage(
@@ -359,9 +377,15 @@ export function useMessages({
         optimistic: optimisticLayer,
         resumed: resumedLayer,
         http: httpLayer,
+        previous: previousMessagesRef.current,
+        enableDebugDataSource: import.meta.env.DEV,
       }),
     [cacheLayerForMerge, persistedLayerForMerge, optimisticLayer, resumedLayer, httpLayer]
   );
+
+  useEffect(() => {
+    previousMessagesRef.current = messages;
+  }, [messages]);
 
   // query data are pending if any query is pending
   const isQueryPending = isSkip
