@@ -212,6 +212,13 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - deferred idea captured in plans/backlog: future source-aware hot-vs-cold metadata selectors (`http/resumed` hot path vs `cache/persisted/optimistic` cold path) only if measured need appears
 - added `rebuild-resumed-stream-message.ts` pure wrapper seam, but same-stream seeded continuation was backed out after resumed rendering regression; current hook again rebuilds from full chunk history each tick
 - checks: `pnpm -F web run test` and `pnpm -F web run check-types` passed
+
+2026-04-11: message-stability cache-tail dedupe shipped (RALPH)
+- added pure helper `apps/web/src/lib/message-assembly/cache-tail.ts` + Vitest coverage
+- cache writes now compare a recent-tail contract before persisting: message id/role, visual metadata (`createdAt`, `lifecycleState`, `liveStatus`, `modelId`, `error`), and rendered `text`/`reasoning` part content/state
+- dedupe intentionally ignores `updatedAt`/`usage`/`timing`, so hot-path metadata churn no longer rewrites cache
+- prepend-only history growth no longer rewrites tail cache when the recent window is unchanged
+- `use-messages.tsx` now writes cache tail only on meaningful change and logs cache write failures explicitly
 - feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
 
 2026-03-02: sidebar S5.3e.r2 shipped (RALPH)

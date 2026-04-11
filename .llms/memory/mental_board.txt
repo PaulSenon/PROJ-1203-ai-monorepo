@@ -26,7 +26,8 @@
 - message-stability Issue 2-lite done: pure canonical assembly core extracted; tests green
 - message-stability ownership handoff done: row/parts reuse landed
 - resumed seeded rebuild attempted then backed out due resumed render regression; helper seam remains
-- next: message-stability cache-write dedupe / measurement gate or safer resumed rebuild hardening
+- message-stability cache-tail dedupe done: meaningful-tail contract gates cache writes
+- next: downstream settled-row/static rendering hardening or safer resumed rebuild hardening
 
 [OPEN_DECISIONS]
 - bot protection vendor: Turnstile?

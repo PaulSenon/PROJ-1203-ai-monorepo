@@ -11,6 +11,7 @@ import {
   assembleMessages,
   normalizeMessages,
 } from "@/lib/message-assembly/assemble-messages";
+import { planCacheTailWrite } from "@/lib/message-assembly/cache-tail";
 import {
   rebuildResumedStreamMessage,
 } from "@/lib/message-assembly/rebuild-resumed-stream-message";
@@ -211,6 +212,9 @@ export function useMessages({
   const previousMessagesRef = useRef<readonly MyUIMessage[] | undefined>(
     undefined
   );
+  const previousWrittenCacheTailRef = useRef<readonly MyUIMessage[] | undefined>(
+    undefined
+  );
 
   const paginatedMessages = usePersistedMessages(threadUuid);
   const resumedMessages = useStreamingUiMessage(
@@ -393,11 +397,25 @@ export function useMessages({
   const isLoading = isSkip ? false : paginatedMessages.isLoading;
   const paginatedStatus = paginatedMessages.status;
 
+  const cacheTailWritePlan = useMemo(
+    () =>
+      planCacheTailWrite({
+        messages,
+        previousTail: previousWrittenCacheTailRef.current ?? cache.snapshot ?? undefined,
+      }),
+    [messages, cache.snapshot]
+  );
+
   useEffect(() => {
     if (isSkip) return;
-    if (messages.length === 0) return;
-    cache.set(messages.slice(-10));
-  }, [isSkip, messages, cache.set]);
+    if (!cacheTailWritePlan.shouldWrite) return;
+
+    // Cache only the recent tail, and only when that tail meaningfully changed.
+    previousWrittenCacheTailRef.current = cacheTailWritePlan.tail;
+    cache.set(cacheTailWritePlan.tail).catch((error) => {
+      console.error("failed to write message cache tail", error);
+    });
+  }, [isSkip, cacheTailWritePlan, cache.set]);
 
   return useMemo(
     () => ({
