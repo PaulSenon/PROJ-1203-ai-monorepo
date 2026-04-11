@@ -14,6 +14,7 @@ import {
 import { planCacheTailWrite } from "@/lib/message-assembly/cache-tail";
 import {
   rebuildResumedStreamMessage,
+  type ResumedStreamBuildSnapshot,
 } from "@/lib/message-assembly/rebuild-resumed-stream-message";
 import {
   useAiSdkChatMessages,
@@ -122,6 +123,9 @@ function useStreamingUiMessageChunks(threadUuid: string | "skip") {
 function useStreamingUiMessage(threadUuid: string | "skip") {
   const isSkip = threadUuid === "skip";
   const stream = useStreamingUiMessageChunks(threadUuid);
+  const previousSnapshotRef = useRef<
+    ResumedStreamBuildSnapshot<Id<"threadStreams">> | null
+  >(null);
 
   const throttledMessageChunks = useFpsThrottledValue(
     isSkip ? "skip" : stream.messageChunks,
@@ -144,6 +148,7 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
 
   useEffect(() => {
     if (!canBuildMessage) {
+      previousSnapshotRef.current = null;
       setStreamed(null);
       return;
     }
@@ -161,11 +166,23 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
       const snapshot = await rebuildResumedStreamMessage({
         streamId: streamIdAtStart,
         chunks,
+        previous: previousSnapshotRef.current,
       });
       if (!snapshot) return;
       if (cancelled) return;
       if (stream.streamId !== streamIdAtStart) return;
-      setStreamed({ streamId: streamIdAtStart, message: snapshot.message });
+
+      previousSnapshotRef.current = snapshot;
+      setStreamed((previousState) => {
+        if (
+          previousState?.streamId === snapshot.streamId &&
+          previousState.message === snapshot.message
+        ) {
+          return previousState;
+        }
+
+        return snapshot;
+      });
     })();
 
     return () => {

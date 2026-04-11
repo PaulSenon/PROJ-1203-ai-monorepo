@@ -225,6 +225,12 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - settled message metadata now overrides stale part-level `state: "streaming"`, preventing persisted/resumed handoff rows from keeping streaming markdown mode/caret forever
 - `SmoothMarkdown` now animates only when a part is truly live and non-consolidated; otherwise it renders the full raw text in `static` mode immediately
 - `MessageContentParts`, `TextPart`, and `ReasoningPart` now receive message metadata so render policy is explicit instead of inferred from part state alone
+
+2026-04-11: safer resumed rebuild hardening shipped (RALPH)
+- kept AI SDK reconstruction correctness path conservative: rebuild from full chunk history, no seeded continuation into `readUIMessageStream`
+- `rebuildResumedStreamMessage` now stabilizes rebuilt output against the prior same-stream snapshot, preserving unchanged settled prefix refs without changing reconstructed output semantics
+- same-stream no-op rebuilds now return the previous snapshot object, and `useStreamingUiMessage` bails out of state updates when snapshot/message identity is unchanged
+- this keeps Phase 3 on track while avoiding the earlier seeded-continuation regression; future seeded continuation remains possible behind the existing helper seam
 - feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
 
 2026-03-02: sidebar S5.3e.r2 shipped (RALPH)

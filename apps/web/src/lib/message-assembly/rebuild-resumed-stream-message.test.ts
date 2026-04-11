@@ -166,9 +166,25 @@ describe("rebuildResumedStreamMessage", () => {
     });
 
     expect(next).not.toBeNull();
+    expect(next?.message.parts[0]).toBe(first?.message.parts[0]);
     expect(next?.message.parts[1]).not.toBe(first?.message.parts[1]);
     expect(next?.message.parts[1]).toMatchObject({ type: "text", text: "hello" });
     expect(next?.streamId).toBe("stream-1");
+  });
+
+  it("returns the previous snapshot when the rebuilt output is unchanged", async () => {
+    const first = await rebuildResumedStreamMessage({
+      streamId: "stream-1",
+      chunks: makeStreamingChunks(["hel"]),
+    });
+
+    const next = await rebuildResumedStreamMessage({
+      streamId: "stream-1",
+      chunks: makeStreamingChunks(["hel"]),
+      previous: first,
+    });
+
+    expect(next).toBe(first);
   });
 
   it("resets reuse when stream identity changes", async () => {

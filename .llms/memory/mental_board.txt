@@ -28,7 +28,8 @@
 - resumed seeded rebuild attempted then backed out due resumed render regression; helper seam remains
 - message-stability cache-tail dedupe done: meaningful-tail contract gates cache writes
 - message render hardening done: settled/static policy now overrides stale part-streaming flags
-- next: safer resumed rebuild hardening or deeper render perf measurement on real chat surface
+- safer resumed rebuild hardening done: full rebuild + same-stream snapshot stabilization + no-op state bailout
+- next: deeper render perf measurement on real chat surface or revisit true seeded continuation later behind explicit guard
 
 [OPEN_DECISIONS]
 - bot protection vendor: Turnstile?

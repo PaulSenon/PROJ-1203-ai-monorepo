@@ -3,30 +3,52 @@ import type {
   MyUIMessage,
   MyUIMessageChunk,
 } from "@ai-monorepo/ai/types/uiMessage";
+import { stabilizeMessages } from "./assemble-messages";
 
-export type ResumedStreamBuildSnapshot = {
-  streamId: string;
+type RebuildResumedStreamMessageInput<TStreamId extends string> = {
+  streamId: TStreamId;
+  chunks: readonly MyUIMessageChunk[];
+  previous?: ResumedStreamBuildSnapshot<TStreamId> | null;
+};
+
+export type ResumedStreamBuildSnapshot<TStreamId extends string = string> = {
+  streamId: TStreamId;
   message: MyUIMessage;
 };
 
-type RebuildResumedStreamMessageInput = {
-  streamId: string;
-  chunks: readonly MyUIMessageChunk[];
-  previous?: ResumedStreamBuildSnapshot | null;
-};
-
-export async function rebuildResumedStreamMessage({
+export async function rebuildResumedStreamMessage<TStreamId extends string>({
   streamId,
   chunks,
-}: RebuildResumedStreamMessageInput): Promise<ResumedStreamBuildSnapshot | null> {
+  previous,
+}: RebuildResumedStreamMessageInput<TStreamId>): Promise<
+  ResumedStreamBuildSnapshot<TStreamId> | null
+> {
   if (chunks.length === 0) return null;
 
   const message = await createUiMessageFromChunks<MyUIMessage>([...chunks]);
 
   if (!message) return null;
 
+  if (previous?.streamId === streamId) {
+    // Rebuild from full chunks for correctness, then reuse refs from the prior
+    // same-stream snapshot so unchanged settled prefix content stays stable.
+    const stabilizedMessage =
+      stabilizeMessages([previous.message], [message], {
+        enableDebugDataSource: false,
+      })[0] ?? message;
+
+    if (stabilizedMessage === previous.message) {
+      return previous;
+    }
+
+    return {
+      streamId,
+      message: stabilizedMessage,
+    } satisfies ResumedStreamBuildSnapshot<TStreamId>;
+  }
+
   return {
     streamId,
     message,
-  } satisfies ResumedStreamBuildSnapshot;
+  } satisfies ResumedStreamBuildSnapshot<TStreamId>;
 }
