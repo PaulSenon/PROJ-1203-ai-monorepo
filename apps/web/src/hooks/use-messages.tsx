@@ -1,6 +1,4 @@
-import { createUiMessageFromChunks } from "@ai-monorepo/ai/libs/createUiMessageFromChunks";
 import type {
-  MessageDataSource,
   MyUIMessage,
   MyUIMessageChunk,
   MyUIMessageMetadata,
@@ -10,6 +8,15 @@ import dedent from "dedent";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cvx } from "@/lib/convex/queries";
 import {
+  assembleMessages,
+  normalizeMessages,
+} from "@/lib/message-assembly/assemble-messages";
+import { planCacheTailWrite } from "@/lib/message-assembly/cache-tail";
+import {
+  rebuildResumedStreamMessage,
+  type ResumedStreamBuildSnapshot,
+} from "@/lib/message-assembly/rebuild-resumed-stream-message";
+import {
   useAiSdkChatMessages,
   useAiSdkChatState,
 } from "./chat/use-ai-sdk-chat";
@@ -18,122 +25,8 @@ import { useCvxPaginatedQueryStable } from "./queries/convex/utils/use-convex-qu
 import { useUserCacheEntryOnce } from "./use-user-cache";
 import { useFpsThrottledValue } from "./utils/use-fps-throttled-state";
 
-// NormalizedMessages must be oldest -> newest for merge perf.
-declare const normalizedMessagesBrand: unique symbol;
-type NormalizedMessages = MyUIMessage[] & {
-  readonly [normalizedMessagesBrand]: true;
-};
-
-type NormalizeOptions = {
-  reverse?: boolean;
-  debugLabel?: string;
-};
-
-const emptyNormalizedMessages: NormalizedMessages =
-  [] as unknown as NormalizedMessages;
-
-function normalizeMessages(
-  messages: MyUIMessage[] | undefined,
-  options: NormalizeOptions = {}
-): NormalizedMessages {
-  if (!messages || messages.length === 0) return emptyNormalizedMessages;
-  const normalized = options.reverse ? [...messages].reverse() : messages;
-  warnIfNotNormalized(normalized, options.debugLabel);
-  return normalized as NormalizedMessages;
-}
-
-function warnIfNotNormalized(messages: MyUIMessage[], label?: string) {
-  if (!import.meta.env.DEV) return;
-  if (!label) return;
-  if (messages.length < 2) return;
-
-  const sampleCount = Math.min(messages.length - 1, 3);
-  for (let i = 0; i < sampleCount; i++) {
-    const prev = messages[i];
-    const next = messages[i + 1];
-    if (!(prev && next)) continue;
-    if ((prev.metadata?.createdAt ?? 0) > (next.metadata?.createdAt ?? 0)) {
-      console.warn(
-        `[useMessagesV2] ${label} not normalized (oldest -> newest).`
-      );
-      return;
-    }
-  }
-}
-
 function isOngoingLiveStatus(liveStatus: MyUIMessageMetadata["liveStatus"]) {
   return liveStatus === "pending" || liveStatus === "streaming";
-}
-
-type MessageLayer = {
-  messages: NormalizedMessages;
-  dataSource?: MessageDataSource;
-};
-
-type MergeOptions = {
-  sort?: boolean;
-};
-
-function mergeMessageLayers(
-  layers: MessageLayer[],
-  options: MergeOptions = {}
-): MyUIMessage[] {
-  if (layers.length === 0) return [];
-
-  const [baseLayer, ...rest] = layers;
-  const baseMessages = baseLayer?.messages ?? emptyNormalizedMessages;
-  const list: MyUIMessage[] = baseLayer?.dataSource
-    ? baseMessages.map((msg) => withDataSource(msg, baseLayer.dataSource))
-    : [...baseMessages];
-  const indexMap = new Map<string, number>();
-
-  for (let i = 0; i < list.length; i++) {
-    const msg = list[i];
-    if (!msg) continue;
-    indexMap.set(msg.id, i);
-  }
-
-  for (const layer of rest) {
-    if (layer.messages.length === 0) continue;
-    for (const msg of layer.messages) {
-      const nextMsg = layer.dataSource
-        ? withDataSource(msg, layer.dataSource)
-        : msg;
-      const existingIndex = indexMap.get(nextMsg.id);
-      if (existingIndex !== undefined) {
-        list[existingIndex] = nextMsg;
-        continue;
-      }
-      const newIndex = list.push(nextMsg) - 1;
-      indexMap.set(nextMsg.id, newIndex);
-    }
-  }
-
-  const filtered = list.filter(
-    (msg) =>
-      msg.metadata?.lifecycleState !== "deleted" &&
-      msg.metadata?.lifecycleState !== "archived"
-  );
-
-  if (options.sort === false || filtered.length <= 1) return filtered;
-  return filtered.sort(compareMessages);
-}
-
-function withDataSource(message: MyUIMessage, dataSource?: MessageDataSource) {
-  if (!dataSource) return message;
-  const currentDataSource = message.metadata?.debug?.dataSource;
-  if (currentDataSource === dataSource) return message;
-
-  return {
-    ...message,
-    metadata: {
-      ...message.metadata,
-      debug: {
-        ...message.metadata?.debug,
-        dataSource,
-      } satisfies MyUIMessageMetadata["debug"],
-    } as MyUIMessageMetadata,
-  } satisfies MyUIMessage;
 }
 
 type UseMessagesParams = {
@@ -230,6 +123,9 @@ function useStreamingUiMessageChunks(threadUuid: string | "skip") {
 function useStreamingUiMessage(threadUuid: string | "skip") {
   const isSkip = threadUuid === "skip";
   const stream = useStreamingUiMessageChunks(threadUuid);
+  const previousSnapshotRef = useRef<
+    ResumedStreamBuildSnapshot<Id<"threadStreams">> | null
+  >(null);
 
   const throttledMessageChunks = useFpsThrottledValue(
     isSkip ? "skip" : stream.messageChunks,
@@ -252,6 +148,7 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
 
   useEffect(() => {
     if (!canBuildMessage) {
+      previousSnapshotRef.current = null;
       setStreamed(null);
       return;
     }
@@ -266,11 +163,26 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
     let cancelled = false;
 
     (async () => {
-      const message = await createUiMessageFromChunks<MyUIMessage>(chunks);
-      if (!message) return;
+      const snapshot = await rebuildResumedStreamMessage({
+        streamId: streamIdAtStart,
+        chunks,
+        previous: previousSnapshotRef.current,
+      });
+      if (!snapshot) return;
       if (cancelled) return;
       if (stream.streamId !== streamIdAtStart) return;
-      setStreamed({ streamId: streamIdAtStart, message });
+
+      previousSnapshotRef.current = snapshot;
+      setStreamed((previousState) => {
+        if (
+          previousState?.streamId === snapshot.streamId &&
+          previousState.message === snapshot.message
+        ) {
+          return previousState;
+        }
+
+        return snapshot;
+      });
     })();
 
     return () => {
@@ -314,6 +226,12 @@ export function useMessages({
   resumeStreamEnabled,
 }: UseMessagesParams) {
   const isSkip = threadUuid === "skip";
+  const previousMessagesRef = useRef<readonly MyUIMessage[] | undefined>(
+    undefined
+  );
+  const previousWrittenCacheTailRef = useRef<readonly MyUIMessage[] | undefined>(
+    undefined
+  );
 
   const paginatedMessages = usePersistedMessages(threadUuid);
   const resumedMessages = useStreamingUiMessage(
@@ -461,41 +379,24 @@ export function useMessages({
     [httpStreamingMessages]
   );
 
-  // For performance reasons, we merge layer in two steps:
-  // 1. merge the layers that rarely change
-  //  - cache snapshot never changes (set at init once)
-  //  - persisted layer changes only when assistant message complete (once in a while)
-  //  - optimistic layer changes only when user apply/remove a patch (at send message and when complete)
-  const baseMessages = useMemo(
-    () =>
-      mergeMessageLayers(
-        [
-          { messages: cacheLayerForMerge, dataSource: "cache" },
-          { messages: persistedLayerForMerge, dataSource: "convex-persisted" },
-          { messages: optimisticLayer, dataSource: "optimistic" },
-        ],
-        { sort: false } // important we want to sort only once at the end
-      ),
-    [cacheLayerForMerge, persistedLayerForMerge, optimisticLayer]
-  );
-
-  const baseLayer = useMemo(
-    () => normalizeMessages(baseMessages),
-    [baseMessages]
-  );
-
-  // 2. merge the layers that change frequently on top
-  //  - resumed stream changes on every chunk received (very frequent)
-  //  - http stream changes on every message received (very frequent)
   const messages = useMemo(
     () =>
-      mergeMessageLayers([
-        { messages: baseLayer },
-        { messages: resumedLayer, dataSource: "convex-stream" },
-        { messages: httpLayer, dataSource: "http-stream" },
-      ]),
-    [baseLayer, resumedLayer, httpLayer]
+      // Keep hook-only trim/resume concerns here, then delegate canonical assembly.
+      assembleMessages({
+        cache: cacheLayerForMerge,
+        persisted: persistedLayerForMerge,
+        optimistic: optimisticLayer,
+        resumed: resumedLayer,
+        http: httpLayer,
+        previous: previousMessagesRef.current,
+        enableDebugDataSource: import.meta.env.DEV,
+      }),
+    [cacheLayerForMerge, persistedLayerForMerge, optimisticLayer, resumedLayer, httpLayer]
   );
+
+  useEffect(() => {
+    previousMessagesRef.current = messages;
+  }, [messages]);
 
   // query data are pending if any query is pending
   const isQueryPending = isSkip
@@ -513,11 +414,25 @@ export function useMessages({
   const isLoading = isSkip ? false : paginatedMessages.isLoading;
   const paginatedStatus = paginatedMessages.status;
 
+  const cacheTailWritePlan = useMemo(
+    () =>
+      planCacheTailWrite({
+        messages,
+        previousTail: previousWrittenCacheTailRef.current ?? cache.snapshot ?? undefined,
+      }),
+    [messages, cache.snapshot]
+  );
+
   useEffect(() => {
     if (isSkip) return;
-    if (messages.length === 0) return;
-    cache.set(messages.slice(-10));
-  }, [isSkip, messages, cache.set]);
+    if (!cacheTailWritePlan.shouldWrite) return;
+
+    // Cache only the recent tail, and only when that tail meaningfully changed.
+    previousWrittenCacheTailRef.current = cacheTailWritePlan.tail;
+    cache.set(cacheTailWritePlan.tail).catch((error) => {
+      console.error("failed to write message cache tail", error);
+    });
+  }, [isSkip, cacheTailWritePlan, cache.set]);
 
   return useMemo(
     () => ({

@@ -45,10 +45,14 @@ export function SmoothMarkdown({
   enableCodeHighlighting = true,
   consolidate,
 }: SmoothMarkdownProps) {
-  const [text] = useSmoothText(children, {
+  // Settled or consolidated rows should render the full final text immediately.
+  const shouldAnimate = Boolean(isStreaming) && !consolidate;
+
+  const [smoothedText] = useSmoothText(children, {
     startStreaming: startStreaming ?? false,
     charsPerSec: 200,
   });
+  const text = shouldAnimate ? smoothedText : children;
 
   const trustedDomains = linkPolicy?.trustedDomains ?? DEFAULT_TRUSTED_DOMAINS;
 
@@ -72,7 +76,7 @@ export function SmoothMarkdown({
           panZoom: true, // Show mermaid pan/zoom controls
         },
       }}
-      isAnimating={Boolean(isStreaming)}
+      isAnimating={shouldAnimate}
       linkSafety={{
         enabled: true,
         onLinkCheck: (url) => {
@@ -86,7 +90,7 @@ export function SmoothMarkdown({
           <LinkSafetyModal {...props} trustedDomains={trustedDomains} />
         ),
       }}
-      mode={consolidate ? "static" : "streaming"}
+      mode={shouldAnimate ? "streaming" : "static"}
       plugins={
         enableCodeHighlighting
           ? streamdownPluginsWithCode

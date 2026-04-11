@@ -198,6 +198,45 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-02: sidebar S5.3e.r1 shipped (RALPH)
 - `ThreadItem.Root` context-menu selection path now prevents default select propagation and sets a short mobile-only navigation suppression window, blocking accidental row-link navigation immediately after selecting a context-menu action
 - intended behavior restored: non-navigation context-menu actions no longer auto-close mobile sidebar; close remains tied to actual thread navigation
+
+2026-04-11: message-stability Issue 2-lite shipped (RALPH)
+- added pure assembly core at `apps/web/src/lib/message-assembly/assemble-messages.ts`
+- added behavior-first Vitest coverage at `apps/web/src/lib/message-assembly/assemble-messages.test.ts` + fixtures file
+- `use-messages.tsx` now delegates canonical normalize/merge/filter/debug-tag logic to pure core; hook still owns persisted-tail trim, cache-boundary trim, resumed rebuild, cache writes, statuses
+- debug datasource tagging now gated to DEV inside pure core (prod hot path avoids datasource clone churn)
+- `pnpm -F web run test` and `pnpm -F web run check-types` passed; also removed unsupported `waitForInitialLayout` prop from 2 LegendList callsites to unblock current web typecheck
+
+2026-04-11: message-stability ownership handoff + resumed rebuild slice shipped (RALPH)
+- `assembleMessages` now accepts `previous` + `enableDebugDataSource` and performs schema-aware stabilization for rows, metadata, and `text`/`reasoning` parts
+- current simple metadata reuse rule: only `createdAt`, `liveStatus`, `modelId`, `error`, and DEV `debug.dataSource` break reuse; `updatedAt`/`usage`/`timing` are globally ignored for now
+- deferred idea captured in plans/backlog: future source-aware hot-vs-cold metadata selectors (`http/resumed` hot path vs `cache/persisted/optimistic` cold path) only if measured need appears
+- added `rebuild-resumed-stream-message.ts` pure wrapper seam, but same-stream seeded continuation was backed out after resumed rendering regression; current hook again rebuilds from full chunk history each tick
+- checks: `pnpm -F web run test` and `pnpm -F web run check-types` passed
+
+2026-04-11: message-stability cache-tail dedupe shipped (RALPH)
+- added pure helper `apps/web/src/lib/message-assembly/cache-tail.ts` + Vitest coverage
+- cache writes now compare a recent-tail contract before persisting: message id/role, visual metadata (`createdAt`, `lifecycleState`, `liveStatus`, `modelId`, `error`), and rendered `text`/`reasoning` part content/state
+- dedupe intentionally ignores `updatedAt`/`usage`/`timing`, so hot-path metadata churn no longer rewrites cache
+- prepend-only history growth no longer rewrites tail cache when the recent window is unchanged
+- `use-messages.tsx` now writes cache tail only on meaningful change and logs cache write failures explicitly
+
+2026-04-11: message render hardening slice shipped (RALPH)
+- added pure helper `components/chat/message/_helpers/message-render-policy.ts` + tests to derive per-part streaming vs static render policy from message metadata, part state, and consolidation
+- settled message metadata now overrides stale part-level `state: "streaming"`, preventing persisted/resumed handoff rows from keeping streaming markdown mode/caret forever
+- `SmoothMarkdown` now animates only when a part is truly live and non-consolidated; otherwise it renders the full raw text in `static` mode immediately
+- `MessageContentParts`, `TextPart`, and `ReasoningPart` now receive message metadata so render policy is explicit instead of inferred from part state alone
+
+2026-04-11: safer resumed rebuild hardening shipped (RALPH)
+- kept AI SDK reconstruction correctness path conservative: rebuild from full chunk history, no seeded continuation into `readUIMessageStream`
+- `rebuildResumedStreamMessage` now stabilizes rebuilt output against the prior same-stream snapshot, preserving unchanged settled prefix refs without changing reconstructed output semantics
+- same-stream no-op rebuilds now return the previous snapshot object, and `useStreamingUiMessage` bails out of state updates when snapshot/message identity is unchanged
+- this keeps Phase 3 on track while avoiding the earlier seeded-continuation regression; future seeded continuation remains possible behind the existing helper seam
+
+2026-04-11: message-stability decision gate closed (RALPH)
+- Phase 4 measurement/validation accepted as good enough for current MVP path
+- rejected optional one-way settled-row consolidation policy for now (Issue 7)
+- rejected granular per-message store escalation for now (Issue 8)
+- next work should leave message-stability track unless fresh evidence reopens it
 - feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
 
 2026-03-02: sidebar S5.3e.r2 shipped (RALPH)

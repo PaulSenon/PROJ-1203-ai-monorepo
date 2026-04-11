@@ -172,7 +172,6 @@ export function MessagesListVirtual({
         renderItem={renderItem}
         suggestEstimatedItemSize
         useWindowScroll
-        waitForInitialLayout={true}
       />
       <ScrollEdgeProbe ref={bottomRef} />
     </>

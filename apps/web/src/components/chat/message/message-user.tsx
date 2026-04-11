@@ -35,6 +35,7 @@ export function ChatMessageUser({
       <Message.Root className="w-fit max-w-[90%] sm:max-w-[80%]" from="user">
         <Message.Content variant="user">
           <MessageContentParts
+            metadata={message.metadata}
             consolidate={consolidate}
             enableCodeHighlighting={enableCodeHighlighting}
             parts={message.parts}

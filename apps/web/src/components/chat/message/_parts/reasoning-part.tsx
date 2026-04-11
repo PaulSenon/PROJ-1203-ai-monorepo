@@ -1,13 +1,18 @@
-import type { MyUIMessagePart } from "@ai-monorepo/ai/types/uiMessage";
+import type {
+  MyUIMessageMetadata,
+  MyUIMessagePart,
+} from "@ai-monorepo/ai/types/uiMessage";
 import { memo, useDeferredValue } from "react";
 import { Reasoning } from "@/components/ui-custom/chat/reasoning";
 import { SmoothMarkdown } from "@/components/ui-custom/markdown/smooth-markdown";
 import { cn } from "@/lib/utils";
+import { getPartRenderPolicy } from "../_helpers/message-render-policy";
 
 type ReasoningPartType = Extract<MyUIMessagePart, { type: "reasoning" }>;
 
 export type ReasoningPartProps = {
   part: ReasoningPartType;
+  metadata?: MyUIMessageMetadata;
   previewLines?: number;
   consolidate?: boolean;
   enableCodeHighlighting?: boolean;
@@ -20,20 +25,25 @@ const MARKDOWN_OVERFLOW_GUARDS =
 
 export const ReasoningPart = memo(function _ReasoningPart({
   part,
+  metadata,
   previewLines = DEFAULT_PREVIEW_LINES,
   consolidate,
   enableCodeHighlighting,
 }: ReasoningPartProps) {
-  const isStreaming = part.state === "streaming";
   const text = part.text ?? "";
   const deferredText = useDeferredValue(text);
   const hasText = NON_WHITESPACE_PATTERN.test(text);
+  const renderPolicy = getPartRenderPolicy({
+    metadata,
+    partState: part.state,
+    consolidate,
+  });
 
   return (
     <Reasoning.Root
       className="w-full"
       disabled={!hasText}
-      isStreaming={isStreaming}
+      isStreaming={renderPolicy.isStreaming}
     >
       <Reasoning.Trigger />
       <Reasoning.Preview lines={previewLines}>{text}</Reasoning.Preview>
@@ -44,9 +54,9 @@ export const ReasoningPart = memo(function _ReasoningPart({
               "text-muted-foreground text-sm",
               MARKDOWN_OVERFLOW_GUARDS
             )}
-            consolidate={consolidate}
+            consolidate={renderPolicy.markdownMode === "static"}
             enableCodeHighlighting={enableCodeHighlighting}
-            isStreaming={isStreaming}
+            isStreaming={renderPolicy.isStreaming}
           >
             {deferredText}
           </SmoothMarkdown>
