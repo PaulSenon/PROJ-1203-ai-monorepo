@@ -103,6 +103,7 @@ export function ChatMessageAssistant({
         <Message.Content className={cn(debugClass)} variant="assistant">
           {showThinking ? <Message.Thinking /> : null}
           <MessageContentParts
+            metadata={message.metadata}
             consolidate={consolidate}
             enableCodeHighlighting={enableCodeHighlighting}
             parts={message.parts}

@@ -1,9 +1,13 @@
-import type { MyUIMessagePart } from "@ai-monorepo/ai/types/uiMessage";
+import type {
+  MyUIMessageMetadata,
+  MyUIMessagePart,
+} from "@ai-monorepo/ai/types/uiMessage";
 import { ReasoningPart } from "./reasoning-part";
 import { TextPart } from "./text-part";
 
 export type MessageContentPartsProps = {
   parts: MyUIMessagePart[];
+  metadata?: MyUIMessageMetadata;
   reasoningPreviewLines?: number;
   consolidate?: boolean;
   enableCodeHighlighting?: boolean;
@@ -19,6 +23,7 @@ function getPartKey(part: MyUIMessagePart, index: number) {
 
 export function MessageContentParts({
   parts,
+  metadata,
   reasoningPreviewLines,
   consolidate,
   enableCodeHighlighting,
@@ -34,6 +39,7 @@ export function MessageContentParts({
               consolidate={consolidate}
               enableCodeHighlighting={enableCodeHighlighting}
               key={key}
+              metadata={metadata}
               state={part.state}
               text={part.text}
             />
@@ -46,6 +52,7 @@ export function MessageContentParts({
               consolidate={consolidate}
               enableCodeHighlighting={enableCodeHighlighting}
               key={key}
+              metadata={metadata}
               part={part}
               previewLines={reasoningPreviewLines}
             />

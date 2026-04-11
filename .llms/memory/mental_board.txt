@@ -27,7 +27,8 @@
 - message-stability ownership handoff done: row/parts reuse landed
 - resumed seeded rebuild attempted then backed out due resumed render regression; helper seam remains
 - message-stability cache-tail dedupe done: meaningful-tail contract gates cache writes
-- next: downstream settled-row/static rendering hardening or safer resumed rebuild hardening
+- message render hardening done: settled/static policy now overrides stale part-streaming flags
+- next: safer resumed rebuild hardening or deeper render perf measurement on real chat surface
 
 [OPEN_DECISIONS]
 - bot protection vendor: Turnstile?

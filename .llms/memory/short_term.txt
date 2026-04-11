@@ -219,6 +219,12 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - dedupe intentionally ignores `updatedAt`/`usage`/`timing`, so hot-path metadata churn no longer rewrites cache
 - prepend-only history growth no longer rewrites tail cache when the recent window is unchanged
 - `use-messages.tsx` now writes cache tail only on meaningful change and logs cache write failures explicitly
+
+2026-04-11: message render hardening slice shipped (RALPH)
+- added pure helper `components/chat/message/_helpers/message-render-policy.ts` + tests to derive per-part streaming vs static render policy from message metadata, part state, and consolidation
+- settled message metadata now overrides stale part-level `state: "streaming"`, preventing persisted/resumed handoff rows from keeping streaming markdown mode/caret forever
+- `SmoothMarkdown` now animates only when a part is truly live and non-consolidated; otherwise it renders the full raw text in `static` mode immediately
+- `MessageContentParts`, `TextPart`, and `ReasoningPart` now receive message metadata so render policy is explicit instead of inferred from part state alone
 - feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
 
 2026-03-02: sidebar S5.3e.r2 shipped (RALPH)
