@@ -23,7 +23,8 @@
 - conversation architecture pass done (L2/L3 parity w/ message)
 - conversation adapter/layout split + pure layout demo scaffold done (minimal props baseline)
 - PRD v2 done: last assistant min-height reserve erratum fixed (refresh-stream-settle no collapse, latch moved to conversation L3)
-- next: implement simplest optimistic assistant shell (render-derived displayMessages in use-chat-active, no data-layer ID refactor)
+- message-stability Issue 2-lite done: pure canonical assembly core extracted; tests green
+- next: message-stability ownership handoff stabilization (row/parts/metadata ref reuse) or resume seeded rebuild
 
 [OPEN_DECISIONS]
 - bot protection vendor: Turnstile?

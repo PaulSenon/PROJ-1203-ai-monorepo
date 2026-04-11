@@ -198,6 +198,13 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 2026-03-02: sidebar S5.3e.r1 shipped (RALPH)
 - `ThreadItem.Root` context-menu selection path now prevents default select propagation and sets a short mobile-only navigation suppression window, blocking accidental row-link navigation immediately after selecting a context-menu action
 - intended behavior restored: non-navigation context-menu actions no longer auto-close mobile sidebar; close remains tied to actual thread navigation
+
+2026-04-11: message-stability Issue 2-lite shipped (RALPH)
+- added pure assembly core at `apps/web/src/lib/message-assembly/assemble-messages.ts`
+- added behavior-first Vitest coverage at `apps/web/src/lib/message-assembly/assemble-messages.test.ts` + fixtures file
+- `use-messages.tsx` now delegates canonical normalize/merge/filter/debug-tag logic to pure core; hook still owns persisted-tail trim, cache-boundary trim, resumed rebuild, cache writes, statuses
+- debug datasource tagging now gated to DEV inside pure core (prod hot path avoids datasource clone churn)
+- `pnpm -F web run test` and `pnpm -F web run check-types` passed; also removed unsupported `waitForInitialLayout` prop from 2 LegendList callsites to unblock current web typecheck
 - feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
 
 2026-03-02: sidebar S5.3e.r2 shipped (RALPH)

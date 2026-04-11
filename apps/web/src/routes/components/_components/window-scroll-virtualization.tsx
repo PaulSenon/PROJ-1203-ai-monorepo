@@ -150,7 +150,6 @@ function WindowScrollExample() {
         ref={listRef}
         renderItem={renderItem}
         useWindowScroll
-        waitForInitialLayout={true}
       />
     </div>
   );
