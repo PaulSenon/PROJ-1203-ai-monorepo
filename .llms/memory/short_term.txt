@@ -231,6 +231,12 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - `rebuildResumedStreamMessage` now stabilizes rebuilt output against the prior same-stream snapshot, preserving unchanged settled prefix refs without changing reconstructed output semantics
 - same-stream no-op rebuilds now return the previous snapshot object, and `useStreamingUiMessage` bails out of state updates when snapshot/message identity is unchanged
 - this keeps Phase 3 on track while avoiding the earlier seeded-continuation regression; future seeded continuation remains possible behind the existing helper seam
+
+2026-04-11: message-stability decision gate closed (RALPH)
+- Phase 4 measurement/validation accepted as good enough for current MVP path
+- rejected optional one-way settled-row consolidation policy for now (Issue 7)
+- rejected granular per-message store escalation for now (Issue 8)
+- next work should leave message-stability track unless fresh evidence reopens it
 - feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
 
 2026-03-02: sidebar S5.3e.r2 shipped (RALPH)

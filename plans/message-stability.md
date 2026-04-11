@@ -147,3 +147,20 @@ Implementation details:
 - [ ] Row updates are isolated to ids whose message entity actually changed.
 - [ ] Store design remains hybrid and granular, not a whole-array snapshot store.
 - [ ] Complexity remains bounded and documented; if gains are marginal, Phase 5 is rejected.
+
+---
+
+## Current Outcome
+
+Status after upstream/downstream hardening and measurement review:
+
+1. Phase 3 is accepted with the current safer resumed rebuild path.
+2. Phase 4 is accepted with the current explicit static-vs-streaming render policy.
+3. Phase 4 optional one-way settled-row consolidation is rejected for now.
+4. Phase 5 granular store escalation is not justified now.
+
+Rationale:
+
+1. Current stabilization + render hardening already improved churn enough for the active MVP path.
+2. Additional consolidation/state-latching logic would add behavior complexity without current evidence it is needed.
+3. Granular entity store remains an escalation-only path and should stay blocked until fresh evidence shows prop-based stabilization is insufficient.

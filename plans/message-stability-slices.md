@@ -284,6 +284,16 @@ The PRD still leaves this as an unresolved policy decision. It should not be tre
 2. If adopted, the rule is narrow, deterministic, and measured.
 3. If rejected, the decision and rationale are recorded explicitly.
 
+### Current Decision
+
+Rejected for now.
+
+Rationale:
+
+1. Current explicit static-vs-streaming render policy already prevents the observed mode-oscillation issues on the active path.
+2. Measurements were acceptable without adding a one-way settled-row latch.
+3. Adding a latch now would increase behavior complexity and risk feature creep for limited proven gain.
+
 ### Blocked by
 
 1. Issue 6
@@ -319,6 +329,16 @@ This is an escalation path, not default scope. Starting it requires a human comp
 2. The spike proves whether row updates can be isolated more effectively than the prop-based design.
 3. A clear go/no-go decision exists.
 4. If gains are marginal, the store path is rejected.
+
+### Current Decision
+
+Rejected for now.
+
+Rationale:
+
+1. Phase 1-4 style stabilization work was sufficient for the current MVP path.
+2. No current evidence justifies paying the complexity cost of a local entity store.
+3. Revisit only if new measurements show prop-based stabilization is no longer sufficient.
 
 ### Blocked by
 

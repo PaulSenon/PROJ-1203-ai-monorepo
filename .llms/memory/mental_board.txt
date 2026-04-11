@@ -29,7 +29,8 @@
 - message-stability cache-tail dedupe done: meaningful-tail contract gates cache writes
 - message render hardening done: settled/static policy now overrides stale part-streaming flags
 - safer resumed rebuild hardening done: full rebuild + same-stream snapshot stabilization + no-op state bailout
-- next: deeper render perf measurement on real chat surface or revisit true seeded continuation later behind explicit guard
+- message-stability track accepted for current MVP; optional consolidation/store escalation rejected for now
+- next: return to remaining MVP must items outside message-stability
 
 [OPEN_DECISIONS]
 - bot protection vendor: Turnstile?
