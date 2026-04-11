@@ -13,7 +13,6 @@ import {
 } from "@/lib/message-assembly/assemble-messages";
 import {
   rebuildResumedStreamMessage,
-  type ResumedStreamBuildSnapshot,
 } from "@/lib/message-assembly/rebuild-resumed-stream-message";
 import {
   useAiSdkChatMessages,
@@ -122,7 +121,6 @@ function useStreamingUiMessageChunks(threadUuid: string | "skip") {
 function useStreamingUiMessage(threadUuid: string | "skip") {
   const isSkip = threadUuid === "skip";
   const stream = useStreamingUiMessageChunks(threadUuid);
-  const previousSnapshotRef = useRef<ResumedStreamBuildSnapshot | null>(null);
 
   const throttledMessageChunks = useFpsThrottledValue(
     isSkip ? "skip" : stream.messageChunks,
@@ -145,7 +143,6 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
 
   useEffect(() => {
     if (!canBuildMessage) {
-      previousSnapshotRef.current = null;
       setStreamed(null);
       return;
     }
@@ -163,17 +160,10 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
       const snapshot = await rebuildResumedStreamMessage({
         streamId: streamIdAtStart,
         chunks,
-        previous: previousSnapshotRef.current,
       });
-      if (!snapshot) {
-        previousSnapshotRef.current = null;
-        return;
-      }
+      if (!snapshot) return;
       if (cancelled) return;
       if (stream.streamId !== streamIdAtStart) return;
-
-      // Reuse the previously built message when the stream lifecycle is unchanged.
-      previousSnapshotRef.current = snapshot;
       setStreamed({ streamId: streamIdAtStart, message: snapshot.message });
     })();
 

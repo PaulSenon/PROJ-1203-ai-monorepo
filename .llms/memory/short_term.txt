@@ -210,7 +210,7 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - `assembleMessages` now accepts `previous` + `enableDebugDataSource` and performs schema-aware stabilization for rows, metadata, and `text`/`reasoning` parts
 - current simple metadata reuse rule: only `createdAt`, `liveStatus`, `modelId`, `error`, and DEV `debug.dataSource` break reuse; `updatedAt`/`usage`/`timing` are globally ignored for now
 - deferred idea captured in plans/backlog: future source-aware hot-vs-cold metadata selectors (`http/resumed` hot path vs `cache/persisted/optimistic` cold path) only if measured need appears
-- added `rebuild-resumed-stream-message.ts` with same-stream `chunkCount` seeding + open-part prefix replay; `use-messages.tsx` now uses it via `previousSnapshotRef`
+- added `rebuild-resumed-stream-message.ts` pure wrapper seam, but same-stream seeded continuation was backed out after resumed rendering regression; current hook again rebuilds from full chunk history each tick
 - checks: `pnpm -F web run test` and `pnpm -F web run check-types` passed
 - feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
 

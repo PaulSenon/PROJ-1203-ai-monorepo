@@ -24,8 +24,9 @@
 - conversation adapter/layout split + pure layout demo scaffold done (minimal props baseline)
 - PRD v2 done: last assistant min-height reserve erratum fixed (refresh-stream-settle no collapse, latch moved to conversation L3)
 - message-stability Issue 2-lite done: pure canonical assembly core extracted; tests green
-- message-stability ownership handoff + resumed rebuild done: row/parts reuse + same-stream chunkCount seeding landed
-- next: message-stability cache-write dedupe / measurement gate or downstream settled-row rendering hardening
+- message-stability ownership handoff done: row/parts reuse landed
+- resumed seeded rebuild attempted then backed out due resumed render regression; helper seam remains
+- next: message-stability cache-write dedupe / measurement gate or safer resumed rebuild hardening
 
 [OPEN_DECISIONS]
 - bot protection vendor: Turnstile?

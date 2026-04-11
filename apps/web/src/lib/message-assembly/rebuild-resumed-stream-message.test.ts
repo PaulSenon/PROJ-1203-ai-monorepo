@@ -14,7 +14,6 @@ vi.mock("@ai-monorepo/ai/libs/createUiMessageFromChunks", () => ({
         uiMessage?: MyUIMessage;
       }
     ) => {
-      const partIndexByChunkId = new Map<string, number>();
       const message: MyUIMessage =
         structuredClone(options?.uiMessage) ?? {
           id: "message-1",
@@ -28,19 +27,7 @@ vi.mock("@ai-monorepo/ai/libs/createUiMessageFromChunks", () => ({
           parts: [],
         };
 
-      const seededReasoningIndex = message.parts.findIndex(
-        (part) => part.type === "reasoning"
-      );
-      if (seededReasoningIndex !== -1) {
-        partIndexByChunkId.set("reasoning-1", seededReasoningIndex);
-      }
-
-      const seededTextIndex = message.parts.findIndex(
-        (part) => part.type === "text"
-      );
-      if (seededTextIndex !== -1) {
-        partIndexByChunkId.set("text-1", seededTextIndex);
-      }
+      const partIndexByChunkId = new Map<string, number>();
 
       for (const chunk of chunks) {
         if (chunk.type === "start") {
@@ -179,10 +166,9 @@ describe("rebuildResumedStreamMessage", () => {
     });
 
     expect(next).not.toBeNull();
-    expect(next?.message.parts[0]).toBe(first?.message.parts[0]);
     expect(next?.message.parts[1]).not.toBe(first?.message.parts[1]);
     expect(next?.message.parts[1]).toMatchObject({ type: "text", text: "hello" });
-    expect(next?.chunkCount).toBe(7);
+    expect(next?.streamId).toBe("stream-1");
   });
 
   it("resets reuse when stream identity changes", async () => {
@@ -198,7 +184,6 @@ describe("rebuildResumedStreamMessage", () => {
     });
 
     expect(next).not.toBeNull();
-    expect(next?.message.parts[0]).not.toBe(first?.message.parts[0]);
-    expect(next?.chunkCount).toBe(7);
+    expect(next?.streamId).toBe("stream-2");
   });
 });
