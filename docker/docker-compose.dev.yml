@@ -16,8 +16,8 @@ services:
       - volume-opencode-data:/root/.local/share/opencode
       - volume-opencode-config:/root/.config/opencode
       - ${HOME}/.config/opencode/opencode.jsonc:/root/.config/opencode/opencode.jsonc:ro
-      - ${HOME}/.local/share/opencode/mcp-auth.json:/root/.local/share/opencode/mcp-auth.json:ro
-      - ${HOME}/.local/share/opencode/auth.json:/root/.local/share/opencode/auth.json:ro
+      - ${HOME}/.local/share/opencode/mcp-auth.json:/root/.local/share/opencode/mcp-auth.json
+      - ${HOME}/.local/share/opencode/auth.json:/root/.local/share/opencode/auth.json
       - ${HOME}/.alchemy:/root/.alchemy:ro
 
     working_dir: /app

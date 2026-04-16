@@ -53,10 +53,10 @@ clean-install: ## Clean everything (containers, volumes, dependencies)
 	$(MAKE) convex-dev-once
 
 opencode-serve:
-	$(call run_in_container_smart,app,pnpm exec opencode web --port 4096 --hostname 0.0.0.0)
+	$(call run_in_container_smart,app,bash -lc 'npm i -g @openai/codex@latest && npx -y opencode-ai@latest web --port 4096 --hostname 0.0.0.0')
 
 opencode:
-	$(call run_in_container_smart,app,pnpm exec opencode attach $(OPENCODE_ATTACH_URL))
+	$(call run_in_container_smart,app,npx -y opencode-ai@latest attach $(OPENCODE_ATTACH_URL))
 
 t3-serve: ## Update Codex globally, then start latest T3 server
 	$(call run_in_container_smart,app,bash -lc 'npm i -g @openai/codex@latest && export T3CODE_NO_BROWSER=1; npx -y t3@latest')
