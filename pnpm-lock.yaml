@@ -265,6 +265,9 @@ importers:
       '@legendapp/list':
         specifier: 3.0.0-beta.44
         version: 3.0.0-beta.44(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@legendapp/state':
+        specifier: 3.0.0-beta.46
+        version: 3.0.0-beta.46(react@19.2.1)
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.13.5(@opentelemetry/api@1.9.0)
@@ -471,7 +474,7 @@ importers:
         version: 2.0.7(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       streamdown:
         specifier: file:/app/.tmp/streamdown-2.3.0.tgz
-        version: file:.tmp/streamdown-2.3.0.tgz(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+        version: file:../../../../../../../app/.tmp/streamdown-2.3.0.tgz(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       tailwind-merge:
         specifier: ^3.3.1
         version: 3.3.1
@@ -2381,6 +2384,14 @@ packages:
       react-dom:
         optional: true
       react-native:
+        optional: true
+
+  '@legendapp/state@3.0.0-beta.46':
+    resolution: {integrity: sha512-TcCabsE9jPW2r0sKQbUet46L0hbWiupKoun9UUkcHyF/6Jec1RyJCmLrdgFPnYZ9HwupJKIRxJVlxNrg2tG3SQ==}
+    peerDependencies:
+      expo-sqlite: ^15.0.0
+    peerDependenciesMeta:
+      expo-sqlite:
         optional: true
 
   '@mermaid-js/parser@0.6.3':
@@ -6991,8 +7002,8 @@ packages:
     resolution: {integrity: sha512-KXDYZ9dszj6bzvnEMRYvxgeTHU74QBFL54XKtP3nyMuJ81CFYtABZ3bAzL2EdFUaEwJOBOgENyFj3R7oTzDyyw==}
     engines: {node: '>=4', npm: '>=6'}
 
-  streamdown@file:.tmp/streamdown-2.3.0.tgz:
-    resolution: {integrity: sha512-ZyMt0dJVsqEe1G5m+zZYPtZxF/9t1Xl3CqjA5kHvY7gU1okorKVX8dcwqd4Bp+tD3U/gsleyd3OS07mS6Vgguw==, tarball: file:.tmp/streamdown-2.3.0.tgz}
+  streamdown@file:../../../../../../../app/.tmp/streamdown-2.3.0.tgz:
+    resolution: {integrity: sha512-ZyMt0dJVsqEe1G5m+zZYPtZxF/9t1Xl3CqjA5kHvY7gU1okorKVX8dcwqd4Bp+tD3U/gsleyd3OS07mS6Vgguw==, tarball: file:../../../../../../../app/.tmp/streamdown-2.3.0.tgz}
     version: 2.3.0
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
@@ -9701,6 +9712,12 @@ snapshots:
       use-sync-external-store: 1.6.0(react@19.2.1)
     optionalDependencies:
       react-dom: 19.2.1(react@19.2.1)
+
+  '@legendapp/state@3.0.0-beta.46(react@19.2.1)':
+    dependencies:
+      use-sync-external-store: 1.6.0(react@19.2.1)
+    transitivePeerDependencies:
+      - react
 
   '@mermaid-js/parser@0.6.3':
     dependencies:
@@ -15107,7 +15124,7 @@ snapshots:
 
   stoppable@1.1.0: {}
 
-  streamdown@file:.tmp/streamdown-2.3.0.tgz(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
+  streamdown@file:../../../../../../../app/.tmp/streamdown-2.3.0.tgz(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
     dependencies:
       clsx: 2.1.1
       hast-util-to-jsx-runtime: 2.3.6
