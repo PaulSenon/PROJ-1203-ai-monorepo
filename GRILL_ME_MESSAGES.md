@@ -434,9 +434,6 @@ Append-only takeaways from the frontend message merge/perf design interview.
 
 ### 2.5 Cleanup Decisions
 
-- Prop-driven `ChatMessage` must remain usable outside `MessagesStoreProvider`.
-- Store-backed rendering stays explicit via `ChatMessageStoreItem`.
-- Standalone message actions may receive an explicit raw-text reader override instead of implicitly depending on the store.
 - Projector baseline must advance to the latest canonical snapshot even when emitted diff ops are empty.
 
 ### Phase 3 progress
@@ -476,6 +473,19 @@ Append-only takeaways from the frontend message merge/perf design interview.
 - Core pure-TS coverage now includes merge, normalization, diffing, validation, resumed reconstruction, regenerate selection, and store identity behavior.
 - A single jsdom-based reactive integration test now proves slice-level store reactivity at the provider boundary.
 - Message merge/projection ownership cleanup is complete enough for the planned architecture: `ActiveThreadProvider` no longer owns the message pipeline.
+
+### Post-phase alignment clarifications
+
+- User does not want a dual real entry-mode architecture for `ChatMessage`.
+- Decision: keep one real L3 entry path based on store-backed hooks; debug/playground routes should adapt/mock that path with minimal concern for elegance.
+- User confirmed the assistant render path must be reshaped so heavy content rendering becomes more performant.
+- Decision: split assistant rendering so the expensive markdown/content subtree depends on `parts` only; metadata-driven UI may live in lighter sibling subtrees.
+
+### Naming clarification
+
+- `useMessages` as a concept is no longer desired.
+- Decision: the bridge layer between query/data hooks and the store should be named as a message state bridge concept.
+- Current implementation uses `useMessageStateBridge` under `MessagePipelineProvider`.
 
 ## 2026-04-17
 

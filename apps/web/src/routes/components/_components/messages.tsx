@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { MessagesStoreProvider } from "@/hooks/use-message-store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/components/_components/messages")({
@@ -913,11 +914,13 @@ function RouteComponent() {
                 isMobilePreview && "mx-auto max-w-sm"
               )}
             >
-              <ChatMessage
-                consolidate={consolidate}
-                message={message}
-                reasoningPreviewLines={reasoningPreviewLines}
-              />
+              <MessagesStoreProvider messages={[message]}>
+                <ChatMessage
+                  consolidate={consolidate}
+                  messageId={message.id}
+                  reasoningPreviewLines={reasoningPreviewLines}
+                />
+              </MessagesStoreProvider>
             </div>
           </CardContent>
         </Card>

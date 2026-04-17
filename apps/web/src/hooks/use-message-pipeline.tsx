@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
+import { useMessageStateBridge } from "./use-message-state-bridge";
 import { MessagesStoreProvider } from "./use-message-store";
-import { useMessages } from "./use-messages";
 
-type MessagePipelineValue = ReturnType<typeof useMessages>;
+type MessagePipelineValue = ReturnType<typeof useMessageStateBridge>;
 
 const MessagePipelineContext = createContext<MessagePipelineValue | null>(null);
 
@@ -16,7 +16,7 @@ export function MessagePipelineProvider({
   threadUuid: string | "skip";
   resumeStreamEnabled: boolean;
 }) {
-  const pipeline = useMessages({ threadUuid, resumeStreamEnabled });
+  const pipeline = useMessageStateBridge({ threadUuid, resumeStreamEnabled });
 
   return (
     <MessagePipelineContext.Provider value={pipeline}>

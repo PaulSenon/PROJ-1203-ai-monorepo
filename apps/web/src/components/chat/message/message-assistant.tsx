@@ -2,18 +2,17 @@ import type {
   MyUIMessage,
   MyUIMessageMetadata,
 } from "@ai-monorepo/ai/types/uiMessage";
-import { type ComponentProps, useMemo } from "react";
+import { type ComponentProps, memo, useMemo } from "react";
 import { Message } from "@/components/ui-custom/chat/message";
 import { useMessageMetadata, useMessageParts } from "@/hooks/use-message-store";
 import { cn } from "@/lib/utils";
 import { useMessageActions } from "./_hooks/use-message-actions";
-import { extractRawTextFromMessageParts } from "./_hooks/use-message-raw-text-reader";
 import { MessageContentParts } from "./_parts/content";
 import { MessageFooterAssistant } from "./_parts/footer/footer";
 import { StatusPart } from "./_parts/status/status";
 
 export type ChatMessageAssistantProps = ComponentProps<"div"> & {
-  message: MyUIMessage;
+  messageId: string;
   reasoningPreviewLines?: number;
   consolidate?: boolean;
   enableCodeHighlighting?: boolean;
@@ -55,124 +54,70 @@ function shouldShowThinking({
       return false;
     }
   }
+
   return true;
 }
 
 function useMessageDatasourceDebugger(metadata?: MyUIMessageMetadata) {
   const dataSource = metadata?.debug?.dataSource;
 
-  const className = useMemo(() => {
+  return useMemo(() => {
     if (dataSource === "cache") return "border-l border-yellow-500 p-2";
-    if (dataSource === "convex-persisted")
+    if (dataSource === "convex-persisted") {
       return "border-l border-orange-500 p-2";
+    }
     if (dataSource === "optimistic") return "border-l border-purple-500 p-2";
     if (dataSource === "http-stream") return "border-l border-green-500 p-2";
     if (dataSource === "convex-stream") return "border-l border-blue-500 p-2";
   }, [dataSource]);
-
-  return className;
 }
 
-export function ChatMessageAssistant({
-  message,
-  reasoningPreviewLines,
-  className,
-  consolidate,
-  enableCodeHighlighting,
-  ...props
-}: ChatMessageAssistantProps) {
-  const showThinking = shouldShowThinking({
-    metadata: message.metadata,
-    parts: message.parts,
-  });
-  const readRawText = useMemo(
-    () => () => extractRawTextFromMessageParts(message.parts),
-    [message.parts]
-  );
-  const { handleFooterAction, handleStatusAction } = useMessageActions({
-    messageId: message.id,
-    readRawText,
-    role: "assistant",
-  });
-  const isStreaming =
-    message.metadata?.liveStatus === "pending" ||
-    message.metadata?.liveStatus === "streaming";
-
-  // TODO: for debug purpose only, hide behind flag
-  const debugClass = useMessageDatasourceDebugger(message.metadata);
-
-  return (
-    <div
-      className={cn(
-        "flex w-full flex-col items-start gap-2",
-
-        className
-      )}
-      {...props}
-    >
-      <Message.Root className="w-full max-w-full" from="assistant">
-        <Message.Content className={cn(debugClass)} variant="assistant">
-          {showThinking ? <Message.Thinking /> : null}
-          <MessageContentParts
-            consolidate={consolidate}
-            enableCodeHighlighting={enableCodeHighlighting}
-            parts={message.parts}
-            reasoningPreviewLines={reasoningPreviewLines}
-          />
-          <StatusPart
-            metadata={message.metadata}
-            onAction={handleStatusAction}
-          />
-        </Message.Content>
-        <Message.Footer>
-          <MessageFooterAssistant
-            isStreaming={isStreaming}
-            messageId={message.id}
-            modelId={message.metadata?.modelId}
-            onAction={handleFooterAction}
-          />
-        </Message.Footer>
-      </Message.Root>
-    </div>
-  );
-}
-
-export type ChatMessageAssistantStoreItemProps = Omit<
-  ChatMessageAssistantProps,
-  "message"
-> & {
-  messageId: string;
-};
-
-function AssistantContentStoreItem({
+function AssistantContentFrame({
   messageId,
-  reasoningPreviewLines,
-  consolidate,
-  enableCodeHighlighting,
-}: Pick<
-  ChatMessageAssistantStoreItemProps,
-  | "messageId"
-  | "reasoningPreviewLines"
-  | "consolidate"
-  | "enableCodeHighlighting"
->) {
+  children,
+}: {
+  messageId: string;
+  children: React.ReactNode;
+}) {
   const metadata = useMessageMetadata(messageId);
   const parts = useMessageParts(messageId) ?? [];
   const showThinking = shouldShowThinking({ metadata, parts });
+  // TODO: for debug purpose only, hide behind flag
   const debugClass = useMessageDatasourceDebugger(metadata);
 
   return (
     <Message.Content className={cn(debugClass)} variant="assistant">
       {showThinking ? <Message.Thinking /> : null}
+      {children}
+    </Message.Content>
+  );
+}
+
+const AssistantMessagePartsContent = memo(
+  function AssistantMessagePartsContent({
+    messageId,
+    reasoningPreviewLines,
+    consolidate,
+    enableCodeHighlighting,
+  }: Pick<
+    ChatMessageAssistantProps,
+    | "messageId"
+    | "reasoningPreviewLines"
+    | "consolidate"
+    | "enableCodeHighlighting"
+  >) {
+    const parts = useMessageParts(messageId) ?? [];
+
+    return (
       <MessageContentParts
         consolidate={consolidate}
         enableCodeHighlighting={enableCodeHighlighting}
         parts={parts}
         reasoningPreviewLines={reasoningPreviewLines}
       />
-    </Message.Content>
-  );
-}
+    );
+  }
+);
 
 function AssistantStatusStoreItem({ messageId }: { messageId: string }) {
   const metadata = useMessageMetadata(messageId);
@@ -203,26 +148,28 @@ function AssistantFooterStoreItem({ messageId }: { messageId: string }) {
   );
 }
 
-export function ChatMessageAssistantStoreItem({
+export function ChatMessageAssistant({
   messageId,
   reasoningPreviewLines,
   className,
   consolidate,
   enableCodeHighlighting,
   ...props
-}: ChatMessageAssistantStoreItemProps) {
+}: ChatMessageAssistantProps) {
   return (
     <div
       className={cn("flex w-full flex-col items-start gap-2", className)}
       {...props}
     >
       <Message.Root className="w-full max-w-full" from="assistant">
-        <AssistantContentStoreItem
-          consolidate={consolidate}
-          enableCodeHighlighting={enableCodeHighlighting}
-          messageId={messageId}
-          reasoningPreviewLines={reasoningPreviewLines}
-        />
+        <AssistantContentFrame messageId={messageId}>
+          <AssistantMessagePartsContent
+            consolidate={consolidate}
+            enableCodeHighlighting={enableCodeHighlighting}
+            messageId={messageId}
+            reasoningPreviewLines={reasoningPreviewLines}
+          />
+        </AssistantContentFrame>
         <AssistantStatusStoreItem messageId={messageId} />
         <Message.Footer>
           <AssistantFooterStoreItem messageId={messageId} />

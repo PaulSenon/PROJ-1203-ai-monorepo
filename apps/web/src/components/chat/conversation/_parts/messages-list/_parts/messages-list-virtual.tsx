@@ -5,7 +5,7 @@ import {
   type LegendListRenderItemProps,
 } from "@legendapp/list/react";
 import { useCallback, useEffect, useRef } from "react";
-import { ChatMessageStoreItem } from "@/components/chat/message/message";
+import { ChatMessage } from "@/components/chat/message/message";
 import { useMessagesStoreApi } from "@/hooks/use-message-store";
 import {
   ScrollEdgeProbe,
@@ -130,7 +130,7 @@ export function MessagesListVirtual({
           )}
           key={item}
         >
-          <ChatMessageStoreItem
+          <ChatMessage
             consolidate={!isDynamic}
             enableCodeHighlighting={true} // TODO: how to handle isReady reactivity here ???
             messageId={item}

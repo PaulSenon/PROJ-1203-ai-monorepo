@@ -14,7 +14,7 @@ Durable decisions that apply across all phases:
 - **Bootstrap**: Seed the store synchronously from the first available canonical projection when possible. If full canonical seeding is too complex initially, cache-only synchronous seed is an acceptable fallback. Subsequent updates are effect-driven.
 - **Scope**: Only renderable active messages belong in the canonical reactive layer. Removed messages disappear immediately.
 - **Core read model**: Core reads are ids-first and slice-first. No full ordered `MyUIMessage[]` list is exposed from core.
-- **Standalone path**: The standalone prop-driven `ChatMessage` path must remain valid outside store scope. Store-backed rendering stays explicit via the ids-first chat surface.
+- **Message entry**: `ChatMessage` is the one real store-backed L3 message entry. Debug/playground routes may wrap it minimally with a local store provider instead of preserving a second standalone architecture.
 - **Virtualization**: The list consumes ordered message ids. Virtualizer classification uses non-reactive reads for immutable item facts such as role.
 - **Message invariants**: Message role is immutable after creation.
 - **Part invariants**: Part type is immutable. Parts are append-only, never removed, never reordered, and only the tail part may mutate.
@@ -131,7 +131,7 @@ Bring optimistic overlays and message-dependent thread actions into the new arch
 
 Current phase 5 progress notes:
 
-- `useMessages` and `MessagesStoreProvider` are now owned by a dedicated message-pipeline provider instead of `ActiveThreadProvider` directly.
+- The dedicated message-pipeline provider now owns the message state bridge hook and `MessagesStoreProvider` instead of `ActiveThreadProvider` directly.
 - `ActiveThreadProvider` now consumes pipeline outputs and store peeks rather than owning message merge/projection.
 - Regenerate selection is extracted into a pure helper and thread-level regenerate now traverses current store state via specific non-reactive peek helpers.
 - Pure tests cover regenerate selection logic and optimistic-to-persisted node identity preservation.

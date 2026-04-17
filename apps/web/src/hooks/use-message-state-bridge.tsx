@@ -32,7 +32,7 @@ function isOngoingLiveStatus(liveStatus: MyUIMessageMetadata["liveStatus"]) {
   return liveStatus === "pending" || liveStatus === "streaming";
 }
 
-type UseMessagesParams = {
+type UseMessageStateBridgeParams = {
   threadUuid: string | "skip";
   resumeStreamEnabled: boolean;
 };
@@ -119,19 +119,23 @@ function useStreamingUiMessageChunks(threadUuid: string | "skip") {
       streamId: streamIdRef.current,
       isPending: isSkip ? false : isPending,
     }),
-    [uiMessageChunks, isPending, isSkip]
+    [isSkip, isPending, uiMessageChunks]
   );
 }
 
-function useStreamingUiMessage(threadUuid: string | "skip") {
+type UseStreamingUiMessageReturn = {
+  messages: MyUIMessage[];
+  isPending: boolean;
+};
+
+function useStreamingUiMessage(
+  threadUuid: string | "skip"
+): UseStreamingUiMessageReturn {
   const isSkip = threadUuid === "skip";
   const stream = useStreamingUiMessageChunks(threadUuid);
-
   const throttledMessageChunks = useFpsThrottledValue(
     isSkip ? "skip" : stream.messageChunks,
-    {
-      maxFps: 5,
-    }
+    { maxFps: 30 }
   );
 
   const [streamed, setStreamed] = useState<ResumedStreamedMessageState<
@@ -145,17 +149,10 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
   });
 
   useEffect(() => {
-    if (!canBuildMessage) {
-      setStreamed(null);
-      return;
-    }
-
+    if (!canBuildMessage) return;
     const streamIdAtStart = stream.streamId;
+    if (!streamIdAtStart || throttledMessageChunks === undefined) return;
     const chunks = throttledMessageChunks;
-    if (!streamIdAtStart || chunks === undefined) {
-      setStreamed(null);
-      return;
-    }
 
     let cancelled = false;
 
@@ -175,7 +172,7 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
     return () => {
       cancelled = true;
     };
-  }, [canBuildMessage, stream.streamId, throttledMessageChunks]);
+  }, [canBuildMessage, throttledMessageChunks, stream.streamId]);
 
   return useMemo(
     () =>
@@ -189,23 +186,22 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
   );
 }
 
+function createCacheKey(threadUuid: string) {
+  return `thread:messages:${threadUuid}`;
+}
+
 function usePersistedMessages(threadUuid: string | "skip") {
-  const isSkip = threadUuid === "skip";
   return useCvxPaginatedQueryStable(
     ...cvx.query
       .threadMessagesPaginated({ threadUuid })
-      .options.skipWhen(isSkip)
+      .options.skipWhen(threadUuid === "skip")
   );
 }
 
-function createCacheKey(threadUuid: string) {
-  return `messages:${threadUuid}` as const;
-}
-
-export function useMessages({
+export function useMessageStateBridge({
   threadUuid,
   resumeStreamEnabled,
-}: UseMessagesParams) {
+}: UseMessageStateBridgeParams) {
   const isSkip = threadUuid === "skip";
 
   const paginatedMessages = usePersistedMessages(threadUuid);
@@ -254,12 +250,6 @@ export function useMessages({
     [paginatedMessages.results]
   );
 
-  // persisted layer might contain an optimistic shell for a pending assistant message
-  // but as persisted layer has priority over cache layer, we need a way to never not
-  // override a more up to date cached streaming message on refresh mid-stream while resumed stream
-  // query is catching up.
-  // for that reason we simply trim any last pending assistant message from the persisted layer
-  // before merging it with the rest.
   const persistedLayerForMerge = useMemo(() => {
     if (!(resumeStreamEnabled && resumedMessages.isPending)) {
       return persistedLayerRaw;
@@ -280,21 +270,10 @@ export function useMessages({
     return persistedLayerRaw;
   }, [persistedLayerRaw, resumeStreamEnabled, resumedMessages.isPending]);
 
-  // cache layer might unsync from persisted data (having in between ghost messages)
-  // for that, we always remove all contiguous messages in cache layer that are within
-  // the first and last message persisted (from persisted layer)
-  // we do work with the persisted layer for merge because it has the last pending message trimmed
-  // (so we don't remove it from the cache layer)
-  // if cache layer contains [1, 2, 3, 4, 5, 6, 999, 7, 8, 9, 10]
-  // and persisted layer contains [6, 7, 8, 9]
-  // then the trimmed cache layer should contain [1, 2, 3, 4, 5, 10]
-  // because we remove everything contiguous between persisted layer boundaries (6 and 9) included.
   const cacheLayerForMerge = useMemo(() => {
     if (persistedLayerForMerge.length === 0) return cacheLayerRaw;
     if (cacheLayerRaw.length === 0) return cacheLayerRaw;
 
-    // get persisted layer boundaries (oldest and newest)
-    // NB. (last pending message has been trimmed)
     const first = persistedLayerForMerge.at(0);
     const last = persistedLayerForMerge.at(-1);
     if (!(first && last)) return cacheLayerRaw;
@@ -303,23 +282,18 @@ export function useMessages({
       MyUIMessage,
     ];
 
-    // find the index where we must start trimming the cache layer
     const oldestIndexInCache = cacheLayerRaw.findIndex(
       (msg) => msg.id === oldest.id
     );
-    // skip if missed in cache layer
     if (oldestIndexInCache === -1) return cacheLayerRaw;
-    // keep everything up to the oldest message index (excluded)
     const newCacheLayer: MyUIMessage[] = cacheLayerRaw.slice(
       0,
-      oldestIndexInCache // excluded from the slice
+      oldestIndexInCache
     );
 
-    // then we need to find if we have any items after the newest message index
     const newestIndexInCache = cacheLayerRaw.findIndex(
       (msg) => msg.id === newest.id
     );
-    // if we do then we can add everything after the newest message index
     if (newestIndexInCache !== -1) {
       newCacheLayer.push(...cacheLayerRaw.slice(newestIndexInCache + 1));
     }
@@ -354,11 +328,6 @@ export function useMessages({
     [httpStreamingMessages]
   );
 
-  // For performance reasons, we merge layer in two steps:
-  // 1. merge the layers that rarely change
-  //  - cache snapshot never changes (set at init once)
-  //  - persisted layer changes only when assistant message complete (once in a while)
-  //  - optimistic layer changes only when user apply/remove a patch (at send message and when complete)
   const baseMessages = useMemo(
     () =>
       mergeMessageLayers(
@@ -367,7 +336,7 @@ export function useMessages({
           { messages: persistedLayerForMerge, dataSource: "convex-persisted" },
           { messages: optimisticLayer, dataSource: "optimistic" },
         ],
-        { sort: false } // important we want to sort only once at the end
+        { sort: false }
       ),
     [cacheLayerForMerge, persistedLayerForMerge, optimisticLayer]
   );
@@ -377,9 +346,6 @@ export function useMessages({
     [baseMessages]
   );
 
-  // 2. merge the layers that change frequently on top
-  //  - resumed stream changes on every chunk received (very frequent)
-  //  - http stream changes on every message received (very frequent)
   const messages = useMemo(
     () =>
       mergeMessageLayers([
@@ -390,19 +356,15 @@ export function useMessages({
     [baseLayer, resumedLayer, httpLayer]
   );
 
-  // query data are pending if any query is pending
   const isQueryPending = isSkip
     ? false
     : paginatedMessages.isPending || resumedMessages.isPending;
-  // data are pending is cache is pending, or if cache it empty, fallback on query pending
   const isPending = isSkip
     ? false
     : cache.isPending || (cache.isEmpty && isQueryPending);
-  // data are stale if cache no longer pending and not empty while query is still pending
   const isStale = isSkip
     ? false
     : !(cache.isPending || cache.isEmpty) && isQueryPending;
-  // data are loading only when data are loading (loading = subsequent load-more on paginated query)
   const isLoading = isSkip ? false : paginatedMessages.isLoading;
   const paginatedStatus = paginatedMessages.status;
 

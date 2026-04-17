@@ -94,7 +94,7 @@ This solution keeps the source contract simple, isolates most complexity in pure
 - Reduce message derivation responsibilities exposed by the thread provider where practical in phase 1, but allow internal transitional ownership to remain until later slices remove it fully.
 - Keep the thread provider focused on thread-level state and actions as the longer-term direction.
 - Allow thread-level actions such as regenerate to read current messages via non-reactive store access at execution time.
-- Preserve the standalone prop-driven `ChatMessage` path. Store-backed rendering should remain explicit rather than becoming an implicit provider requirement.
+- Use one real store-backed L3 `ChatMessage` entry path. Debug/playground routes may adapt by wrapping that real path minimally rather than maintaining a second architectural mode.
 - Preserve a single writer to the message store.
 - Expose read hooks and non-reactive peek/store helpers from the store layer, but no public mutation actions.
 - Seed the store synchronously on initial mount from the first available canonical projection when possible.
