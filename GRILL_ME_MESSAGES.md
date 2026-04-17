@@ -386,3 +386,60 @@ Append-only takeaways from the frontend message merge/perf design interview.
   - message projector / diff engine
   - dev validator
 - React components do not need heavy direct testing for this PRD.
+
+### Legend-State audit branch
+
+- User challenged whether the current Legend-State store shape is truly idiomatic.
+- Codebase audit + local Legend-State skill/source review found:
+  - pure TS core extraction is good and remains valid
+  - the current Legend integration uses a more unusual internal shape than the original conceptual model
+  - `observable(parts)` for the rich message parts type appears to be a poor fit for v3 beta TypeScript
+  - a coarse-leaf approach is defensible in Legend, but it increases conceptual weirdness
+- Current partial Legend store shape in code uses:
+  - `orderedIds$`
+  - `messagesById: Map<string, MessageNode>`
+  - `role$`
+  - `metadata$`
+  - raw `parts` plus `partsVersion$`
+- Current concern is no longer only performance. It is now also maintainability / architecture clarity / team confidence.
+
+### Reduced store-type branch
+
+- User asked whether recursive Legend typing could be bypassed by intentionally storing a smaller/coarser type rather than the full original rich type.
+- Distinction clarified:
+  - bad: lying cast through `unknown` while pretending to store the same full type
+  - acceptable: explicit, documented store-specific reduced type with controlled input/output conversion
+- User is open to the reduced-type approach if it is documented and all store input/output boundaries are controlled.
+- New decision: for the Legend-backed render store, phase 1 may store an explicit reduced render-parts union limited to currently rendered part kinds (`text | reasoning`) instead of full upstream `MyUIMessage["parts"]`.
+- If unsupported part kinds appear in phase 1, store conversion should drop them but emit a dev warning.
+
+### Parts granularity clarification
+
+- User noticed `observablePrimitive(parts)` changes mutation semantics: it supports coarse whole-slice replacement, not convenient direct per-item observable mutation.
+- User clarified the desired granularity floor is the full part, not below a part.
+- User is currently okay with replacing the full parts slice on updates if that keeps the model simpler.
+- More granular append/update-at-tail behavior remains desirable long-term, but is not required if it complicates phase 1 too much.
+- New decision: for now, `parts` may be treated as one coarse reactive leaf slice and replaced as a whole on updates.
+- New decision: drop the reduced render-parts store boundary for now and type the coarse `parts` observable leaf with the full upstream parts type directly.
+- New decision: drop the reduced render-model entirely for phase 1 and keep full upstream message semantics, with coarse leaf observables for full `metadata` and full `parts`.
+- Core minimum goal clarified: the essential improvement is stable role + separate coarse subscriptions for `parts` and `metadata`; that is sufficient to unlock the desired next steps.
+- Hard clarification: the message UI should not reconstruct a combined message object on the render path. Each subtree must read only the slice it actually needs from the store.
+
+### Action plumbing clarification
+
+- Existing `readRawText` helper is only for current copy/edit/retry action plumbing, not part of the desired core architecture.
+- The main refactor target remains render subscription architecture, not new action features.
+- Current decision: keep actions simple for now, but provide a way to non-reactively peek text parts for copy/paste style actions.
+- New decision: the store API should expose non-reactive peek helpers for action use, starting with message parts and optionally metadata.
+
+### Filtered parts hook decision
+
+- Reactive filtered selectors over the coarse full `parts` slice are desired.
+- Part-type filtering does not need to become a lower-level Legend granularity concern.
+- Decision: filtered helpers such as `useMessagePartsByType(messageId, "text")` should live in L3/domain hooks, not in the core store API.
+
+### Core API boundary decision
+
+- Core store API should expose explicit primitives only.
+- Decision: do not keep a generic `useMessageSelector` in core.
+- Core primitives should remain focused on `role`, `metadata`, `parts`, ordered ids, and specific non-reactive peek helpers.

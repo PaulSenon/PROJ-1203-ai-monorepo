@@ -1,4 +1,3 @@
-import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import {
   type AlwaysRenderConfig,
   LegendList,
@@ -6,7 +5,8 @@ import {
   type LegendListRenderItemProps,
 } from "@legendapp/list/react";
 import { useCallback, useEffect, useRef } from "react";
-import { ChatMessage } from "@/components/chat/message/message";
+import { ChatMessageStoreItem } from "@/components/chat/message/message";
+import { useMessagesStoreApi } from "@/hooks/use-message-store";
 import {
   ScrollEdgeProbe,
   useScrollEdges,
@@ -18,7 +18,7 @@ export type EnrichedLegendListRef = LegendListRef & {
 };
 
 export type MessagesListVirtualProps = {
-  messages: MyUIMessage[];
+  messageIds: string[];
   shouldReserveLastAssistantSpace: boolean;
   onStartReached?: () => void;
   onEndReached?: () => void;
@@ -34,16 +34,8 @@ function SeparatorComponent() {
   return <div className="h-10" />;
 }
 
-function messageKeyExtractor(message: MyUIMessage) {
-  return message.id;
-}
-
-function messageTypeExtractor(message: MyUIMessage) {
-  return message.role;
-}
-
 export function MessagesListVirtual({
-  messages,
+  messageIds,
   shouldReserveLastAssistantSpace,
   onStartReached,
   onEndReached,
@@ -52,8 +44,9 @@ export function MessagesListVirtual({
 }: MessagesListVirtualProps) {
   const listRef = useRef<EnrichedLegendListRef | null>(null);
   const isReady = useRef(false);
-  const messagesRef = useRef(messages);
-  messagesRef.current = messages;
+  const messageIdsRef = useRef(messageIds);
+  messageIdsRef.current = messageIds;
+  const { peekMessageRole } = useMessagesStoreApi();
 
   const handleStartReached = useCallback(() => {
     if (!isReady.current) return;
@@ -92,7 +85,7 @@ export function MessagesListVirtual({
       // when ready we notify last added item key when layout changes
       cancelAnimationFrame(raf.current);
       raf.current = requestAnimationFrame(() => {
-        onLastItemKeyUpdate?.(messagesRef.current.at(-1)?.id);
+        onLastItemKeyUpdate?.(messageIdsRef.current.at(-1));
       });
       return;
     }
@@ -117,12 +110,12 @@ export function MessagesListVirtual({
   }, [onLayoutReady]);
 
   const renderItem = useCallback(
-    ({ item, index }: LegendListRenderItemProps<MyUIMessage>) => {
-      const isLast = index === messagesRef.current.length - 1;
-      const isFollowup = messagesRef.current.length > 2;
+    ({ item, index }: LegendListRenderItemProps<string>) => {
+      const isLast = index === messageIdsRef.current.length - 1;
+      const isFollowup = messageIdsRef.current.length > 2;
       const isDynamic = isLast && shouldReserveLastAssistantSpace;
       const shouldReserveForAssistant =
-        item.role === "assistant" && isDynamic && isFollowup;
+        peekMessageRole(item) === "assistant" && isDynamic && isFollowup;
 
       // DEBUG force slow message components render
       // const startTime = performance.now();
@@ -135,35 +128,35 @@ export function MessagesListVirtual({
           className={cn(
             shouldReserveForAssistant && "min-h-[calc(100vh-20rem)]"
           )}
-          key={item.id}
+          key={item}
         >
-          <ChatMessage
+          <ChatMessageStoreItem
             consolidate={!isDynamic}
             enableCodeHighlighting={true} // TODO: how to handle isReady reactivity here ???
-            message={item}
+            messageId={item}
           />
         </div>
       );
     },
-    [shouldReserveLastAssistantSpace]
+    [peekMessageRole, shouldReserveLastAssistantSpace]
   );
 
   // just a safety net
-  if (messages.length === 0) return null;
+  if (messageIds.length === 0) return null;
 
   return (
     <>
       <ScrollEdgeProbe ref={topRef} />
-      <LegendList<MyUIMessage>
+      <LegendList<string>
         alignItemsAtEnd={true}
         alwaysRender={ALWAYS_RENDER_CONFIG}
         // Important while we cannot handle initial window scroll to bottom natively with legendList:
         className={cn(!isReady.current && "opacity-0")}
-        data={messages}
-        getItemType={messageTypeExtractor}
+        data={messageIds}
+        getItemType={(messageId) => peekMessageRole(messageId) ?? "assistant"}
         ItemSeparatorComponent={SeparatorComponent}
         initialScrollAtEnd
-        keyExtractor={messageKeyExtractor}
+        keyExtractor={(messageId) => messageId}
         maintainVisibleContentPosition
         onLayout={handleLayout}
         onLoad={handleLoad}
@@ -172,7 +165,6 @@ export function MessagesListVirtual({
         renderItem={renderItem}
         suggestEstimatedItemSize
         useWindowScroll
-        waitForInitialLayout={true}
       />
       <ScrollEdgeProbe ref={bottomRef} />
     </>

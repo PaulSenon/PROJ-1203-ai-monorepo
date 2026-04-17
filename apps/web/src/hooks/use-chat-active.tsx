@@ -27,6 +27,7 @@ import { useChatNavActions } from "./chat/use-chat-nav";
 import { useCvxMutationAuthV3 } from "./queries/convex/utils/use-convex-mutation-0-auth";
 import { useThread } from "./queries/use-chat-active-queries";
 import { useChatInputActions } from "./use-chat-input";
+import { MessagesStoreProvider } from "./use-message-store";
 import { useMessages } from "./use-messages";
 import { getLiveStatusKind, useStreamOwnership } from "./use-stream-ownership";
 
@@ -67,7 +68,7 @@ type ActiveThreadActions = {
 
 type ActiveThreadMessagesType = Pick<
   ActiveThreadState,
-  "messages" | "isDataPending" | "isDataStale"
+  "isDataPending" | "isDataStale"
 > & {
   isLoadingOlder: ReturnType<typeof useMessages>["isLoading"];
   olderHistoryStatus: ReturnType<typeof useMessages>["paginatedStatus"];
@@ -484,31 +485,24 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const messagesState = useMemo(
     () =>
       ({
-        messages,
         isDataPending,
         isDataStale,
         isLoadingOlder,
         olderHistoryStatus: paginatedStatus,
         loadOlder: loadMore,
       }) satisfies ActiveThreadMessagesType,
-    [
-      messages,
-      isDataPending,
-      isDataStale,
-      isLoadingOlder,
-      paginatedStatus,
-      loadMore,
-    ]
+    [isDataPending, isDataStale, isLoadingOlder, paginatedStatus, loadMore]
   );
 
   return (
-    <ActiveTheadActionsContext.Provider value={actions}>
-      <ActiveTheadStateContext.Provider value={state}>
-        {/* TODO: rewire to messages */}
-        <ActiveTheadMessagesContext.Provider value={messagesState}>
-          {children}
-        </ActiveTheadMessagesContext.Provider>
-      </ActiveTheadStateContext.Provider>
-    </ActiveTheadActionsContext.Provider>
+    <MessagesStoreProvider messages={messages}>
+      <ActiveTheadActionsContext.Provider value={actions}>
+        <ActiveTheadStateContext.Provider value={state}>
+          <ActiveTheadMessagesContext.Provider value={messagesState}>
+            {children}
+          </ActiveTheadMessagesContext.Provider>
+        </ActiveTheadStateContext.Provider>
+      </ActiveTheadActionsContext.Provider>
+    </MessagesStoreProvider>
   );
 }

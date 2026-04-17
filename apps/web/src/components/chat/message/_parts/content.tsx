@@ -10,7 +10,7 @@ export type MessageContentPartsProps = {
 };
 
 function getPartKey(part: MyUIMessagePart, index: number) {
-  if ("id" in part && part.id) {
+  if ("id" in part && typeof part.id === "string" && part.id.length > 0) {
     return part.id;
   }
 

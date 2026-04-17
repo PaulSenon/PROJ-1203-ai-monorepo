@@ -1,4 +1,3 @@
-import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import React, { useCallback, useRef, useState } from "react";
 import { Conversation } from "@/components/ui-custom/chat/conversation";
 import {
@@ -13,7 +12,7 @@ import { MessagesList } from "./_parts/messages-list/messages-list";
 
 export type ChatConversationLayoutProps = {
   threadUuid: string;
-  messages: MyUIMessage[];
+  messageIds: string[];
   isThreadSettled: boolean;
   isPending: boolean;
   pendingAutoScrollMessageId: string | undefined;
@@ -22,7 +21,7 @@ export type ChatConversationLayoutProps = {
 
 export const ChatConversationLayout = React.memo(
   function _ChatConversationLayout({
-    messages,
+    messageIds,
     isThreadSettled,
     pendingAutoScrollMessageId,
     isPending,
@@ -73,7 +72,7 @@ export const ChatConversationLayout = React.memo(
         <Conversation.List>
           <MessagesList
             isPending={isPending}
-            messages={messages}
+            messageIds={messageIds}
             onLastItemKeyUpdate={handleLastItemKeyUpdate}
             onReady={handleReady}
             onStartReached={onStartReached}

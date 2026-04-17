@@ -6,7 +6,7 @@
 
 Durable decisions that apply across all phases:
 
-- **Provider boundary**: Introduce a dedicated session-scoped message store provider under the AI SDK chat provider and above the thread provider.
+- **Provider boundary**: Phase 1 may integrate the session-scoped message store provider inside the current thread-provider path. A later extraction under the AI SDK chat provider and above the thread provider remains the longer-term target.
 - **Source contract**: Message sources remain React-hook-based in v1 and continue to output ordered `UIMessage[]` layers.
 - **Merge boundary**: Source collection and layer merging stay outside the reactive store.
 - **Store role**: The reactive store holds only the canonical merged active-message projection used for rendering.
@@ -17,7 +17,8 @@ Durable decisions that apply across all phases:
 - **Virtualization**: The list consumes ordered message ids. Virtualizer classification uses non-reactive reads for immutable item facts such as role.
 - **Message invariants**: Message role is immutable after creation.
 - **Part invariants**: Part type is immutable. Parts are append-only, never removed, never reordered, and only the tail part may mutate.
-- **Metadata semantics**: Metadata remains one coarse slice. `metadata.debug` is ignored only when explicit debug mode is off.
+- **Metadata semantics**: Full upstream metadata remains one coarse slice. `metadata.debug` is ignored only when explicit debug mode is off.
+- **Parts semantics**: Full upstream parts remain one coarse slice in the reactive store during phase 1. Whole-array replacement on updates is acceptable.
 - **Core state scope**: Core state stores only order and per-message slices. Conversation-level derived facts stay outside core.
 - **Action reads**: Message-dependent actions read current message state non-reactively at execution time.
 - **Validation**: Dev-only validation checks both canonical projection invariants and diff ops, and throws on broken core invariants.
@@ -35,7 +36,7 @@ Build the first end-to-end path where cold message sources can produce a canonic
 
 ### Acceptance criteria
 
-- [ ] A session-scoped message store is created and owned by a dedicated provider at the agreed provider boundary.
+- [ ] A session-scoped message store is created and owned by a dedicated provider at the current phase-1 integration boundary.
 - [ ] The store can be synchronously seeded from the first available cold canonical projection during initial render.
 - [ ] The conversation list renders from ordered message ids rather than a full ordered message array from core.
 - [ ] Rows can branch by immutable role using primitive reads while virtualizer item typing can use non-reactive role access.
@@ -74,7 +75,7 @@ Wire the direct live HTTP streaming source into the same projector/store pipelin
 - [ ] Live HTTP stream updates flow into the same canonical merge and projector path as cold sources.
 - [ ] Part reconciliation respects append-only and tail-only mutation semantics.
 - [ ] Content consumers can subscribe narrowly enough that metadata changes do not force markdown-heavy rerenders.
-- [ ] Text/reasoning filtering can be built through generic selector mechanisms without introducing special-purpose core APIs.
+- [ ] Text/reasoning filtering can be built later in L3 on top of the coarse full parts slice without changing the core store API.
 - [ ] Projector writes are applied in immediate batches after render, without introducing a second defer/throttle layer.
 
 ---

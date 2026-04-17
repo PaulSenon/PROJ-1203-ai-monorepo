@@ -1,7 +1,11 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
 import { type ComponentProps, memo } from "react";
-import { ChatMessageAssistant } from "./message-assistant";
-import { ChatMessageUser } from "./message-user";
+import { useMessageRole } from "@/hooks/use-message-store";
+import {
+  ChatMessageAssistant,
+  ChatMessageAssistantStoreItem,
+} from "./message-assistant";
+import { ChatMessageUser, ChatMessageUserStoreItem } from "./message-user";
 
 export type ChatMessageProps = ComponentProps<"div"> & {
   message: MyUIMessage;
@@ -44,3 +48,44 @@ export const ChatMessage = memo(function _ChatMessage({
 
   return null;
 });
+
+export type ChatMessageStoreItemProps = Omit<ChatMessageProps, "message"> & {
+  messageId: string;
+};
+
+export function ChatMessageStoreItem({
+  messageId,
+  reasoningPreviewLines,
+  consolidate,
+  enableCodeHighlighting,
+  ...props
+}: ChatMessageStoreItemProps) {
+  const role = useMessageRole(messageId);
+
+  if (role === "user") {
+    return (
+      <ChatMessageUserStoreItem
+        consolidate={consolidate}
+        data-msg-id={messageId}
+        enableCodeHighlighting={enableCodeHighlighting}
+        messageId={messageId}
+        {...props}
+      />
+    );
+  }
+
+  if (role === "assistant") {
+    return (
+      <ChatMessageAssistantStoreItem
+        consolidate={consolidate}
+        data-msg-id={messageId}
+        enableCodeHighlighting={enableCodeHighlighting}
+        messageId={messageId}
+        reasoningPreviewLines={reasoningPreviewLines}
+        {...props}
+      />
+    );
+  }
+
+  return null;
+}

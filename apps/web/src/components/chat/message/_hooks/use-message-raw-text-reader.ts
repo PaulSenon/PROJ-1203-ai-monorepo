@@ -1,5 +1,6 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
+import { useMessagesStoreApi } from "@/hooks/use-message-store";
 
 type MessagePart = MyUIMessage["parts"][number];
 
@@ -23,13 +24,12 @@ export function extractRawTextFromMessageParts(
   return textParts.join("\n\n");
 }
 
-export function useMessageRawTextReader(parts: MyUIMessage["parts"]) {
-  const partsRef = useRef(parts);
-  partsRef.current = parts;
+export function useMessageRawTextReader(messageId: string) {
+  const { peekMessageParts } = useMessagesStoreApi();
 
   const readRawText = useCallback(
-    () => extractRawTextFromMessageParts(partsRef.current),
-    []
+    () => extractRawTextFromMessageParts(peekMessageParts(messageId) ?? []),
+    [messageId, peekMessageParts]
   );
 
   return readRawText;

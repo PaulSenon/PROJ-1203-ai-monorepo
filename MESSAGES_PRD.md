@@ -14,11 +14,11 @@ Introduce a session-scoped, Legend-State-backed reactive message entity layer th
 
 All sources continue to produce arrays of full `UIMessage`/`MyUIMessage` values. A pure TypeScript layering engine merges ordered source layers into one canonical active-message projection. That merged projection is normalized into a diff-friendly shape and compared against the previous canonical projection. A pure TypeScript projector/diff engine emits only the minimal message-store write operations required to update the reactive store while preserving identity for unchanged slices.
 
-The new reactive store is scoped to the chat session lifecycle and holds only the canonical active message entity state required for rendering: ordered message ids, immutable message role, coarse metadata, and ordered parts. The store does not own source layering semantics, pending/loading/stale query state, or user actions. It is single-writer only: the projector/reconciler is the only code allowed to mutate it.
+The new reactive store is scoped to the chat session lifecycle and holds only the canonical active message entity state required for rendering: ordered message ids, immutable message role, a coarse full metadata leaf, and a coarse full parts leaf. The store does not own source layering semantics, pending/loading/stale query state, or user actions. It is single-writer only: the projector/reconciler is the only code allowed to mutate it.
 
 The React bridge is hybrid. On first mount, the store must be seeded synchronously from the first available canonical projection when possible, with a cache-only seed allowed as a fallback if full canonical seeding is too complex for v1. After bootstrap, updates are applied through an effect-driven projector path that batches writes immediately. This avoids an empty first paint for cached stale data while preserving a clean update model.
 
-UI consumption becomes ids-first and slice-first. The list consumes ordered message ids. Rows branch by immutable role. Content, footer, and status consumers subscribe to only the slices they need through primitive read hooks and Legend-native selector mechanisms. Virtualizer plumbing uses non-reactive reads such as `peek()` for immutable classification like message role. Domain-specific hooks may be built on top later, but the core API may expose Legend-State mechanisms directly.
+UI consumption becomes ids-first and slice-first. The list consumes ordered message ids. Rows branch by immutable role. Content, footer, and status consumers subscribe to only the slices they need through explicit primitive read hooks. Virtualizer plumbing uses non-reactive reads such as `peek()` for immutable classification like message role. Domain-specific hooks may be built on top later, but the core store API stays minimal and explicit.
 
 This solution keeps the source contract simple, isolates most complexity in pure TypeScript deep modules, preserves current message semantics, and directly targets the remaining frontend performance problems: non-granular updates and same-ish message reference churn.
 
@@ -65,7 +65,7 @@ This solution keeps the source contract simple, isolates most complexity in pure
 39. As a frontend engineer, I want the `ActiveThreadProvider` to focus on thread concerns instead of message merge concerns, so that provider boundaries become clearer.
 40. As a frontend engineer, I want message-dependent actions to perform non-reactive store reads at execution time, so that actions see fresh data without creating render subscriptions.
 41. As a frontend engineer, I want a dedicated order primitive in the read API, so that message order remains explicit and performance-sensitive code stays standardized.
-42. As a frontend engineer, I want a generic Legend-native message selector primitive, so that L3 hooks can subscribe narrowly where needed.
+42. As a frontend engineer, I want L3 hooks to derive narrower filtered reads on top of coarse full-slice primitives, so that the core store API can remain explicit and stable.
 43. As a frontend engineer, I want pure TypeScript invariant validation around canonical projections and diff ops, so that projector bugs are detected before they leak into UX.
 44. As a frontend engineer, I want most tests to target pure TypeScript behavior rather than React component internals, so that tests remain durable and valuable.
 45. As a frontend engineer, I want the architecture to remain compatible with future seeding improvements or future non-React source reactivity, so that v1 does not trap the system in a dead-end.
@@ -89,9 +89,10 @@ This solution keeps the source contract simple, isolates most complexity in pure
 - Scope the store to the chat session lifetime.
 - If a session is intentionally kept alive while hidden, its store may remain alive by design.
 - If the owning session scope unmounts, the store should be freed naturally.
-- Place the new messages store provider under the AI SDK chat provider and above the thread provider.
-- Remove message derivation responsibilities from the thread provider.
-- Keep the thread provider focused on thread-level state and actions.
+- Phase 1 may host the messages store provider inside the current thread-provider path as a transitional integration point.
+- Longer-term provider extraction under the AI SDK chat provider and above the thread provider remains desirable, but is not required to complete phase 1.
+- Reduce message derivation responsibilities exposed by the thread provider where practical in phase 1, but allow internal transitional ownership to remain until later slices remove it fully.
+- Keep the thread provider focused on thread-level state and actions as the longer-term direction.
 - Allow thread-level actions such as regenerate to read current messages via non-reactive store access at execution time.
 - Preserve a single writer to the message store.
 - Expose read hooks and non-reactive peek/store helpers from the store layer, but no public mutation actions.
@@ -106,25 +107,24 @@ This solution keeps the source contract simple, isolates most complexity in pure
 - Keep only message order and per-message slices in core store state.
 - Do not cache conversation-level derived facts such as last assistant or last streaming message in core store state.
 - Keep pending/loading/stale query flags outside the message store.
-- Preserve `metadata` as one coarse semantic slice.
+- Preserve full upstream `metadata` as one coarse semantic slice.
 - Keep `timing`, `usage`, and `debug` inside metadata semantically.
 - Do not split metadata into more reactive sub-objects in v1.
 - Ignore only `metadata.debug` when comparing metadata while explicit debug mode is off.
 - Include debug in metadata comparison when debug mode is on.
 - Treat message role as immutable after message creation.
 - Treat part type as immutable.
-- Enforce the canonical parts invariant: parts are append-only, never removed, never reordered, and only the tail part may mutate.
-- Treat middle-part mutation, removal, or reorder as a developer bug.
-- Because parts follow append-only/tail-only rules, internal keyed part maps are not required in v1.
-- Reconcile parts by ordered index with append and tail-update semantics.
+- Preserve full upstream `parts` semantics at the source/canonical level.
+- Store `parts` as one coarse reactive leaf slice in v1.
+- Full parts-array replacement on updates is acceptable in v1.
 - Preserve per-message identity for unchanged messages even when message order changes elsewhere.
 - Keep a dedicated `useMessageIds()` primitive in the core read API.
-- Core read API should include at least primitives for message ids, message role, message metadata, message parts, and non-reactive role peeking for virtualizer use.
-- Add a generic Legend-native `useMessageSelector(messageId, selector)` primitive for narrower subscriptions.
-- Allow core selector APIs to expose Legend-State mechanisms directly.
-- Domain-specific hooks may be added in feature code on top of these primitives later, but are not a required abstraction boundary for v1.
+- Core read API should include explicit primitives for message ids, message role, message metadata, message parts, and specific non-reactive peek helpers for role/parts/metadata.
+- Do not keep a generic selector primitive in the core API.
+- Domain-specific hooks may be added in feature code on top of these primitives later, including filtered parts hooks.
 - Keep older paginated message history in the same message store path as recent messages in v1.
 - Use non-reactive reads such as `peek()` for virtualizer item typing and for action execution-time reads.
+- Allow loose internal store typing for parts if needed to keep Legend-State typechecking tractable, but keep that looseness fully internal to the store boundary.
 - Add a dev-only validator layer around canonical projections and diff ops.
 - Keep validation logic separate from the core reconciler implementation rather than polluting core logic.
 - Validate both the next canonical projection invariants and the produced diff operations.
@@ -164,7 +164,7 @@ This solution keeps the source contract simple, isolates most complexity in pure
 - Adding a second colder internal storage tier for older paginated history.
 - Adding soft-retention or transition lifecycles for removed messages.
 - Adding specialized invariant-aware selector helpers before profiling proves they are needed.
-- Building a broad abstraction layer to hide Legend-State from core selector APIs.
+- Building a broad abstraction layer to hide Legend-State from core store internals.
 - Heavy direct testing of React components.
 - Immediate full migration of every existing consumer to domain-shaped hooks.
 - Any GitHub issue creation or issue workflow automation for this PRD.

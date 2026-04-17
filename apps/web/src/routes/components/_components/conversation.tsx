@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ScrollToBottomProvider } from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
+import { MessagesStoreProvider } from "@/hooks/use-message-store";
 
 export const Route = createFileRoute("/components/_components/conversation")({
   component: RouteComponent,
@@ -314,14 +315,16 @@ function RouteComponent() {
               ref={previewScrollRef}
             >
               <ScrollToBottomProvider containerRef={previewScrollRef}>
-                <ChatConversationLayout
-                  isPending={false}
-                  isThreadSettled={isThreadSettled}
-                  key={`${threadUuid}:${layoutRemountKey}`}
-                  messages={messages}
-                  pendingAutoScrollMessageId={undefined}
-                  threadUuid="123"
-                />
+                <MessagesStoreProvider messages={messages}>
+                  <ChatConversationLayout
+                    isPending={false}
+                    isThreadSettled={isThreadSettled}
+                    key={`${threadUuid}:${layoutRemountKey}`}
+                    messageIds={messages.map((message) => message.id)}
+                    pendingAutoScrollMessageId={undefined}
+                    threadUuid="123"
+                  />
+                </MessagesStoreProvider>
               </ScrollToBottomProvider>
             </div>
           </CardContent>

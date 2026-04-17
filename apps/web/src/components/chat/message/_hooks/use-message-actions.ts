@@ -2,11 +2,11 @@ import { useCallback } from "react";
 import { useSaveToClipboard } from "@/hooks/utils/uas-save-to-clipboard";
 import type { MessageFooterActionPayload } from "../_parts/footer/footer.types";
 import type { StatusActionPayload } from "../_parts/status/_parts/status-actions";
+import { useMessageRawTextReader } from "./use-message-raw-text-reader";
 
 export type UseMessageActionsParams = {
   messageId: string;
   role: "assistant" | "user";
-  readRawText: () => string;
   onRetry?: (modelId?: string) => void;
   onContinue?: () => void;
   onEditRetry?: (text: string) => void;
@@ -15,12 +15,12 @@ export type UseMessageActionsParams = {
 export function useMessageActions({
   messageId,
   role,
-  readRawText,
   onRetry,
   onContinue,
   onEditRetry,
 }: UseMessageActionsParams) {
   const saveToClipboard = useSaveToClipboard();
+  const readRawText = useMessageRawTextReader(messageId);
 
   const handleRetry = useCallback(
     (modelId?: string) => {
@@ -85,8 +85,8 @@ export function useMessageActions({
       handleEditRetry,
       handleRetry,
       messageId,
-      readRawText,
       role,
+      readRawText,
       saveToClipboard,
     ]
   );

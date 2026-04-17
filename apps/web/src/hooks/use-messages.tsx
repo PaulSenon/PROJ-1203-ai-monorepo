@@ -1,6 +1,5 @@
 import { createUiMessageFromChunks } from "@ai-monorepo/ai/libs/createUiMessageFromChunks";
 import type {
-  MessageDataSource,
   MyUIMessage,
   MyUIMessageChunk,
   MyUIMessageMetadata,
@@ -10,6 +9,11 @@ import dedent from "dedent";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cvx } from "@/lib/convex/queries";
 import {
+  compareMessages,
+  mergeMessageLayers,
+  normalizeMessages,
+} from "@/lib/messages/messages-core";
+import {
   useAiSdkChatMessages,
   useAiSdkChatState,
 } from "./chat/use-ai-sdk-chat";
@@ -18,122 +22,8 @@ import { useCvxPaginatedQueryStable } from "./queries/convex/utils/use-convex-qu
 import { useUserCacheEntryOnce } from "./use-user-cache";
 import { useFpsThrottledValue } from "./utils/use-fps-throttled-state";
 
-// NormalizedMessages must be oldest -> newest for merge perf.
-declare const normalizedMessagesBrand: unique symbol;
-type NormalizedMessages = MyUIMessage[] & {
-  readonly [normalizedMessagesBrand]: true;
-};
-
-type NormalizeOptions = {
-  reverse?: boolean;
-  debugLabel?: string;
-};
-
-const emptyNormalizedMessages: NormalizedMessages =
-  [] as unknown as NormalizedMessages;
-
-function normalizeMessages(
-  messages: MyUIMessage[] | undefined,
-  options: NormalizeOptions = {}
-): NormalizedMessages {
-  if (!messages || messages.length === 0) return emptyNormalizedMessages;
-  const normalized = options.reverse ? [...messages].reverse() : messages;
-  warnIfNotNormalized(normalized, options.debugLabel);
-  return normalized as NormalizedMessages;
-}
-
-function warnIfNotNormalized(messages: MyUIMessage[], label?: string) {
-  if (!import.meta.env.DEV) return;
-  if (!label) return;
-  if (messages.length < 2) return;
-
-  const sampleCount = Math.min(messages.length - 1, 3);
-  for (let i = 0; i < sampleCount; i++) {
-    const prev = messages[i];
-    const next = messages[i + 1];
-    if (!(prev && next)) continue;
-    if ((prev.metadata?.createdAt ?? 0) > (next.metadata?.createdAt ?? 0)) {
-      console.warn(
-        `[useMessagesV2] ${label} not normalized (oldest -> newest).`
-      );
-      return;
-    }
-  }
-}
-
 function isOngoingLiveStatus(liveStatus: MyUIMessageMetadata["liveStatus"]) {
   return liveStatus === "pending" || liveStatus === "streaming";
-}
-
-type MessageLayer = {
-  messages: NormalizedMessages;
-  dataSource?: MessageDataSource;
-};
-
-type MergeOptions = {
-  sort?: boolean;
-};
-
-function mergeMessageLayers(
-  layers: MessageLayer[],
-  options: MergeOptions = {}
-): MyUIMessage[] {
-  if (layers.length === 0) return [];
-
-  const [baseLayer, ...rest] = layers;
-  const baseMessages = baseLayer?.messages ?? emptyNormalizedMessages;
-  const list: MyUIMessage[] = baseLayer?.dataSource
-    ? baseMessages.map((msg) => withDataSource(msg, baseLayer.dataSource))
-    : [...baseMessages];
-  const indexMap = new Map<string, number>();
-
-  for (let i = 0; i < list.length; i++) {
-    const msg = list[i];
-    if (!msg) continue;
-    indexMap.set(msg.id, i);
-  }
-
-  for (const layer of rest) {
-    if (layer.messages.length === 0) continue;
-    for (const msg of layer.messages) {
-      const nextMsg = layer.dataSource
-        ? withDataSource(msg, layer.dataSource)
-        : msg;
-      const existingIndex = indexMap.get(nextMsg.id);
-      if (existingIndex !== undefined) {
-        list[existingIndex] = nextMsg;
-        continue;
-      }
-      const newIndex = list.push(nextMsg) - 1;
-      indexMap.set(nextMsg.id, newIndex);
-    }
-  }
-
-  const filtered = list.filter(
-    (msg) =>
-      msg.metadata?.lifecycleState !== "deleted" &&
-      msg.metadata?.lifecycleState !== "archived"
-  );
-
-  if (options.sort === false || filtered.length <= 1) return filtered;
-  return filtered.sort(compareMessages);
-}
-
-function withDataSource(message: MyUIMessage, dataSource?: MessageDataSource) {
-  if (!dataSource) return message;
-  const currentDataSource = message.metadata?.debug?.dataSource;
-  if (currentDataSource === dataSource) return message;
-
-  return {
-    ...message,
-    metadata: {
-      ...message.metadata,
-      debug: {
-        ...message.metadata?.debug,
-        dataSource,
-      } satisfies MyUIMessageMetadata["debug"],
-    } as MyUIMessageMetadata,
-  } satisfies MyUIMessage;
 }
 
 type UseMessagesParams = {
@@ -542,12 +432,5 @@ export function useMessages({
       applyOptimisticPatch,
       revertOptimisticPatch,
     ]
-  );
-}
-
-function compareMessages(a: MyUIMessage, b: MyUIMessage) {
-  return (
-    (a.metadata?.createdAt ?? Date.now()) -
-    (b.metadata?.createdAt ?? Date.now())
   );
 }
