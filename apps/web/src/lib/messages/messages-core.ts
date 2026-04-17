@@ -161,6 +161,19 @@ export function diffCanonicalMessages(
       continue;
     }
 
+    const sourceMode = getSourceMode(nextMessage.metadata);
+
+    if (sourceMode === "hot") {
+      if (shouldUpdateHotParts(prevMessage.parts, nextMessage.parts)) {
+        ops.push({ type: "setMessageParts", id, parts: nextMessage.parts });
+      }
+      continue;
+    }
+
+    if (!isNewerColdSnapshot(prevMessage.metadata, nextMessage.metadata)) {
+      continue;
+    }
+
     if (
       !areMetadataEqual(prevMessage.metadata, nextMessage.metadata, options)
     ) {
@@ -171,7 +184,7 @@ export function diffCanonicalMessages(
       });
     }
 
-    if (!isDeepEqual(prevMessage.parts, nextMessage.parts)) {
+    if (shouldUpdateColdParts(prevMessage.parts, nextMessage.parts)) {
       ops.push({ type: "setMessageParts", id, parts: nextMessage.parts });
     }
   }
@@ -186,6 +199,49 @@ export function diffCanonicalMessages(
   }
 
   return ops;
+}
+
+function getSourceMode(metadata: MyUIMessageMetadata | undefined) {
+  const dataSource = metadata?.debug?.dataSource;
+  if (dataSource === "http-stream" || dataSource === "convex-stream") {
+    return "hot" as const;
+  }
+
+  return "cold" as const;
+}
+
+function isNewerColdSnapshot(
+  previous: MyUIMessageMetadata | undefined,
+  next: MyUIMessageMetadata | undefined
+) {
+  return (next?.updatedAt ?? 0) > (previous?.updatedAt ?? 0);
+}
+
+function shouldUpdateColdParts(
+  previous: MyUIMessage["parts"],
+  next: MyUIMessage["parts"]
+) {
+  return !isDeepEqual(previous, next);
+}
+
+function shouldUpdateHotParts(
+  previous: MyUIMessage["parts"],
+  next: MyUIMessage["parts"]
+) {
+  if (previous === next) return false;
+
+  const previousLength = previous.length;
+  const nextLength = next.length;
+
+  if (previousLength !== nextLength) {
+    return true;
+  }
+
+  if (previousLength === 0) {
+    return false;
+  }
+
+  return !isDeepEqual(previous[previousLength - 1], next[nextLength - 1]);
 }
 
 export function compareMessages(a: MyUIMessage, b: MyUIMessage) {

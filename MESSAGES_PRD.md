@@ -131,6 +131,13 @@ This solution keeps the source contract simple, isolates most complexity in pure
 - Keep validation logic separate from the core reconciler implementation rather than polluting core logic.
 - Validate both the next canonical projection invariants and the produced diff operations.
 - Throw in development when core invariants are broken.
+- Source-aware diff semantics should distinguish cold and hot sources:
+  - cold updates require freshness via `updatedAt`
+  - hot updates ignore metadata churn
+  - hot part updates honor append/tail-only semantics
+- Resumed stream reconstruction should be isolated behind a pure adapter layer where possible, while preserving the existing Convex chunk query behavior and continuing to output normal `MyUIMessage[]` values.
+- Optimistic overlays should remain source-layer inputs to the canonical merge rather than introducing a second store-writer path.
+- Thread-level actions that need current messages should read them via specific non-reactive store peek helpers at execution time instead of depending on render-time `messages` arrays.
 
 ## Testing Decisions
 
@@ -140,6 +147,7 @@ This solution keeps the source contract simple, isolates most complexity in pure
 - Strong unit tests should cover the canonical normalizer.
 - Strong unit tests should cover the projector/diff engine.
 - Strong unit tests should cover the dev validator behavior.
+- Strong unit tests should cover resumed reconstruction and regenerate selection helpers.
 - Tests should prove that unchanged messages preserve identity through diffs.
 - Tests should prove that metadata-only changes do not emit part updates.
 - Tests should prove that part tail updates do not rewrite earlier parts.
@@ -149,6 +157,7 @@ This solution keeps the source contract simple, isolates most complexity in pure
 - Tests should prove metadata debug comparison policy, including ignoring debug only when debug mode is off.
 - Tests should prove that invalid canonical inputs or invalid diff outputs throw in development.
 - Add one lightweight reactive integration test around the store/provider boundary to verify that intended slices update without broad unnecessary churn.
+- A single jsdom-based React integration test is acceptable for this reactive boundary proof; broader UI testing remains out of scope.
 - Do not invest heavily in direct React component tests for this PRD unless a component boundary proves unusually risky.
 - Good tests in this area should validate visible behavior and store/public contracts rather than internal implementation structure.
 

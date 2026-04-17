@@ -14,6 +14,12 @@ import {
   normalizeMessages,
 } from "@/lib/messages/messages-core";
 import {
+  canBuildResumedStreamedMessage,
+  type ResumedStreamedMessageState,
+  reconstructResumedStreamedMessage,
+  selectResumedMessages,
+} from "@/lib/messages/messages-resumed";
+import {
   useAiSdkChatMessages,
   useAiSdkChatState,
 } from "./chat/use-ai-sdk-chat";
@@ -128,17 +134,15 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
     }
   );
 
-  type StreamedMessageState = {
-    streamId: Id<"threadStreams">;
-    message: MyUIMessage;
-  };
-
-  const [streamed, setStreamed] = useState<StreamedMessageState | null>(null);
-  const canBuildMessage =
-    !isSkip &&
-    stream.streamId !== null &&
-    throttledMessageChunks !== undefined &&
-    throttledMessageChunks.length > 0;
+  const [streamed, setStreamed] = useState<ResumedStreamedMessageState<
+    Id<"threadStreams">,
+    MyUIMessage
+  > | null>(null);
+  const canBuildMessage = canBuildResumedStreamedMessage({
+    isSkip,
+    streamId: stream.streamId,
+    throttledMessageChunks,
+  });
 
   useEffect(() => {
     if (!canBuildMessage) {
@@ -156,11 +160,16 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
     let cancelled = false;
 
     (async () => {
-      const message = await createUiMessageFromChunks<MyUIMessage>(chunks);
-      if (!message) return;
+      const nextStreamed = await reconstructResumedStreamedMessage({
+        streamId: streamIdAtStart,
+        throttledMessageChunks: chunks,
+        buildMessage: (nextChunks) =>
+          createUiMessageFromChunks<MyUIMessage>(nextChunks),
+      });
+      if (!nextStreamed) return;
       if (cancelled) return;
       if (stream.streamId !== streamIdAtStart) return;
-      setStreamed({ streamId: streamIdAtStart, message });
+      setStreamed(nextStreamed);
     })();
 
     return () => {
@@ -168,21 +177,15 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
     };
   }, [canBuildMessage, stream.streamId, throttledMessageChunks]);
 
-  const activeStreamedMessage =
-    streamed?.streamId === stream.streamId ? streamed.message : undefined;
-
   return useMemo(
-    () => ({
-      messages:
-        stream.isPending || activeStreamedMessage === undefined || isSkip
-          ? []
-          : [activeStreamedMessage],
-      isPending: isSkip
-        ? false
-        : stream.streamId !== null &&
-          (stream.isPending || activeStreamedMessage === undefined),
-    }),
-    [stream.isPending, activeStreamedMessage, isSkip, stream.streamId]
+    () =>
+      selectResumedMessages({
+        isSkip,
+        streamId: stream.streamId,
+        streamIsPending: stream.isPending,
+        streamed,
+      }),
+    [isSkip, stream.streamId, stream.isPending, streamed]
   );
 }
 

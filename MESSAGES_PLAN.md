@@ -80,6 +80,12 @@ Wire the direct live HTTP streaming source into the same projector/store pipelin
 - [ ] Text/reasoning filtering can be built later in L3 on top of the coarse full parts slice without changing the core store API.
 - [ ] Projector writes are applied in immediate batches after render, without introducing a second defer/throttle layer.
 
+Current phase 3 progress notes:
+
+- Source-aware cold/hot diff semantics are implemented in the pure TS diff engine.
+- Dev-only invariant validation is implemented and wired into the provider.
+- Remaining phase 3 work should focus on broader hot-path integration confidence and any further streaming-specific behavior needed beyond the current reconciler semantics.
+
 ---
 
 ## Phase 4: Resumed Stream Path
@@ -92,11 +98,18 @@ Adapt the resumed streaming path so it continues to reconstruct normal `UIMessag
 
 ### Acceptance criteria
 
-- [ ] The resumed stream source still exposes normal ordered `UIMessage[]` output.
-- [ ] The resumed path feeds the same layering engine and projector path as the cold and HTTP stream paths.
-- [ ] Tail streaming updates in resumed mode obey the same append-only/tail-only invariants.
-- [ ] No separate message rendering contract is introduced for resumed streaming.
-- [ ] The resumed path is covered by pure TypeScript tests at the merge/projector level.
+- [x] The resumed stream source still exposes normal ordered `UIMessage[]` output.
+- [x] The resumed path feeds the same layering engine and projector path as the cold and HTTP stream paths.
+- [x] Tail streaming updates in resumed mode obey the same append-only/tail-only invariants.
+- [x] No separate message rendering contract is introduced for resumed streaming.
+- [x] The resumed path is covered by pure TypeScript tests at the merge/projector level.
+
+Current phase 4 progress notes:
+
+- Resumed reconstruction is extracted into a pure adapter module and the hook now acts as a thin bridge.
+- The current Convex chunk query/cursor behavior is preserved.
+- Resumed output still uses the same `MyUIMessage[]` contract and the same merge/project/store/render path.
+- Pure TS tests cover resumed adapter behavior and resumed-source hot diff semantics.
 
 ---
 
@@ -110,11 +123,18 @@ Bring optimistic overlays and message-dependent thread actions into the new arch
 
 ### Acceptance criteria
 
-- [ ] Optimistic message overlays participate in the same ordered layer merge as other sources.
-- [ ] Optimistic-to-persisted transitions reconcile through the projector/store path without broad node churn.
-- [ ] Thread-level actions can read current message state via non-reactive store access at execution time.
-- [ ] The thread provider no longer owns message merge/projection responsibilities.
-- [ ] The store remains single-writer despite optimistic and action-driven flows.
+- [x] Optimistic message overlays participate in the same ordered layer merge as other sources.
+- [x] Optimistic-to-persisted transitions reconcile through the projector/store path without broad node churn.
+- [x] Thread-level actions can read current message state via non-reactive store access at execution time.
+- [x] The thread provider no longer owns message merge/projection responsibilities.
+- [x] The store remains single-writer despite optimistic and action-driven flows.
+
+Current phase 5 progress notes:
+
+- `useMessages` and `MessagesStoreProvider` are now owned by a dedicated message-pipeline provider instead of `ActiveThreadProvider` directly.
+- `ActiveThreadProvider` now consumes pipeline outputs and store peeks rather than owning message merge/projection.
+- Regenerate selection is extracted into a pure helper and thread-level regenerate now traverses current store state via specific non-reactive peek helpers.
+- Pure tests cover regenerate selection logic and optimistic-to-persisted node identity preservation.
 
 ---
 
@@ -128,8 +148,15 @@ Finalize the architecture by adding explicit dev-only invariant validation and l
 
 ### Acceptance criteria
 
-- [ ] Dev-only validation checks both canonical projection invariants and projector diff ops.
-- [ ] Broken core invariants throw in development.
-- [ ] The strongest automated coverage targets the pure TypeScript core modules: layering, normalization, diff/projector behavior, and validation.
-- [ ] A lightweight reactive integration test proves that intended slices update through the store boundary without broad unnecessary churn.
-- [ ] Legacy message ownership responsibilities are removed from the thread-level provider path.
+- [x] Dev-only validation checks both canonical projection invariants and projector diff ops.
+- [x] Broken core invariants throw in development.
+- [x] The strongest automated coverage targets the pure TypeScript core modules: layering, normalization, diff/projector behavior, and validation.
+- [x] A lightweight reactive integration test proves that intended slices update through the store boundary without broad unnecessary churn.
+- [x] Legacy message ownership responsibilities are removed from the thread-level provider path.
+
+Current phase 6 progress notes:
+
+- Dev-only canonical and diff-op validation is implemented and wired into the provider.
+- Pure TS coverage now spans merge, normalization, diff/projector behavior, validation, resumed reconstruction, regenerate selection, and store identity behavior.
+- A single jsdom-based reactive integration test proves that metadata-only updates do not rerender parts subscribers and parts-only hot updates do not rerender metadata subscribers.
+- Message merge/projection ownership is out of `ActiveThreadProvider`; it now consumes a dedicated message-pipeline provider.

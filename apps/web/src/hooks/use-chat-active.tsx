@@ -17,6 +17,7 @@ import {
 } from "react";
 import { useChatSessionScope } from "@/components/providers/4-chat-session-scope";
 import { cvx } from "@/lib/convex/queries";
+import { createRegeneratePlan } from "@/lib/messages/messages-regenerate";
 import type { MaybePromise } from "@/lib/utils";
 import {
   useAiSdkChatActions,
@@ -27,8 +28,11 @@ import { useChatNavActions } from "./chat/use-chat-nav";
 import { useCvxMutationAuthV3 } from "./queries/convex/utils/use-convex-mutation-0-auth";
 import { useThread } from "./queries/use-chat-active-queries";
 import { useChatInputActions } from "./use-chat-input";
-import { MessagesStoreProvider } from "./use-message-store";
-import { useMessages } from "./use-messages";
+import {
+  MessagePipelineProvider,
+  useMessagePipeline,
+} from "./use-message-pipeline";
+import { useMessagesStoreApi } from "./use-message-store";
 import { getLiveStatusKind, useStreamOwnership } from "./use-stream-ownership";
 
 type ActiveThreadState = {
@@ -70,9 +74,9 @@ type ActiveThreadMessagesType = Pick<
   ActiveThreadState,
   "isDataPending" | "isDataStale"
 > & {
-  isLoadingOlder: ReturnType<typeof useMessages>["isLoading"];
-  olderHistoryStatus: ReturnType<typeof useMessages>["paginatedStatus"];
-  loadOlder: ReturnType<typeof useMessages>["loadMore"];
+  isLoadingOlder: ReturnType<typeof useMessagePipeline>["isLoading"];
+  olderHistoryStatus: ReturnType<typeof useMessagePipeline>["paginatedStatus"];
+  loadOlder: ReturnType<typeof useMessagePipeline>["loadMore"];
 };
 const ActiveTheadMessagesContext =
   createContext<ActiveThreadMessagesType | null>(null);
@@ -135,8 +139,6 @@ type ActiveThreadStatus =
   | "cancelled";
 
 export function ActiveThreadProvider({ children }: { children: ReactNode }) {
-  const inputActions = useChatInputActions();
-  const chatNavAction = useChatNavActions();
   const scope = useChatSessionScope();
   const isSkip = scope.isNew;
 
@@ -146,19 +148,54 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     isStale: isThreadQueryStale,
   } = useThread(isSkip ? "skip" : scope.sessionId);
 
-  // TODO start: from here to "TODO end" should move this in a separate hook/function for readability
-  const { isLocalOwned, markOwned, clearOwnership } = useStreamOwnership({
+  const streamOwnership = useStreamOwnership({
     threadUuid: isSkip ? "skip" : scope.sessionId,
     liveStatus: thread?.liveStatus,
     isThreadQueryPending,
   });
-  // NB: This is normal to use thread.liveStatus here and not streamStatus aggregate
+  const { isLocalOwned } = streamOwnership;
   const liveStatusKind = getLiveStatusKind(thread?.liveStatus);
   const resumeStreamEnabled =
     !(isSkip || isThreadQueryPending || isLocalOwned) &&
     liveStatusKind === "ongoing";
-  // TODO end
 
+  return (
+    <MessagePipelineProvider
+      resumeStreamEnabled={resumeStreamEnabled}
+      threadUuid={isSkip ? "skip" : scope.sessionId}
+    >
+      <ActiveThreadProviderInner
+        clearOwnership={streamOwnership.clearOwnership}
+        isThreadQueryPending={isThreadQueryPending}
+        isThreadQueryStale={isThreadQueryStale}
+        markOwned={streamOwnership.markOwned}
+        thread={thread}
+      >
+        {children}
+      </ActiveThreadProviderInner>
+    </MessagePipelineProvider>
+  );
+}
+
+function ActiveThreadProviderInner({
+  children,
+  thread,
+  markOwned,
+  clearOwnership,
+  isThreadQueryPending,
+  isThreadQueryStale,
+}: {
+  children: ReactNode;
+  thread: ReturnType<typeof useThread>["data"];
+  markOwned: ReturnType<typeof useStreamOwnership>["markOwned"];
+  clearOwnership: ReturnType<typeof useStreamOwnership>["clearOwnership"];
+  isThreadQueryPending: boolean;
+  isThreadQueryStale: boolean;
+}) {
+  const inputActions = useChatInputActions();
+  const chatNavAction = useChatNavActions();
+  const scope = useChatSessionScope();
+  const isSkip = scope.isNew;
   const {
     messages,
     isPending: isMessagesQueryPending,
@@ -168,10 +205,13 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     paginatedStatus,
     applyOptimisticPatch,
     revertOptimisticPatch,
-  } = useMessages({
-    threadUuid: isSkip ? "skip" : scope.sessionId,
-    resumeStreamEnabled,
-  });
+  } = useMessagePipeline();
+  const {
+    peekMessageIds,
+    peekMessageMetadata,
+    peekMessageParts,
+    peekMessageRole,
+  } = useMessagesStoreApi();
 
   const upsertPromiseRef = useRef<Promise<unknown>>(Promise.resolve());
   const [messagesQueue, _setMessagesQueue] = useState<MyUIMessage[]>([]);
@@ -354,53 +394,55 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       });
       let patchId: string | undefined;
       try {
-        // [U1, A1, U2, A2, U3, A3, A4, U4, A5, U5] => messageId === A4
-        // => messageIndex === 6 (A4)
-        let messageIndex = messages.findIndex((m) => m.id === messageId);
-        while (
-          messageIndex > 0 &&
-          messages[messageIndex]?.role === "assistant"
-        ) {
-          // [U1, A1, U2, A2, U3, A3, A4, U4, A5, U5]
-          // => i === 6                ^
-          // [U1, A1, U2, A2, U3, A3, A4, U4, A5, U5]
-          // => i === 5            ^
-          // [U1, A1, U2, A2, U3, A3, A4, U4, A5, U5]
-          // => i === 4        ^
-          messageIndex--;
-        }
-        // => messageIndex === 4 (U3)
-        const firstUserMessageBeforeMessageToRegenerate = messageIndex;
-        const message = messages[firstUserMessageBeforeMessageToRegenerate];
-        // => message === U3
-        const messagesToRemovePatched = messages
-          .slice(firstUserMessageBeforeMessageToRegenerate + 1)
-          .map(
-            (m): MyUIMessage => ({
-              ...m,
-              metadata: {
-                ...(m.metadata as MyUIMessageMetadata),
-                lifecycleState: "deleted",
-              },
-            })
-          );
-        // => messagesToRemovePatched === [A3, A4, U4, A5, U5]
-        if (!message) {
+        const orderedIds = peekMessageIds();
+        const getMessage = (id: string): MyUIMessage | undefined => {
+          const role = peekMessageRole(id);
+          const metadata = peekMessageMetadata(id);
+          const parts = peekMessageParts(id);
+          if (!(role && parts)) return undefined;
+          return {
+            id,
+            role,
+            metadata,
+            parts,
+          };
+        };
+        const plan = createRegeneratePlan({
+          targetMessageId: messageId,
+          orderedIds,
+          getRole: peekMessageRole,
+          getMessage,
+        });
+
+        if (!plan) {
           console.error(
             "Cannot regenerate: message user message not found before",
             {
               messageId,
-              messages,
-              messageIndex,
+              orderedIds,
             }
           );
           return;
         }
+        const messagesToRemovePatched = plan.messagesToDelete
+          .map((id) => getMessage(id))
+          .filter((message): message is MyUIMessage => Boolean(message))
+          .map((message): MyUIMessage => {
+            const metadata: MyUIMessageMetadata = {
+              ...(message.metadata as MyUIMessageMetadata),
+              lifecycleState: "deleted",
+            };
+
+            return {
+              ...message,
+              metadata,
+            };
+          });
         patchId = applyOptimisticPatch(messagesToRemovePatched);
-        sdkSetMessages([message]);
+        sdkSetMessages([plan.anchorMessage]);
         markOwned();
         await sdkRegenerate({
-          messageId: message.id,
+          messageId: plan.anchorMessage.id,
           metadata: {
             selectedModelId: options?.selectedModelId,
           },
@@ -427,7 +469,10 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       sdkRegenerate,
       upsertThread,
       scope.sessionId,
-      messages,
+      peekMessageIds,
+      peekMessageMetadata,
+      peekMessageParts,
+      peekMessageRole,
       sdkSetMessages,
       applyOptimisticPatch,
       revertOptimisticPatch,
@@ -495,14 +540,12 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <MessagesStoreProvider messages={messages}>
-      <ActiveTheadActionsContext.Provider value={actions}>
-        <ActiveTheadStateContext.Provider value={state}>
-          <ActiveTheadMessagesContext.Provider value={messagesState}>
-            {children}
-          </ActiveTheadMessagesContext.Provider>
-        </ActiveTheadStateContext.Provider>
-      </ActiveTheadActionsContext.Provider>
-    </MessagesStoreProvider>
+    <ActiveTheadActionsContext.Provider value={actions}>
+      <ActiveTheadStateContext.Provider value={state}>
+        <ActiveTheadMessagesContext.Provider value={messagesState}>
+          {children}
+        </ActiveTheadMessagesContext.Provider>
+      </ActiveTheadStateContext.Provider>
+    </ActiveTheadActionsContext.Provider>
   );
 }

@@ -18,6 +18,10 @@ import {
   fromStoredParts,
   type MessagesStore,
 } from "@/lib/messages/messages-store";
+import {
+  validateCanonicalMessagesTransition,
+  validateMessageStoreOps,
+} from "@/lib/messages/messages-validator";
 
 const MessagesStoreContext = createContext<MessagesStore | null>(null);
 
@@ -46,9 +50,21 @@ export function MessagesStoreProvider({
     const store = storeRef.current;
     if (!store) return;
 
+    if (import.meta.env.DEV) {
+      validateCanonicalMessagesTransition(
+        previousCanonicalRef.current,
+        canonical
+      );
+    }
+
     const ops = diffCanonicalMessages(previousCanonicalRef.current, canonical, {
       debugMode,
     });
+
+    if (import.meta.env.DEV) {
+      validateMessageStoreOps(previousCanonicalRef.current, canonical, ops);
+    }
+
     previousCanonicalRef.current = canonical;
 
     if (ops.length === 0) return;
@@ -91,6 +107,9 @@ export function useMessagesStoreApi() {
 
   return useMemo(
     () => ({
+      peekMessageIds() {
+        return store.orderedIds$.peek();
+      },
       peekMessageRole(messageId: string) {
         return store.messagesById.get(messageId)?.role$.peek();
       },

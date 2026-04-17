@@ -1,6 +1,9 @@
 import { createOptimisticStepStartMessage } from "@ai-monorepo/ai/helpers";
 import { describe, expect, it, vi } from "vitest";
-import { normalizeCanonicalMessages } from "./messages-core";
+import {
+  diffCanonicalMessages,
+  normalizeCanonicalMessages,
+} from "./messages-core";
 import { applyMessageStoreOps, createMessagesStore } from "./messages-store";
 
 describe("createMessagesStore", () => {
@@ -199,5 +202,71 @@ describe("applyMessageStoreOps", () => {
     expect(store.orderedIds$.get()).toEqual(["2", "1"]);
     expect(store.messagesById.get("1")).toBe(firstNode);
     expect(store.messagesById.get("2")).toBe(secondNode);
+  });
+
+  it("preserves node identity through optimistic-to-persisted replacement for the same message id", () => {
+    const previous = normalizeCanonicalMessages([
+      {
+        id: "1",
+        role: "user",
+        metadata: {
+          createdAt: 100,
+          updatedAt: 100,
+          liveStatus: "completed",
+          lifecycleState: "active",
+        },
+        parts: [{ type: "text", text: "user" }],
+      },
+      {
+        id: "2",
+        role: "assistant",
+        metadata: {
+          createdAt: 200,
+          updatedAt: 200,
+          liveStatus: "pending",
+          lifecycleState: "active",
+          debug: { dataSource: "optimistic" },
+        },
+        parts: [{ type: "step-start" }],
+      },
+    ]);
+    const next = normalizeCanonicalMessages([
+      {
+        id: "1",
+        role: "user",
+        metadata: {
+          createdAt: 100,
+          updatedAt: 100,
+          liveStatus: "completed",
+          lifecycleState: "active",
+        },
+        parts: [{ type: "text", text: "user" }],
+      },
+      {
+        id: "2",
+        role: "assistant",
+        metadata: {
+          createdAt: 200,
+          updatedAt: 300,
+          liveStatus: "completed",
+          lifecycleState: "active",
+          debug: { dataSource: "convex-persisted" },
+        },
+        parts: [{ type: "text", text: "persisted" }],
+      },
+    ]);
+    const store = createMessagesStore(previous);
+    const userNode = store.messagesById.get("1");
+    const assistantNode = store.messagesById.get("2");
+
+    const ops = diffCanonicalMessages(previous, next, { debugMode: false });
+    applyMessageStoreOps(store, ops);
+
+    expect(store.messagesById.get("1")).toBe(userNode);
+    expect(store.messagesById.get("2")).toBe(assistantNode);
+    expect(store.messagesById.get("2")?.metadata$.get()?.updatedAt).toBe(300);
+    expect(store.messagesById.get("2")?.parts$.get()).toEqual([
+      { type: "text", text: "persisted" },
+    ]);
   });
 });

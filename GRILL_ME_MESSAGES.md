@@ -439,6 +439,54 @@ Append-only takeaways from the frontend message merge/perf design interview.
 - Standalone message actions may receive an explicit raw-text reader override instead of implicitly depending on the store.
 - Projector baseline must advance to the latest canonical snapshot even when emitted diff ops are empty.
 
+### Phase 3 progress
+
+- Source-aware diffing is now partially implemented.
+- Cold-source diff path now uses an `updatedAt` freshness gate.
+- Hot-source diff path now ignores metadata churn entirely.
+- Hot-source parts diff now uses tail/append-only semantics and ignores non-tail-only mutations.
+- A dedicated dev-only validator module now exists and is wired into the provider in development.
+- Validator currently checks:
+  - role immutability
+  - part type immutability
+  - append-only parts
+  - no non-tail mutation
+  - no metadata ops for hot-source transitions
+
+### Phase 4 progress
+
+- Resumed stream reconstruction is now extracted behind a pure adapter module instead of staying embedded inside the hook body.
+- Current Convex resumed chunk query behavior is preserved; the query/cursor hook itself was not redesigned.
+- The resumed adapter keeps the existing one-message-array contract for active reconstructed output.
+- Resumed output still enters the same canonical merge, diff, store, and render path as all other sources.
+- Pure TS tests now cover resumed adapter gating, reconstruction, active stream selection, and resumed-source hot diff semantics.
+
+### Phase 5 progress
+
+- Optimistic overlays remain source-layer state in the message pipeline and continue to merge through the same canonical path.
+- A dedicated message-pipeline provider now owns `useMessages` + `MessagesStoreProvider` instead of `ActiveThreadProvider` directly.
+- `ActiveThreadProvider` now consumes pipeline outputs and specific non-reactive store peek helpers instead of owning message merge/projection.
+- Regenerate selection is extracted into a pure helper.
+- Thread-level regenerate now traverses current messages via store peeks at execution time.
+- Pure tests cover regenerate selection and optimistic-to-persisted node identity preservation.
+
+### Phase 6 progress
+
+- Dev-only invariant validation and diff-op validation are both implemented and wired into the provider.
+- Core pure-TS coverage now includes merge, normalization, diffing, validation, resumed reconstruction, regenerate selection, and store identity behavior.
+- A single jsdom-based reactive integration test now proves slice-level store reactivity at the provider boundary.
+- Message merge/projection ownership cleanup is complete enough for the planned architecture: `ActiveThreadProvider` no longer owns the message pipeline.
+
+## 2026-04-17
+
+### Alignment fix branch
+
+- Fresh alignment audit found 2 critical remaining gaps against original goals:
+  - standalone prop-driven `ChatMessage` path still indirectly depends on store hooks
+  - assistant heavy content still subscribes to metadata and parts together, so metadata churn can still wake heavy content
+- User clarified that one audit finding is intentional: hot metadata being ignored is wanted behavior, not a bug.
+- Implication: specs/docs should be updated to treat hot metadata suppression as intentional policy rather than an accidental gap.
+
 ### Filtered parts hook decision
 
 - Reactive filtered selectors over the coarse full `parts` slice are desired.

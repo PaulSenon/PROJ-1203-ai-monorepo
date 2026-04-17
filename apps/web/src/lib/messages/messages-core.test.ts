@@ -195,6 +195,12 @@ describe("diffCanonicalMessages", () => {
     ]);
     const next = normalizeCanonicalMessages([
       createMessage("2", {
+        metadata: {
+          createdAt: 200,
+          updatedAt: 201,
+          liveStatus: "completed",
+          lifecycleState: "active",
+        },
         parts: [{ type: "text", text: "after" }],
       }),
       createMessage("3"),
@@ -203,6 +209,11 @@ describe("diffCanonicalMessages", () => {
     const ops = diffCanonicalMessages(previous, next, { debugMode: false });
 
     expect(ops).toEqual([
+      {
+        type: "setMessageMetadata",
+        id: "2",
+        metadata: next.byId["2"]?.metadata,
+      },
       {
         type: "setMessageParts",
         id: "2",
@@ -219,6 +230,188 @@ describe("diffCanonicalMessages", () => {
       {
         type: "setOrder",
         order: ["2", "3"],
+      },
+    ]);
+  });
+
+  it("ignores stale cold updates when updatedAt does not advance", () => {
+    const previous = normalizeCanonicalMessages([
+      createMessage("1", {
+        metadata: {
+          createdAt: 100,
+          updatedAt: 200,
+          liveStatus: "completed",
+          lifecycleState: "active",
+          modelId: "persisted-model",
+          debug: { dataSource: "convex-persisted" },
+        },
+        parts: [{ type: "text", text: "persisted" }],
+      }),
+    ]);
+    const next = normalizeCanonicalMessages([
+      createMessage("1", {
+        metadata: {
+          createdAt: 100,
+          updatedAt: 150,
+          liveStatus: "completed",
+          lifecycleState: "active",
+          modelId: "older-model",
+          debug: { dataSource: "convex-persisted" },
+        },
+        parts: [{ type: "text", text: "older-content" }],
+      }),
+    ]);
+
+    const ops = diffCanonicalMessages(previous, next, { debugMode: false });
+
+    expect(ops).toEqual([]);
+  });
+
+  it("ignores metadata-only hot updates from http stream", () => {
+    const previous = normalizeCanonicalMessages([
+      createMessage("1", {
+        metadata: {
+          createdAt: 100,
+          updatedAt: 100,
+          liveStatus: "streaming",
+          lifecycleState: "active",
+          modelId: "model-a",
+          debug: { dataSource: "http-stream" },
+        },
+        parts: [{ type: "text", text: "Hello" }],
+      }),
+    ]);
+    const next = normalizeCanonicalMessages([
+      createMessage("1", {
+        metadata: {
+          createdAt: 100,
+          updatedAt: 999,
+          liveStatus: "completed",
+          lifecycleState: "active",
+          modelId: "model-b",
+          debug: { dataSource: "http-stream" },
+        },
+        parts: [{ type: "text", text: "Hello" }],
+      }),
+    ]);
+
+    const ops = diffCanonicalMessages(previous, next, { debugMode: false });
+
+    expect(ops).toEqual([]);
+  });
+
+  it("emits only parts update for hot stream tail changes and appends", () => {
+    const previous = normalizeCanonicalMessages([
+      createMessage("1", {
+        metadata: {
+          createdAt: 100,
+          updatedAt: 100,
+          liveStatus: "streaming",
+          lifecycleState: "active",
+          debug: { dataSource: "http-stream" },
+        },
+        parts: [{ type: "text", text: "Hello" }],
+      }),
+    ]);
+    const next = normalizeCanonicalMessages([
+      createMessage("1", {
+        metadata: {
+          createdAt: 100,
+          updatedAt: 101,
+          liveStatus: "completed",
+          lifecycleState: "active",
+          debug: { dataSource: "http-stream" },
+          modelId: "ignored-model-change",
+        },
+        parts: [
+          { type: "text", text: "Hello world" },
+          { type: "reasoning", text: "thinking", state: "streaming" },
+        ],
+      }),
+    ]);
+
+    const ops = diffCanonicalMessages(previous, next, { debugMode: false });
+
+    expect(ops).toEqual([
+      {
+        type: "setMessageParts",
+        id: "1",
+        parts: next.byId["1"]?.parts ?? [],
+      },
+    ]);
+  });
+
+  it("ignores hot updates that only mutate non-tail parts", () => {
+    const previous = normalizeCanonicalMessages([
+      createMessage("1", {
+        metadata: {
+          createdAt: 100,
+          updatedAt: 100,
+          liveStatus: "streaming",
+          lifecycleState: "active",
+          debug: { dataSource: "http-stream" },
+        },
+        parts: [
+          { type: "text", text: "prefix" },
+          { type: "reasoning", text: "tail", state: "streaming" },
+        ],
+      }),
+    ]);
+    const next = normalizeCanonicalMessages([
+      createMessage("1", {
+        metadata: {
+          createdAt: 100,
+          updatedAt: 101,
+          liveStatus: "streaming",
+          lifecycleState: "active",
+          debug: { dataSource: "http-stream" },
+        },
+        parts: [
+          { type: "text", text: "prefix changed" },
+          { type: "reasoning", text: "tail", state: "streaming" },
+        ],
+      }),
+    ]);
+
+    const ops = diffCanonicalMessages(previous, next, { debugMode: false });
+
+    expect(ops).toEqual([]);
+  });
+
+  it("treats convex resumed stream as a hot source too", () => {
+    const previous = normalizeCanonicalMessages([
+      createMessage("1", {
+        metadata: {
+          createdAt: 100,
+          updatedAt: 100,
+          liveStatus: "streaming",
+          lifecycleState: "active",
+          debug: { dataSource: "convex-stream" },
+        },
+        parts: [{ type: "text", text: "hello" }],
+      }),
+    ]);
+    const next = normalizeCanonicalMessages([
+      createMessage("1", {
+        metadata: {
+          createdAt: 100,
+          updatedAt: 200,
+          liveStatus: "completed",
+          lifecycleState: "active",
+          debug: { dataSource: "convex-stream" },
+          modelId: "ignored-metadata-change",
+        },
+        parts: [{ type: "text", text: "hello world" }],
+      }),
+    ]);
+
+    const ops = diffCanonicalMessages(previous, next, { debugMode: false });
+
+    expect(ops).toEqual([
+      {
+        type: "setMessageParts",
+        id: "1",
+        parts: next.byId["1"]?.parts ?? [],
       },
     ]);
   });
