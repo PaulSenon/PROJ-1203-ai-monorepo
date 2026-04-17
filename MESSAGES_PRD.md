@@ -94,6 +94,7 @@ This solution keeps the source contract simple, isolates most complexity in pure
 - Reduce message derivation responsibilities exposed by the thread provider where practical in phase 1, but allow internal transitional ownership to remain until later slices remove it fully.
 - Keep the thread provider focused on thread-level state and actions as the longer-term direction.
 - Allow thread-level actions such as regenerate to read current messages via non-reactive store access at execution time.
+- Preserve the standalone prop-driven `ChatMessage` path. Store-backed rendering should remain explicit rather than becoming an implicit provider requirement.
 - Preserve a single writer to the message store.
 - Expose read hooks and non-reactive peek/store helpers from the store layer, but no public mutation actions.
 - Seed the store synchronously on initial mount from the first available canonical projection when possible.
@@ -125,6 +126,7 @@ This solution keeps the source contract simple, isolates most complexity in pure
 - Keep older paginated message history in the same message store path as recent messages in v1.
 - Use non-reactive reads such as `peek()` for virtualizer item typing and for action execution-time reads.
 - Allow loose internal store typing for parts if needed to keep Legend-State typechecking tractable, but keep that looseness fully internal to the store boundary.
+- Advance the projector baseline to the latest canonical snapshot on every processed canonical evaluation, even when no diff ops are emitted.
 - Add a dev-only validator layer around canonical projections and diff ops.
 - Keep validation logic separate from the core reconciler implementation rather than polluting core logic.
 - Validate both the next canonical projection invariants and the produced diff operations.

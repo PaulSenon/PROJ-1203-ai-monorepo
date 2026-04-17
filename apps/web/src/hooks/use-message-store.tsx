@@ -49,10 +49,11 @@ export function MessagesStoreProvider({
     const ops = diffCanonicalMessages(previousCanonicalRef.current, canonical, {
       debugMode,
     });
+    previousCanonicalRef.current = canonical;
+
     if (ops.length === 0) return;
 
     applyMessageStoreOps(store, ops);
-    previousCanonicalRef.current = canonical;
   }, [canonical, debugMode]);
 
   return (

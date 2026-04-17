@@ -4,7 +4,10 @@ import { Message } from "@/components/ui-custom/chat/message";
 import { useMessageMetadata, useMessageParts } from "@/hooks/use-message-store";
 import { cn } from "@/lib/utils";
 import { useMessageActions } from "./_hooks/use-message-actions";
-import { useMessageRawTextReader } from "./_hooks/use-message-raw-text-reader";
+import {
+  extractRawTextFromMessageParts,
+  useMessageRawTextReader,
+} from "./_hooks/use-message-raw-text-reader";
 import { MessageContentParts } from "./_parts/content";
 import { MessageFooterUser } from "./_parts/footer/footer";
 
@@ -21,9 +24,10 @@ export function ChatMessageUser({
   enableCodeHighlighting,
   ...props
 }: ChatMessageUserProps) {
-  const readRawText = useMessageRawTextReader(message.id);
+  const readRawText = () => extractRawTextFromMessageParts(message.parts);
   const { handleFooterAction } = useMessageActions({
     messageId: message.id,
+    readRawText,
     role: "user",
   });
 

@@ -432,6 +432,13 @@ Append-only takeaways from the frontend message merge/perf design interview.
 - Current decision: keep actions simple for now, but provide a way to non-reactively peek text parts for copy/paste style actions.
 - New decision: the store API should expose non-reactive peek helpers for action use, starting with message parts and optionally metadata.
 
+### 2.5 Cleanup Decisions
+
+- Prop-driven `ChatMessage` must remain usable outside `MessagesStoreProvider`.
+- Store-backed rendering stays explicit via `ChatMessageStoreItem`.
+- Standalone message actions may receive an explicit raw-text reader override instead of implicitly depending on the store.
+- Projector baseline must advance to the latest canonical snapshot even when emitted diff ops are empty.
+
 ### Filtered parts hook decision
 
 - Reactive filtered selectors over the coarse full `parts` slice are desired.

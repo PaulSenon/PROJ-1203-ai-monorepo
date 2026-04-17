@@ -126,4 +126,78 @@ describe("applyMessageStoreOps", () => {
     expect(store.messagesById.get("3")?.role$.get()).toBe("assistant");
     expect(store.messagesById.get("3")?.metadata$.get()?.createdAt).toBe(300);
   });
+
+  it("preserves parts leaf identity on metadata-only updates", () => {
+    const initial = normalizeCanonicalMessages([
+      {
+        id: "1",
+        role: "assistant",
+        metadata: {
+          createdAt: 100,
+          updatedAt: 100,
+          liveStatus: "completed",
+          lifecycleState: "active",
+        },
+        parts: [{ type: "text", text: "first" }],
+      },
+    ]);
+    const store = createMessagesStore(initial);
+    const node = store.messagesById.get("1");
+    const partsLeaf = node?.parts$;
+    const partsValue = node?.parts$.get();
+
+    applyMessageStoreOps(store, [
+      {
+        type: "setMessageMetadata",
+        id: "1",
+        metadata: {
+          createdAt: 100,
+          updatedAt: 101,
+          liveStatus: "completed",
+          lifecycleState: "active",
+          modelId: "model-b",
+        },
+      },
+    ]);
+
+    expect(store.messagesById.get("1")).toBe(node);
+    expect(store.messagesById.get("1")?.parts$).toBe(partsLeaf);
+    expect(store.messagesById.get("1")?.parts$.get()).toBe(partsValue);
+  });
+
+  it("preserves message node identity on order-only updates", () => {
+    const initial = normalizeCanonicalMessages([
+      {
+        id: "1",
+        role: "assistant",
+        metadata: {
+          createdAt: 100,
+          updatedAt: 100,
+          liveStatus: "completed",
+          lifecycleState: "active",
+        },
+        parts: [{ type: "text", text: "first" }],
+      },
+      {
+        id: "2",
+        role: "user",
+        metadata: {
+          createdAt: 200,
+          updatedAt: 200,
+          liveStatus: "completed",
+          lifecycleState: "active",
+        },
+        parts: [{ type: "text", text: "second" }],
+      },
+    ]);
+    const store = createMessagesStore(initial);
+    const firstNode = store.messagesById.get("1");
+    const secondNode = store.messagesById.get("2");
+
+    applyMessageStoreOps(store, [{ type: "setOrder", order: ["2", "1"] }]);
+
+    expect(store.orderedIds$.get()).toEqual(["2", "1"]);
+    expect(store.messagesById.get("1")).toBe(firstNode);
+    expect(store.messagesById.get("2")).toBe(secondNode);
+  });
 });

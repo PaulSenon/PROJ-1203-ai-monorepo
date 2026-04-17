@@ -14,6 +14,7 @@ Durable decisions that apply across all phases:
 - **Bootstrap**: Seed the store synchronously from the first available canonical projection when possible. If full canonical seeding is too complex initially, cache-only synchronous seed is an acceptable fallback. Subsequent updates are effect-driven.
 - **Scope**: Only renderable active messages belong in the canonical reactive layer. Removed messages disappear immediately.
 - **Core read model**: Core reads are ids-first and slice-first. No full ordered `MyUIMessage[]` list is exposed from core.
+- **Standalone path**: The standalone prop-driven `ChatMessage` path must remain valid outside store scope. Store-backed rendering stays explicit via the ids-first chat surface.
 - **Virtualization**: The list consumes ordered message ids. Virtualizer classification uses non-reactive reads for immutable item facts such as role.
 - **Message invariants**: Message role is immutable after creation.
 - **Part invariants**: Part type is immutable. Parts are append-only, never removed, never reordered, and only the tail part may mutate.
@@ -58,6 +59,7 @@ Extend the cold read path so subsequent cold-source changes flow through canonic
 - [ ] A previous canonical snapshot is retained beside the projector and used as the primary diff baseline.
 - [ ] Metadata-only changes do not rewrite parts.
 - [ ] Order changes update only the ordered id list and preserve unchanged message node identity.
+- [ ] Canonical baseline advances even when a processed diff emits no store ops.
 - [ ] Metadata comparison ignores `metadata.debug` only when explicit debug mode is off.
 
 ---

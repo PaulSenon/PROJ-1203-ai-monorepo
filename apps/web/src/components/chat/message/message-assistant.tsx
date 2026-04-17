@@ -7,6 +7,7 @@ import { Message } from "@/components/ui-custom/chat/message";
 import { useMessageMetadata, useMessageParts } from "@/hooks/use-message-store";
 import { cn } from "@/lib/utils";
 import { useMessageActions } from "./_hooks/use-message-actions";
+import { extractRawTextFromMessageParts } from "./_hooks/use-message-raw-text-reader";
 import { MessageContentParts } from "./_parts/content";
 import { MessageFooterAssistant } from "./_parts/footer/footer";
 import { StatusPart } from "./_parts/status/status";
@@ -84,8 +85,13 @@ export function ChatMessageAssistant({
     metadata: message.metadata,
     parts: message.parts,
   });
+  const readRawText = useMemo(
+    () => () => extractRawTextFromMessageParts(message.parts),
+    [message.parts]
+  );
   const { handleFooterAction, handleStatusAction } = useMessageActions({
     messageId: message.id,
+    readRawText,
     role: "assistant",
   });
   const isStreaming =

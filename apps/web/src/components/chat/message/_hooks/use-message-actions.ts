@@ -7,6 +7,7 @@ import { useMessageRawTextReader } from "./use-message-raw-text-reader";
 export type UseMessageActionsParams = {
   messageId: string;
   role: "assistant" | "user";
+  readRawText?: () => string;
   onRetry?: (modelId?: string) => void;
   onContinue?: () => void;
   onEditRetry?: (text: string) => void;
@@ -15,12 +16,14 @@ export type UseMessageActionsParams = {
 export function useMessageActions({
   messageId,
   role,
+  readRawText: readRawTextOverride,
   onRetry,
   onContinue,
   onEditRetry,
 }: UseMessageActionsParams) {
   const saveToClipboard = useSaveToClipboard();
-  const readRawText = useMessageRawTextReader(messageId);
+  const readRawTextFromStore = useMessageRawTextReader(messageId);
+  const readRawText = readRawTextOverride ?? readRawTextFromStore;
 
   const handleRetry = useCallback(
     (modelId?: string) => {
