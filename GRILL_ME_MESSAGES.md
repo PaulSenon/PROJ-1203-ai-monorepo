@@ -1,0 +1,225 @@
+2026-04-18T00:00:00Z | session-start
+- scope: chat message aggregation/render perf architecture
+- user goals: perf, responsiveness, stability, reliability, low-end device support
+- current sources: cache, persisted, optimistic, resumed-stream, http-stream
+- confirmed local findings:
+  - `apps/web/src/hooks/use-messages.tsx` merges by replacing whole winning message refs per layer
+  - resumed stream rebuilds full `UIMessage` from chunk array on each throttled update
+  - `apps/web/src/hooks/chat/use-ai-sdk-chat.tsx` provides whole `messages` array via context
+  - `apps/web/src/components/chat/message/message.tsx` and child components consume full `message` object
+- current hypothesis:
+  - main remaining perf issue is not merge complexity itself, but render subscription granularity + referential churn at message level
+  - best direction likely per-conversation external store or equivalent per-message subscription layer
+- no decisions locked yet
+2026-04-18T00:05:00Z | q1
+- question: can v1 change message consumption API from `message` object props to `messageId` + granular selectors/hooks?
+- recommendation: yes
+- reason:
+  - list should subscribe to ids only
+  - content should subscribe to parts only
+  - footer should subscribe to metadata only
+  - keeping whole `message` prop blocks desired rerender isolation even with better merge logic
+2026-04-18T00:06:00Z | q1-answer
+- answer: yes
+- consequence:
+  - row API can pivot to `messageId`
+  - store/selectors become the main architecture seam
+  - merge pipeline can optimize for patching records, not rebuilding React props
+2026-04-18T00:08:00Z | q2-prep
+- local codebase check:
+  - no existing `useSyncExternalStore`
+  - no existing Zustand
+  - no existing `@legendapp/state`
+  - `@legendapp/list` is present but unrelated to state management
+- implication:
+  - v1 can introduce a tiny conversation-scoped store without colliding with existing state patterns
+2026-04-18T00:12:00Z | q2-refine
+- user concern:
+  - does not want to rebuild sync/select plumbing by hand
+  - wants clear conversation-scope cleanup semantics
+- verified official docs:
+  - React `useSyncExternalStore`: intended for external mutable stores
+  - Zustand docs recommend vanilla store + React context for prop-initialized/scoped stores
+  - Zustand `subscribeWithSelector` supports granular subscriptions
+- refined recommendation:
+  - prefer `zustand/vanilla` scoped per conversation over fully custom `useSyncExternalStore` wiring
+  - keep custom typed hooks/selectors and pure TS ingest/merge core
+  - provider owns store lifetime; source bindings unsubscribe on unmount; optional `destroy()` for extra listeners/timers
+2026-04-18T00:15:00Z | q2-answer
+- answer: 1
+- decision:
+  - use `zustand/vanilla`
+  - scope one store instance per mounted conversation provider
+  - keep custom typed selector hooks instead of exposing raw zustand store broadly
+2026-04-18T00:20:00Z | q3-answer-pre
+- user leans to public store owning only materialized merged view, not raw layers
+- user concern:
+  - persisted paginated query still emits full list snapshots
+  - unsure how to derive small patches efficiently from reactive `UIMessage[]`
+- resolution:
+  - use full-snapshot scan for cold layers
+  - maintain previous per-layer `byId`
+  - compare by `id` then message ref, then selected public slices (`role`, `metadata`, `parts`)
+  - recompute winners only for changed ids
+  - emit tiny public patches despite full input snapshot
+- implication:
+  - no true upstream delta feed required for cold sources
+  - hot sources remain the only critical incremental path
+2026-04-18T00:24:00Z | q4-answer-pre
+- answer: yes
+- user added concern:
+  - avoid many rerenders if hot + cold ingests touch same message close together
+- verified docs:
+  - React external store updates are synchronous (`useSyncExternalStore`)
+  - Zustand `set`/`setState` is the store update + notify mechanism
+- recommended design:
+  - ingests never call `setState` directly
+  - ingests mutate private buffers + dirty sets only
+  - schedule one flush
+  - flush computes final public next state once
+  - one `store.setState(next)` per flush max
+- preferred flush policy for v1:
+  - microtask coalescing, not RAF
+  - upstream hot-source throttles remain the only deliberate latency
+2026-04-18T00:28:00Z | q5-answer
+- answer: 1
+- decision:
+  - flush policy is one microtask-coalesced commit per JS tick
+  - ingests only mutate private buffers + dirty sets
+  - flush computes final public next state once
+  - max one `store.setState(next)` per flush
+- expected effect:
+  - hot + cold updates landing in same tick collapse into one notify wave
+  - list/content/footer rerender isolation still handled by selectors + stable slice refs
+  - no extra store-level throttle beyond existing upstream hot-source throttling
+2026-04-18T00:32:00Z | q6-answer
+- answer: 1
+- decision:
+  - expose `useMessageParts(messageId)` only for v1
+  - no dedicated reactive filtering hooks for part subtypes in v1
+  - preserve part refs aggressively so only active tail part churns
+- notes:
+  - derived one-off filtering can happen locally
+  - `shouldShowThinking` can be optimized separately via latch/derived selector later without changing store API
+2026-04-18T00:37:00Z | q7-refine
+- user concern:
+  - chunk-/field-level hot patch API may duplicate AI SDK message reconstruction complexity
+  - wants to avoid owning low-level chunk semantics (tool calls etc.)
+- refined recommendation:
+  - do not expose chunk patch API in v1
+  - cold API stays array snapshot based
+  - hot API becomes single reconstructed `UIMessage` snapshot based
+  - adapters keep using AI SDK reconstruction (`useChat`, `readUIMessageStream`, existing helpers)
+  - store responsibility is only ref-preserving reconciliation of `role` / `metadata` / `parts`
+- proposed public API:
+  - `replaceColdSnapshot(layer, messages[])`
+  - `replaceHotMessage(layer, message | null)`
+2026-04-18T00:42:00Z | q7-clarify
+- clarification:
+  - architecture is not append-only ingest
+  - each source API call replaces that source layer's current truth
+  - private engine keeps source-layer state to support precedence fallback
+  - public store still exposes only merged/materialized state
+- key behavior:
+  - cold layer replacement: full snapshot semantics; missing ids are removals for that layer
+  - hot layer replacement: singleton semantics; `null` removes prior hot candidate
+  - when persisted winner appears and hot source later becomes `null`, final visible winner naturally falls back to persisted
+- naming preference:
+  - prefer `replace*` over `ingest*` because semantics are overwrite/reconcile, not append
+2026-04-18T00:47:00Z | architecture-refine
+- user discomfort:
+  - current proposal still feels too layer-aware / too much overhead
+  - wants source ingestion concerns separated from merge semantics if possible
+- refinement:
+  - split into 3 boxes
+    - source adapters: React hooks -> source snapshots/messages
+    - reconciler engine: source/layer-aware private logic + precedence + dirty tracking + microtask flush scheduling
+    - public view store: layer-agnostic merged state only (`orderedIds`, `recordsById`, `status`)
+- effect:
+  - public store no longer knows cache/persisted/optimistic/http/resumed
+  - reconciler owns source truth + winner selection
+  - store only applies already-computed public patches
+- likely better public API:
+  - adapters call reconciler, not store
+  - reconciler emits one merged patch to store per flush
+2026-04-18T00:52:00Z | clarify-react-boundary
+- user needs clearer model of:
+  - what stays in React land
+  - what is pure TS
+  - where store lives
+  - lifecycle
+  - where `resumeStreamEnabled` and `isPending/isStale/...` belong
+- next response should provide:
+  - box diagram
+  - ownership table
+  - lifecycle timeline
+  - explicit recommendation for status ownership
+2026-04-18T00:58:00Z | glossary
+- added `UBIQUITOUS_LANGUAGE.md`
+- canonical terms introduced:
+  - Conversation Runtime = React-land orchestration/lifecycle owner
+  - Conversation Provider = context boundary exposing the view store
+  - Source Adapter = hook-to-reconciler binding
+  - Conversation Reconciler = pure TS source-aware merge engine
+  - Conversation View Store = public zustand/vanilla merged state only
+  - Source Snapshot / Hot Slot / Winner Message / Message Record / Dirty Id / Flush / View Patch
+2026-04-18T01:05:00Z | architecture-doc
+- added architecture snapshot doc:
+  - [CONVERSATION_RUNTIME_ARCHITECTURE.md](/app/CONVERSATION_RUNTIME_ARCHITECTURE.md)
+- doc persists:
+  - box model
+  - ownership boundaries
+  - lifecycle
+  - simplified real-ish interfaces
+  - full provider/reconciler/store/hooks/component pseudo-implementation path
+  - dirty id definition
+  - microtask flush batching rule
+  - optimistic precedence/spec
+2026-04-18T01:06:00Z | naming+optimistic
+- naming:
+  - locked `Conversation Runtime`
+- optimistic spec captured:
+  - purpose: instant UI feedback between submit and visible `useChat` update
+  - precedence: `hot > optimistic > persisted > cache`
+  - optimistic belongs in reconciler private state, not view store
+  - latest optimistic patch wins for same message id
+2026-04-18T01:12:00Z | viewpatch-proposal
+- persisted in architecture doc:
+  - recommended sparse `ViewPatch` shape:
+    - optional `orderedIds`
+    - optional `status`
+    - sparse `recordUpdates` map with `{ kind: "upsert" | "remove" }`
+- rationale:
+  - one flush => one patch => one store write
+  - patch only changed ids
+  - preserve stable refs for unchanged orderedIds/metadata/parts
+2026-04-18T01:15:00Z | viewpatch-locked
+- locked for now:
+  - `ViewPatch = { orderedIds?, recordUpdates?, status? }`
+  - `recordUpdates` is sparse object map keyed by message id
+  - update values are `{ kind: "upsert"; value: MessageRecord } | { kind: "remove" }`
+2026-04-18T01:20:00Z | optimistic-locked
+- locked:
+  - `applyOptimisticPatch(messages) -> patchId`
+  - `revertOptimisticPatch(patchId)`
+  - internal model is append-only optimistic patch queue
+  - latest optimistic patch wins for same message id
+  - precedence: `hot > optimistic > persisted > cache`
+- v1 usage:
+  - immediate submit feedback
+  - optional optimistic delete by overlaying `metadata.lifecycleState = "deleted"`
+- visibility rule:
+  - winners with `lifecycleState` of `deleted` or `archived` are filtered from final visible output
+2026-04-18T01:32:00Z | file-structure-refine
+- repo-specific constraint confirmed:
+  - chat/session lifetime providers are centrally managed in `apps/web/src/components/providers/4-chat-session-scope.tsx`
+- refined recommendation:
+  - register `ConversationRuntimeProvider` inside chat session scope, under `AiSdkChatProvider`
+  - place runtime/reconciler/store under `apps/web/src/hooks/chat/conversation/`
+  - use `engine/` for pure TS internals, not `_runtime/_core`
+  - keep message feature hooks as L3 adapters over runtime selectors
+  - convert `use-message-raw-text-reader.ts` into non-reactive snapshot helper
+- persisted in architecture doc:
+  - provider placement
+  - recommended file tree
+  - migration target

@@ -27,6 +27,11 @@ Never guess product/spec details. If ambiguity, ask and wait; update PRD/AGENTS 
 - for styling always use tailwind respecting the rules and themes.
 - Never barrel export anything (not allowed by linter rules) nor reexport anything from external libraries (not allowed by linter rules). So unless necessary we should have index.ts like files in folders
 
+## Providers structure
+
+Session/workspace/user/app scoped providers are centrally registered under `apps/web/src/components/providers/*-scope.tsx`.
+New scoped runtime providers must integrate there instead of being mounted ad hoc near feature components. You can read more about this in `apps/web/src/components/providers/README.md`.
+
 ## Component architecture layers
 
 > Full guide with decision trees and examples: `apps/web/src/components/README.md`
@@ -109,4 +114,4 @@ NB: if you want to manage your memory another way, fill free to do it but rememb
 
 In all interactions, be extremely concise and sacrifice grammar for the sake of concision.
 When you need to research, implement, side-track anything where only the end result could benefit to the current conversation, you must use sub-agents wisely to avoid filling current context with side-track reasoning.
-User loves minimal code example over long technical explanation when this makes sense. So feel free to use this toward your goal of sacrificing grammar for the sake of concision.
+User loves minimal code example over long technical explanation when this makes sense. When we talk about anything that could be modelized with a minimal example, because it's to visualize if the shape of something is right or if it's to explore a libs feature etc, always put out some code examples there. User is a visual learner. User is organising everything in his head in a 2D space like an infinite whiteboard with nested boxes. So the more visual, codes, link, group we modelize, the better User is to follow along. So feel free to use this toward your goal of sacrificing grammar for the sake of concision.
