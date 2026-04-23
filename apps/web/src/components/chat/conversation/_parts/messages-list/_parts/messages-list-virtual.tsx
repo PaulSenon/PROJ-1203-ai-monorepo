@@ -5,7 +5,7 @@ import {
   type LegendListRef,
   type LegendListRenderItemProps,
 } from "@legendapp/list/react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import { ChatMessage } from "@/components/chat/message/message";
 import {
   ScrollEdgeProbe,
@@ -73,7 +73,7 @@ export function MessagesListVirtual({
   // does not remount.
   // we absolutely need to skip this on real first mount (not ready)
   // and we only want to trigger it when layout ready on activity remount (already ready)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isReady.current) return;
     requestAnimationFrame(() => {
       onLayoutReady?.();
@@ -104,17 +104,18 @@ export function MessagesListVirtual({
     });
   }, [onLayoutReady, onLastItemKeyUpdate]);
 
+  // TODO: remove this once we are sure the ready event is properly fired on layout (see beta 47)
   // This is only a safety net, in case the ready event isn't properly fired
   // on layout. Because this is critical as it might block the full UI in a loading
   // state. So we also handle onLoad that runs later than layout but I guess it's less
   // framerate dependent.
-  const handleLoad = useCallback(() => {
-    if (isReady.current) return;
-    requestAnimationFrame(() => {
-      isReady.current = true;
-      onLayoutReady?.();
-    });
-  }, [onLayoutReady]);
+  // const handleLoad = useCallback(() => {
+  //   if (isReady.current) return;
+  //   requestAnimationFrame(() => {
+  //     isReady.current = true;
+  //     onLayoutReady?.();
+  //   });
+  // }, [onLayoutReady]);
 
   const renderItem = useCallback(
     ({ item, index }: LegendListRenderItemProps<MyUIMessage>) => {
@@ -166,13 +167,12 @@ export function MessagesListVirtual({
         keyExtractor={messageKeyExtractor}
         maintainVisibleContentPosition
         onLayout={handleLayout}
-        onLoad={handleLoad}
+        // onLoad={handleLoad} // Should bot longer be needed since beta 47 (fixed onLayout consistency)
         recycleItems
         ref={listRef}
         renderItem={renderItem}
         suggestEstimatedItemSize
         useWindowScroll
-        waitForInitialLayout={true}
       />
       <ScrollEdgeProbe ref={bottomRef} />
     </>
