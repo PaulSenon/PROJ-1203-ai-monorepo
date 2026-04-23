@@ -1,16 +1,15 @@
 import { useCallback, useRef } from "react";
-import {
-  useActiveThreadMessages,
-  useActiveThreadState,
-} from "@/hooks/use-chat-active";
+import { useActiveConversationMessageIds } from "@/hooks/chat/conversation/active-conversation-message-store";
+import { useActiveConversationState } from "@/hooks/chat/conversation/active-conversation-store";
 import { ChatConversationLayout } from "./conversation-layout";
 
 const LOAD_OLDER_PAGE_SIZE = 20;
 
 export function ChatConversation() {
   const { uuid, isThreadSettled, pendingAutoScrollMessageId, isDataPending } =
-    useActiveThreadState();
-  const { loadOlder, olderHistoryStatus, messages } = useActiveThreadMessages();
+    useActiveConversationState();
+  const { loadOlder, olderHistoryStatus, messageIds, getMessageSnapshot } =
+    useActiveConversationMessageIds();
 
   const olderHistoryStatusRef = useRef(olderHistoryStatus);
   olderHistoryStatusRef.current = olderHistoryStatus;
@@ -23,10 +22,11 @@ export function ChatConversation() {
 
   return (
     <ChatConversationLayout
+      getMessageSnapshot={getMessageSnapshot}
       isPending={isDataPending}
       isThreadSettled={isThreadSettled}
       key={uuid}
-      messages={messages}
+      messageIds={messageIds}
       onStartReached={handleStartReached}
       pendingAutoScrollMessageId={pendingAutoScrollMessageId}
       threadUuid={uuid}

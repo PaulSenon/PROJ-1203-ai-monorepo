@@ -22,8 +22,17 @@
 - now: stabilize chat surface + UX correctness first (input/draft/sidebar/scroll/loading)
 - conversation architecture pass done (L2/L3 parity w/ message)
 - conversation adapter/layout split + pure layout demo scaffold done (minimal props baseline)
-- PRD v2 done: last assistant min-height reserve erratum fixed (refresh-stream-settle no collapse, latch moved to conversation L3)
-- next: implement simplest optimistic assistant shell (render-derived displayMessages in use-chat-active, no data-layer ID refactor)
+- Phase 1 done: new live conversation runtime surface mounted; legacy runtime untouched/dead
+- docs corrected: Conversation View Store must be `zustand/vanilla` per grill history
+- recovery done: scoped zustand/vanilla view store now live
+- Phase 3 core landed: live path now uses conversation-owned source adapters + reconciler; legacy `useMessages` no longer in live path
+- Phase 3 parity hardening done: source trim/cache-sync helpers extracted + tested; redundant cache writes skipped
+- send-path UI wiring done: prompt input now reflects conversation send state without implying unsupported cancel
+- unsupported retry/continue affordances retired from live message UI
+- dead message action leftovers retired; live message actions now match send/copy-only support
+- Phase 5 verification slice done: vitest now discovers `.test.tsx`; provider/hook integration coverage added for `use-active-conversation`
+- docs aligned: regenerate/cancel explicitly legacy-only, manual QA scope is send/load/stream only
+- next: manual runtime verification / QA review
 
 [OPEN_DECISIONS]
 - bot protection vendor: Turnstile?

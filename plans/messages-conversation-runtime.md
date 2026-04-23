@@ -9,16 +9,20 @@ Durable decisions that apply across all phases:
 - **Terminology**: use `conversation` as the primary runtime language. Do not introduce new public `active-thread-v2` naming.
 - **Scope lifetime**: the new runtime remains session-scoped inside the existing chat session provider stack. It resets on session change, not on intermediate message changes.
 - **Legacy preservation**: the current legacy conversation/message runtime remains untouched and unused during migration. No new logic is added there.
-- **Runtime split**: the new runtime is split into three concerns:
-  - conversation state
-  - conversation actions
-  - conversation message store
+- **Runtime boxes**: the architecture is split into:
+  - Conversation Runtime (React-land orchestration)
+  - Conversation Reconciler (pure TS source-aware merge engine)
+  - Conversation View Store (scoped merged UI-facing store)
 - **Collocation rule**: provider core and its convenience hooks stay collocated in a small number of deep modules. Avoid one-hook-per-file sprawl unless a submodule becomes independently complex.
 - **Rendering model**: conversation list consumes ordered `messageIds`; individual rows consume one message entity each.
 - **Reactivity model**: message-order subscription and single-message subscription are separate. Message churn must not update the conversation state context.
-- **Store contract**: the message store exposes stable subscription and snapshot APIs, suitable for `useSyncExternalStore`.
+- **Store technology**: the Conversation View Store must use `zustand/vanilla`, scoped one instance per mounted conversation provider.
+- **Public store API**: expose custom typed hooks/selectors over the scoped zustand store; do not broadly expose raw store consumption.
+- **Reconciler ownership**: source truth, precedence, dirty tracking, batching, and merged patch computation stay in the reconciler, not in the public store.
 - **Message source contract**: the new message source reproduces current visible behavior across persisted, cached, optimistic, resumed-stream, and http-stream layers.
+- **Precedence**: `hot > optimistic > persisted > cache`
 - **Behavior parity target**: scroll behavior, load-older behavior, optimistic shell behavior, regeneration behavior, and visible message ordering must remain unchanged from the user’s perspective.
+- **Current supported action scope**: live product behavior is send-only. `regenerate` and `cancel` remain legacy reference paths and are explicitly out of scope for completion of this plan.
 
 ---
 
@@ -64,15 +68,16 @@ Replace full-message-array consumption in the conversation feed with a message s
 
 Implementation details:
 
-- Implement the stable message store with:
-  - ordered id snapshot
-  - single-message snapshot
-  - order subscription
-  - per-message subscription
-  - full collection apply/diff logic
-- Bind store reads through `useSyncExternalStore`.
-- Expose the message-id hook surface for conversation-level consumers.
-- Expose the per-message hook surface for row-level consumers.
+- Implement the scoped **Conversation View Store** with `zustand/vanilla`.
+- Shape the public merged UI-facing state around:
+  - `orderedIds`
+  - `recordsById`
+  - `status`
+- Expose custom typed selector hooks for:
+  - ordered ids
+  - single message record by id
+  - snapshot getter access if still needed by list infrastructure
+- Keep the store layer source-agnostic. It must not know cache/persisted/http/resumed details.
 - Rewire the conversation list to consume ordered ids instead of full messages.
 - Add a thin by-id row adapter if needed so the existing message component can continue receiving a full message object.
 - Preserve older-history loading control on the message-id surface so list behavior stays coherent.
@@ -94,11 +99,15 @@ Implementation details:
 
 ### What to build
 
-Replace the legacy message-merge pipeline with the new conversation message source while preserving visible behavior. This phase moves correctness-critical orchestration into the new runtime, but now behind the new store boundary established earlier.
+Replace the legacy message-merge pipeline with the new conversation-owned source adapters + reconciler while preserving visible behavior. This phase moves correctness-critical orchestration into the new runtime, behind the zustand view-store boundary established earlier.
 
 Implementation details:
 
-- Rebuild the message-source module from scratch instead of importing the legacy hook.
+- Rebuild the runtime internals around the 3-box architecture:
+  - source adapters
+  - private reconciler
+  - zustand view store
+- Rebuild the message-source path from scratch instead of importing the legacy hook.
 - Preserve current layer behavior for:
   - persisted paginated messages
   - cache snapshot
@@ -106,7 +115,8 @@ Implementation details:
   - resumed convex stream
   - http AI SDK stream
 - Preserve current merge priority and filtering semantics.
-- Feed the merged collection into the new message store.
+- Implement reconciler-owned dirty tracking and one microtask-coalesced flush per tick.
+- Have the reconciler emit one merged patch into the view store per flush.
 - Keep pending/stale/loading status, optimistic patch controls, and older-history controls exposed through the new runtime.
 
 ### Acceptance criteria
@@ -132,7 +142,7 @@ Implementation details:
 
 - Ensure prompt input actions use the new conversation actions surface only.
 - Ensure message footer actions that depend on conversation runtime use the new surface only.
-- Ensure regenerate flow uses the new source/store path end-to-end.
+- Do not expose unsupported regenerate/cancel UI from the live app path.
 - Ensure pending auto-scroll and related conversation-level signals are sourced from the new runtime only.
 - Confirm older-history loading, scroll handling, and row rendering are fully wired through the new runtime.
 - Remove all live imports of the legacy runtime from app code without editing the legacy files themselves.
@@ -140,7 +150,7 @@ Implementation details:
 ### Acceptance criteria
 
 - [ ] Prompt input is wired only to the new conversation actions surface.
-- [ ] Regenerate flow runs only through the new conversation runtime.
+- [ ] Unsupported regenerate/cancel affordances are absent from the live app path.
 - [ ] Auto-scroll intent handling runs only through the new conversation runtime.
 - [ ] There are no remaining live imports of the legacy runtime in the app path.
 - [ ] Legacy files remain present but unused.
@@ -167,8 +177,8 @@ Implementation details:
   - optimistic send
   - streaming
   - resumed stream
-  - regenerate
   - auto-scroll behavior
+- Regenerate/cancel are explicitly excluded from manual QA in this plan because they are unsupported in the live product path and preserved as legacy reference only.
 - Update memory/docs so future work starts from the new runtime model, not the legacy one.
 - Capture any known remaining risks as explicit follow-up notes rather than hidden assumptions.
 
@@ -177,7 +187,7 @@ Implementation details:
 - [ ] Message store semantics are verified with direct tests or equivalent focused checks.
 - [ ] Provider hook boundaries are verified with integration-level checks.
 - [ ] Conversation-level rerender guardrails are verified.
-- [ ] Manual QA confirms no visible regression in scroll/load/send/regenerate/stream behavior.
+- [ ] Manual QA confirms no visible regression in scroll/load/send/stream behavior.
 - [ ] New runtime is documented as the active architecture baseline.
 - [ ] Follow-up risks, if any, are written down explicitly.
 
@@ -186,16 +196,16 @@ Implementation details:
 ## Suggested execution order
 
 1. Land the new conversation runtime skeleton with stable boundaries first.
-2. Move the feed to ids and row-level subscriptions next.
-3. Replace the message-source pipeline behind that boundary.
+2. Land the scoped zustand view store and move the feed to ids + row-level selectors.
+3. Replace the message-source pipeline with source adapters + reconciler behind that boundary.
 4. Rewire all remaining actions and remove live legacy imports.
 5. Finish with verification and documentation.
 
 ## Risks to watch
 
-- The highest regression risk is behavioral parity in merge semantics, not store mechanics.
+- The highest regression risk is behavioral parity in reconciler/merge semantics, not basic store mechanics.
 - The highest perf footgun is accidentally leaking derived message arrays back into context values.
-- The highest migration footgun is partial rewiring, where some consumers still read from legacy runtime and others from the new runtime.
+- The highest migration footgun is partial rewiring, or collapsing reconciler concerns into the public zustand store.
 - The highest UX regression risk is scroll/auto-scroll timing around optimistic send and resumed streaming.
 
 ## Unresolved questions

@@ -1,3 +1,69 @@
+2026-04-18: conversation Phase 3 core swap landed on live web path
+- added private engine under `apps/web/src/hooks/chat/conversation/engine/`
+- `conversation-reconciler.ts` is pure TS and microtask-batched; tested with Vitest
+- reconciler precedence locked in code: `hot > optimistic > persisted > cache`
+- reconciler emits sparse `ViewPatch` (`orderedIds?`, `recordUpdates?`, `status?`) instead of replacing whole collections
+- scoped `zustand/vanilla` view store now applies sparse patches via `applyViewPatch`
+- new conversation-owned source hook `use-active-conversation-sources.tsx` now feeds cache/persisted/resumed/http layers into reconciler
+- live `use-active-conversation.tsx` no longer reads legacy `useMessages`; optimistic send/regenerate paths now talk to reconciler
+- legacy `apps/web/src/hooks/use-chat-active.tsx` and `apps/web/src/hooks/use-messages.tsx` remained untouched
+- feedback loop green after swap: `pnpm -F web run check-types`, `pnpm -F web run test`
+
+2026-04-18: conversation Phase 3 parity hardening shipped
+- extracted pure message-list helpers to `apps/web/src/hooks/chat/conversation/conversation-message-helpers.ts`
+- source adapter now reuses tested helpers for persisted-tail trim during resumed stream catch-up and cache overlap trimming
+- added focused Vitest coverage in `conversation-message-helpers.test.ts`
+- provider cache persistence now skips redundant writes when only store status changes and the visible message tail is reference-identical
+- feedback loop green: `pnpm -F web run check-types`, `pnpm -F web run test`
+
+2026-04-18: prompt-input send-state wiring shipped (send only)
+- added pure helper `apps/web/src/components/chat/prompt-input/prompt-input-send-state.ts`
+- helper maps conversation `pending|streaming` to prompt status `"submitted"` instead of `"streaming"` so UI never implies unsupported cancel/stop action
+- `prompt-input.tsx` now reads `streamStatus` from active conversation state and uses unified disabled/status mapping for textarea, submit button, and model selector
+- added focused tests in `prompt-input-send-state.test.ts`
+- regenerate/cancel intentionally left untouched and still unsupported
+- feedback loop green: `pnpm -F web run check-types`, `pnpm -F web run test`
+
+2026-04-18: unsupported message retry/continue affordances retired from live UI
+- assistant footer no longer renders retry action; copy + infos only
+- cancelled/error status blocks no longer render action buttons
+- status copy updated to point user toward sending a new message instead of unsupported retry flows
+- removed dead L3 status-action plumbing from `message-assistant.tsx`, `status.tsx`, and `use-message-actions.ts`
+- runtime regenerate/cancel code intentionally left untouched as legacy reference only
+- feedback loop green: `pnpm -F web run check-types`, `pnpm -F web run test`
+
+2026-04-18: dead message action leftovers retired
+- removed unused user edit footer plumbing (`edit-retry` payload, `readEditInitialText` prop, inline editor dead path)
+- deleted unused `apps/web/src/components/chat/message/_parts/status/_parts/status-actions.tsx`
+- message action hook now handles copy only, matching actual supported live behavior
+- feedback loop green: `pnpm -F web run check-types`, `pnpm -F web run test`
+
+2026-04-18: Phase 5 verification/doc alignment finished
+- `apps/web/vitest.config.ts` now includes both `src/**/*.test.ts` and `src/**/*.test.tsx`; prior provider test file was silently skipped
+- added real provider/hook integration coverage in `apps/web/src/hooks/chat/conversation/use-active-conversation.test.tsx`
+- test verifies provider boundary throws and live provider exposes state/actions/feed surfaces with mocked runtime deps
+- updated `plans/messages-conversation-runtime.md` Phase 5 acceptance/manual-QA wording to send/load/stream scope only
+- updated `MESSAGES_PRD.md` action/testing wording so regenerate/cancel are documented as legacy-reference-only, not live-scope requirements
+- feedback loop green: `pnpm -F web run check-types`, `pnpm -F web run test`
+
+2026-04-19: message projection runtime split landed with minimal provider churn
+- added pure message runtime in `apps/web/src/hooks/chat/conversation/active-conversation-messages-runtime.ts`
+- added React source bridge in `apps/web/src/hooks/chat/conversation/active-conversation-messages-runtime-bridge.tsx`
+- `ActiveConversationProvider` kept high-level orchestration (actions/status/nav/input/mutations) and now commands message runtime instead of owning reconciler/source effects directly
+- provider no longer subscribes to direct message-source arrays; bridge owns `useActiveConversationSourceState` and feeds runtime + reports back non-message meta
+- public conversation/message hooks kept unchanged
+- feedback loop green: `pnpm -F web run check-types`, `pnpm -F web run test`
+
+2026-04-19: conversation folder full cleanup completed
+- final public shape now uses 2 explicit stores:
+  - `active-conversation-store.ts` = warm conversation metadata/actions store
+  - `active-conversation-messages.tsx` = hot message store + message hooks + runtime + bridge
+- removed transitional files (`active-conversation-messages-runtime*`, `active-conversation-view-store*`)
+- `use-active-conversation.tsx` now contains provider/controller only
+- message hooks are colocated with the message store they consume; conversation hooks are colocated with the conversation store they consume
+- provider still owns high-level workflow orchestration but no longer owns message-store internals
+- feedback loop green: `pnpm -F web run check-types`, `pnpm -F web run test`
+
 message footer MVP refactor completed under apps/web/src/components/chat/message/_parts/footer/
 footer actions now use shared ui-custom primitives: IconActionButton and CopyActionButton
 copy action now animates copy->check on successful copy and uses app custom tooltip wrapper
@@ -238,6 +304,90 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - feature branch rewritten to 2 commits only: `perf(startTransition swap + changeset)` and `docs(worker-backed code plugin pattern)`
 - dropped prior `deferCodeBlocks` contribution from branch history; no `deferCodeBlocks` refs remain
 - backup branch kept: `backup/feat-codeblock-defer-transition-docs-before-clean`
+
+2026-04-18: naming/structure direction locked for chat refactor
+- public session-scoped runtime now moves under `apps/web/src/hooks/chat/conversation/`
+- `conversation` is the active ubiquitous language for the new runtime surface
+- internal message pipeline/orchestration can still get a deeper module later, but Phase 1 keeps provider + convenience hooks collocated in one conversation runtime file
+- old `use-chat-active.tsx` and `use-messages.tsx` remain untouched reference files only
+- message raw text direction still stands: keep hook-based stable getter shape, prefer explicit snapshot getter naming over reactive-looking value naming; avoid forcing `messageId`-based action API before a real message snapshot/registry seam exists
+
+2026-04-18: authoritative PRD/index for conversation message-runtime refactor added
+- path: `MESSAGES_PRD.md`
+- scope: conversation-state/actions vs message-store split, id-based conversation feed, stable store api via `useSyncExternalStore`, legacy runtime left untouched/unmodified
+- nomenclature updated in PRD: prefer `conversation` over `active-thread-v2`; keep core provider/hooks collocated instead of one-hook-per-file sprawl
+- references section points to component architecture, provider scope doc, older message UI PRD, and grill-me workflow for future ambiguity resolution
+
+2026-04-18: implementation plan approved for conversation message-runtime refactor
+- path: `plans/messages-conversation-runtime.md`
+- phases locked:
+  1. conversation runtime skeleton
+  2. message store + id-based feed
+  3. message-source parity
+  4. action rewire + legacy runtime exit
+  5. verification + perf guardrails
+
+2026-04-18: Phase 1 conversation runtime skeleton shipped
+- added new live runtime at `apps/web/src/hooks/chat/conversation/use-active-conversation.tsx`
+- live app wiring now imports `ActiveConversationProvider`, `useActiveConversationState`, `useActiveConversationActions`, `useActiveConversationMessages`
+- rewired files:
+  - `apps/web/src/components/providers/4-chat-session-scope.tsx`
+  - `apps/web/src/components/chat/conversation/conversation.tsx`
+  - `apps/web/src/components/chat/prompt-input/prompt-input.tsx`
+- legacy `apps/web/src/hooks/use-chat-active.tsx` remains untouched and no longer used by live app path
+- deliberate scope note: stable message-store API via `useSyncExternalStore` deferred to Phase 2; Phase 1 keeps reactive message access via separate message context to avoid accidental half-store implementation
+- feedback loop:
+  - `pnpm -F web run test` passed
+  - `pnpm -F web run check-types` was initially blocked by unrelated local `LegendList.waitForInitialLayout` edits already present before follow-up cleanup
+  - `pnpm -F web run lint:fix` completed but workspace still has many pre-existing warnings unrelated to this slice
+
+2026-04-18: Phase 2 message store + id feed shipped
+- added pure store module with focused tests:
+  - `apps/web/src/hooks/chat/conversation/active-conversation-message-store.ts`
+  - `apps/web/src/hooks/chat/conversation/active-conversation-message-store.test.ts`
+- store behavior now covered for:
+  - initial ids/snapshots
+  - order listener notifications
+  - per-message listener notifications
+  - removed-message notifications
+- `use-active-conversation.tsx` now exposes:
+  - `useActiveConversationMessageIds`
+  - `useActiveConversationMessage`
+- provider now holds a stable message store object and syncs merged message collections into it
+- conversation feed rewired to ordered ids + per-row message subscription
+- rewired files:
+  - `apps/web/src/components/chat/conversation/conversation.tsx`
+  - `apps/web/src/components/chat/conversation/conversation-layout.tsx`
+  - `apps/web/src/components/chat/conversation/_parts/messages-list/messages-list.tsx`
+  - `apps/web/src/components/chat/conversation/_parts/messages-list/_parts/messages-list-virtual.tsx`
+  - `apps/web/src/routes/components/_components/conversation.tsx`
+- scope note: source/merge semantics still come from legacy `useMessages`; Phase 3 remains the source-parity replacement slice
+- feedback loop:
+  - `pnpm -F web run check-types` passed
+  - `pnpm -F web run test` passed
+
+2026-04-18: correction from grill history
+- `GRILL_ME_MESSAGES.md` explicitly locked `zustand/vanilla` for the Conversation View Store
+- PRD and plan were updated to reflect:
+  - mandatory scoped zustand/vanilla view store
+  - 3-box architecture: Conversation Runtime / Conversation Reconciler / Conversation View Store
+  - precedence and reconciler ownership belong to architecture baseline, not optional follow-up
+- implication for implementation restart:
+  - do not continue from the custom hand-rolled store as target architecture
+  - restart from replacing the current custom view store internals with scoped zustand/vanilla while preserving current public conversation hooks if useful
+
+2026-04-18: zustand recovery slice shipped; project back on planned track
+- removed hand-rolled custom conversation store and replaced it with scoped zustand/vanilla view store:
+  - `apps/web/src/hooks/chat/conversation/active-conversation-view-store.ts`
+  - `apps/web/src/hooks/chat/conversation/active-conversation-view-store.test.ts`
+- runtime hooks now bind via zustand selectors (`useStore`) while preserving current public hook surface:
+  - `useActiveConversationMessageIds`
+  - `useActiveConversationMessage`
+- current id-based feed wiring remains intact and now sits on the correct store technology baseline
+- feedback loop:
+  - `pnpm -F web run check-types` passed
+  - `pnpm -F web run test` passed
+- next real phase is still Phase 3: introduce conversation-owned source adapters + reconciler and remove live dependency on legacy `useMessages`
 
 2026-03-02: paginated reactivity bug root-cause confirmed (sidebar + conversation)
 - convex WS showed reactive patches arriving; backend/query/core libs not culprit for this symptom

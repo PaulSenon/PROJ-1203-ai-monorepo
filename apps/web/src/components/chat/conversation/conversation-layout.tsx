@@ -12,8 +12,9 @@ import { cn } from "@/lib/utils";
 import { MessagesList } from "./_parts/messages-list/messages-list";
 
 export type ChatConversationLayoutProps = {
+  getMessageSnapshot: (messageId: string) => MyUIMessage | undefined;
   threadUuid: string;
-  messages: MyUIMessage[];
+  messageIds: string[];
   isThreadSettled: boolean;
   isPending: boolean;
   pendingAutoScrollMessageId: string | undefined;
@@ -22,7 +23,8 @@ export type ChatConversationLayoutProps = {
 
 export const ChatConversationLayout = React.memo(
   function _ChatConversationLayout({
-    messages,
+    messageIds,
+    getMessageSnapshot,
     isThreadSettled,
     pendingAutoScrollMessageId,
     isPending,
@@ -72,8 +74,9 @@ export const ChatConversationLayout = React.memo(
       >
         <Conversation.List>
           <MessagesList
+            getMessageSnapshot={getMessageSnapshot}
             isPending={isPending}
-            messages={messages}
+            messageIds={messageIds}
             onLastItemKeyUpdate={handleLastItemKeyUpdate}
             onReady={handleReady}
             onStartReached={onStartReached}

@@ -13,10 +13,10 @@ interface MessagesListProps extends MessagesListVirtualProps {
 export const MessagesList = memo(function _MessagesList({
   isPending,
   onReady,
-  messages,
+  messageIds,
   ...props
 }: MessagesListProps) {
-  const isEmpty = !isPending && messages.length === 0;
+  const isEmpty = !isPending && messageIds.length === 0;
 
   // Handle ready event signal for empty list only.
   // When list not empty the ready signal is sync with layout logic.
@@ -29,7 +29,7 @@ export const MessagesList = memo(function _MessagesList({
 
   return (
     <MessagesListVirtual
-      messages={messages}
+      messageIds={messageIds}
       onLayoutReady={onReady}
       {...props}
     />

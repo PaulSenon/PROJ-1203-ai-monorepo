@@ -78,7 +78,7 @@ export function ChatMessageAssistant({
 }: ChatMessageAssistantProps) {
   const showThinking = shouldShowThinking(message);
   const readRawText = useMessageRawTextReader(message.parts);
-  const { handleFooterAction, handleStatusAction } = useMessageActions({
+  const { handleFooterAction } = useMessageActions({
     messageId: message.id,
     readRawText,
     role: "assistant",
@@ -108,10 +108,7 @@ export function ChatMessageAssistant({
             parts={message.parts}
             reasoningPreviewLines={reasoningPreviewLines}
           />
-          <StatusPart
-            metadata={message.metadata}
-            onAction={handleStatusAction}
-          />
+          <StatusPart metadata={message.metadata} />
         </Message.Content>
         <Message.Footer>
           <MessageFooterAssistant

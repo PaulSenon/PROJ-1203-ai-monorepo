@@ -3,11 +3,6 @@ import type {
   MessageErrorKind,
 } from "@ai-monorepo/ai/types/uiMessage";
 import { StatusBlock } from "@/components/ui-custom/feedback/status-block";
-import {
-  type StatusActionDescriptor,
-  StatusActionList,
-  type StatusActionPayload,
-} from "./_parts/status-actions";
 
 const supportedStatusErrorLocales = ["en", "fr"] as const;
 const defaultStatusErrorLocale = "fr" as const;
@@ -46,26 +41,26 @@ const errorMessageBuilderByKind: ErrorMessageBuilderByKind = {
   AI_API_ERROR: {
     en: () => ({
       title: "AI Provider Error",
-      bodyLines: ["Please retry with another model."],
+      bodyLines: ["Send a new message to try again."],
     }),
     fr: () => ({
       title: "Erreur du fournisseur IA",
-      bodyLines: ["Veuillez reessayer avec un autre modele."],
+      bodyLines: ["Envoyez un nouveau message pour reessayer."],
     }),
   },
   UNKNOWN_ERROR: {
     en: () => ({
       title: "Unknown Error",
-      bodyLines: ["Sorry for the inconvenience."],
+      bodyLines: ["Send a new message to try again."],
     }),
     fr: () => ({
       title: "Erreur inconnue",
-      bodyLines: ["Desole pour le desagrement."],
+      bodyLines: ["Envoyez un nouveau message pour reessayer."],
     }),
   },
   MAX_OUTPUT_TOKENS_EXCEEDED: {
     en: (params) => {
-      const bodyLines = ["Please retry with another model."];
+      const bodyLines = ["Send a new message to try again."];
 
       if (typeof params.maxOutputTokens === "number") {
         bodyLines.push(`Max output limit: ${params.maxOutputTokens} tokens.`);
@@ -84,7 +79,7 @@ const errorMessageBuilderByKind: ErrorMessageBuilderByKind = {
       };
     },
     fr: (params) => {
-      const bodyLines = ["Veuillez reessayer avec un autre modele."];
+      const bodyLines = ["Envoyez un nouveau message pour reessayer."];
 
       if (typeof params.maxOutputTokens === "number") {
         bodyLines.push(`Limite de sortie: ${params.maxOutputTokens} tokens.`);
@@ -104,77 +99,6 @@ const errorMessageBuilderByKind: ErrorMessageBuilderByKind = {
     },
   },
 };
-
-const defaultErrorActions: StatusActionDescriptor[] = [
-  {
-    id: "retry",
-    label: "Retry",
-    intent: "primary",
-    payload: { type: "retry" },
-  },
-  {
-    id: "retry-another-model",
-    label: "Retry with another model",
-    intent: "secondary",
-    payload: { type: "retry-model" },
-  },
-];
-
-const errorActionsByKind: {
-  [K in MessageErrorKind]: (
-    error: Extract<MessageError, { kind: K }>
-  ) => StatusActionDescriptor[];
-} = {
-  AI_API_ERROR: () => defaultErrorActions,
-  UNKNOWN_ERROR: () => defaultErrorActions,
-  MAX_OUTPUT_TOKENS_EXCEEDED: (error) => {
-    const suggestedModelId = error.params?.retryWithSuggestedModelIds?.[0];
-
-    if (suggestedModelId) {
-      return [
-        {
-          id: "retry-suggested-model",
-          label: "Retry with suggested model",
-          intent: "primary",
-          payload: { type: "retry-model", modelId: suggestedModelId },
-        },
-        {
-          id: "retry-different-model",
-          label: "Retry with different model",
-          intent: "secondary",
-          payload: { type: "retry-model" },
-        },
-      ];
-    }
-
-    return [
-      {
-        id: "retry",
-        label: "Retry",
-        intent: "primary",
-        payload: { type: "retry" },
-      },
-    ];
-  },
-};
-
-function getErrorActions(
-  error: MessageError | undefined
-): StatusActionDescriptor[] {
-  if (!error) {
-    return errorActionsByKind.UNKNOWN_ERROR({ kind: "UNKNOWN_ERROR" });
-  }
-
-  if (error.kind === "AI_API_ERROR") {
-    return errorActionsByKind.AI_API_ERROR(error);
-  }
-
-  if (error.kind === "MAX_OUTPUT_TOKENS_EXCEEDED") {
-    return errorActionsByKind.MAX_OUTPUT_TOKENS_EXCEEDED(error);
-  }
-
-  return errorActionsByKind.UNKNOWN_ERROR(error);
-}
 
 function getLocalizedErrorCopy(error: MessageError, locale: StatusErrorLocale) {
   if (error.kind === "AI_API_ERROR") {
@@ -226,12 +150,10 @@ function getErrorContent(
 
 type ErrorStatusPartProps = {
   error?: MessageError;
-  onAction: (payload: StatusActionPayload) => void;
 };
 
-export function ErrorStatusPart({ error, onAction }: ErrorStatusPartProps) {
+export function ErrorStatusPart({ error }: ErrorStatusPartProps) {
   const { title, body } = getErrorContent(error, defaultStatusErrorLocale);
-  const actions = getErrorActions(error);
 
   return (
     <StatusBlock.Root className="w-full" kind="error">
@@ -239,9 +161,6 @@ export function ErrorStatusPart({ error, onAction }: ErrorStatusPartProps) {
         <StatusBlock.Title>{title}</StatusBlock.Title>
         <StatusBlock.Body>{body}</StatusBlock.Body>
       </StatusBlock.Content>
-      <StatusBlock.Actions>
-        <StatusActionList actions={actions} onAction={onAction} />
-      </StatusBlock.Actions>
     </StatusBlock.Root>
   );
 }

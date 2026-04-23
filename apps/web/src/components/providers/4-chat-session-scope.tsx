@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from "react";
+import { ActiveConversationProvider } from "@/hooks/chat/conversation/active-conversation-provider";
 import { AiSdkChatProvider } from "@/hooks/chat/use-ai-sdk-chat";
-import { ActiveThreadProvider } from "@/hooks/use-chat-active";
 import { ChatDraftProvider } from "@/hooks/use-chat-draft";
 import { ChatInputProvider } from "@/hooks/use-chat-input";
 import { ModelSelectorProvider } from "@/hooks/use-user-preferences";
@@ -46,7 +46,7 @@ function ChatSessionScopeExternalProviders({
       <ModelSelectorProvider>
         <ChatInputProvider>
           <AiSdkChatProvider sessionId={sessionId}>
-            <ActiveThreadProvider>{children}</ActiveThreadProvider>
+            <ActiveConversationProvider>{children}</ActiveConversationProvider>
           </AiSdkChatProvider>
         </ChatInputProvider>
       </ModelSelectorProvider>

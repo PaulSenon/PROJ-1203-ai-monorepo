@@ -77,6 +77,9 @@ function RouteComponent() {
   const [isThreadSettled, setIsThreadSettled] = useState(true);
   const [threadUuid, setThreadUuid] = useState("demo-thread-1");
   const [layoutRemountKey, setLayoutRemountKey] = useState(0);
+  const messageIds = messages.map((message) => message.id);
+  const getMessageSnapshot = (messageId: string) =>
+    messages.find((message) => message.id === messageId);
 
   const addUserMessage = () => {
     setMessages((prev) => [...prev, createUserMessage("New user message")]);
@@ -315,10 +318,11 @@ function RouteComponent() {
             >
               <ScrollToBottomProvider containerRef={previewScrollRef}>
                 <ChatConversationLayout
+                  getMessageSnapshot={getMessageSnapshot}
                   isPending={false}
                   isThreadSettled={isThreadSettled}
                   key={`${threadUuid}:${layoutRemountKey}`}
-                  messages={messages}
+                  messageIds={messageIds}
                   pendingAutoScrollMessageId={undefined}
                   threadUuid="123"
                 />

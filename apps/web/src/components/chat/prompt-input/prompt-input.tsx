@@ -5,27 +5,36 @@ import type {
 } from "@/components/ai-elements/prompt-input";
 import { ChatInput as Input } from "@/components/ui-custom/chat/chat-input";
 import { useAppReadyState } from "@/hooks/chat/app-ready/app-ready-visibility";
-import { useActiveThreadActions } from "@/hooks/use-chat-active";
+import {
+  useActiveConversationActions,
+  useActiveConversationState,
+} from "@/hooks/chat/conversation/active-conversation-store";
 import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useModelSelectorState } from "@/hooks/use-user-preferences";
 import { cn } from "@/lib/utils";
 import { ChatModelSelector } from "./_parts/model-selector";
+import { getPromptInputSendState } from "./prompt-input-send-state";
 
 export function ChatInput() {
   const isMobile = useIsMobile();
   const inputState = useChatInputState();
   const inputActions = useChatInputActions();
-  const { sendMessage } = useActiveThreadActions();
+  const { sendMessage } = useActiveConversationActions();
+  const { streamStatus } = useActiveConversationState();
   const { hidden: isSwitching } = useAppReadyState("conversation");
   // const { markReady } = useAppReadySignalAction({checkpoint: 'prompt-input-data', runKey: })
   const { selectedModelId } = useModelSelectorState();
   const isInputPending = inputState.isPending;
-  const isInputDisabled = inputState.disabled || isSwitching;
-  const handleSubmit: PromptInputProps["onSubmit"] = (message, event) => {
+  const sendState = getPromptInputSendState({
+    isDraftDisabled: inputState.disabled,
+    isSwitching,
+    streamStatus,
+  });
+  const isInputDisabled = sendState.isDisabled;
+  const handleSubmit: PromptInputProps["onSubmit"] = (message) => {
     if (!message.text || message.text.trim() === "") return;
 
-    console.log("ChatInput: handleSubmit", { message, event });
     sendMessage({
       text: message.text,
       options: {
@@ -42,8 +51,8 @@ export function ChatInput() {
 
   // useEffect(() => {}, [markReady]);
 
-  // TODO: status not implemented yet
-  const submitButtonStatus: PromptInputSubmitProps["status"] = "ready";
+  const submitButtonStatus: PromptInputSubmitProps["status"] =
+    sendState.submitStatus;
 
   return (
     <Input.Root
@@ -65,7 +74,7 @@ export function ChatInput() {
       </Input.Header> */}
       <Input.Body>
         <Input.Textarea
-          disabled={isInputPending}
+          disabled={isInputDisabled}
           onChange={(e) => inputActions.setInput(e.target.value)}
           ref={inputState.inputRef}
           submitOnEnter={!isMobile}
@@ -76,7 +85,7 @@ export function ChatInput() {
         <Input.Tools>
           <Input.ToolsMore />
           <ChatModelSelector
-            disabled={isSwitching}
+            disabled={isInputDisabled}
             onClose={() => inputActions.focus()}
           />
         </Input.Tools>

@@ -19,6 +19,15 @@ This doc is the working index for the conversation/messages runtime refactor.
 - `.agents/skills/grill-me/SKILL.md`
   What: design stress-test workflow.
   Use when: a future design branch is still ambiguous and needs forced decision-tree clarification before coding.
+- [GRILL_ME_MESSAGES.md](/app/GRILL_ME_MESSAGES.md)
+  What: decision log from the grill-me design session.
+  Use when: verifying which architecture decisions were actually locked, especially store technology and runtime boundaries.
+- [CONVERSATION_RUNTIME_ARCHITECTURE.md](/app/CONVERSATION_RUNTIME_ARCHITECTURE.md)
+  What: box model and ownership breakdown for runtime, reconciler, and view store.
+  Use when: implementing the runtime internals and checking whether a concern belongs in React land, reconciler, or store.
+- [UBIQUITOUS_LANGUAGE.md](/app/UBIQUITOUS_LANGUAGE.md)
+  What: canonical vocabulary for conversation runtime architecture.
+  Use when: naming modules, APIs, and comments without drifting terminology.
 
 ## Problem Statement
 
@@ -49,6 +58,12 @@ The message collection will move to an id-based rendering model:
 - conversation state consumers no longer subscribe to the full `messages` array
 
 The old runtime stays unused and unmodified until manual deletion later.
+
+Current supported live action scope is narrower than the legacy reference surface:
+
+- supported in live path: send
+- unsupported in live path: regenerate, cancel
+- legacy regenerate/cancel code stays untouched as reference only
 
 ## User Stories
 
@@ -97,6 +112,20 @@ Recommended file grouping:
 
 Avoid splitting trivial context hooks into many one-hook-per-file satellites.
 
+### Runtime architecture boxes
+
+The runtime is split into 3 explicit boxes:
+
+- **Conversation Runtime**: React-land orchestration and lifecycle owner
+- **Conversation Reconciler**: pure TS source-aware merge engine
+- **Conversation View Store**: scoped merged UI-facing store only
+
+Ownership rule:
+
+- React hooks, session scope, source subscriptions, and status wiring stay in the runtime
+- precedence, dirty tracking, batching, and winner selection stay in the reconciler
+- merged UI-facing state only stays in the view store
+
 ### Provider boundary
 
 The exported facade may remain a single `ActiveConversationProvider`-style provider if that keeps usage simple.
@@ -108,6 +137,16 @@ Internally it must compose three concerns:
 - conversation message store context
 
 The message store context value must be a stable store API object, not a derived object carrying `messages` or `messageIds` directly.
+
+### Store technology
+
+This decision is locked from grill history:
+
+- the **Conversation View Store** must use `zustand/vanilla`
+- one scoped store instance is created per mounted conversation provider
+- do not ship a hand-rolled custom external store as the target architecture
+
+Custom typed hooks/selectors should still be the public API. The app should not broadly consume the raw zustand store object.
 
 ### Conversation state contract
 
@@ -131,7 +170,9 @@ Message-level churn must therefore not update the conversation state context.
 
 ### Conversation actions contract
 
-Conversation actions surface must expose the send/cancel/regenerate behavior needed by prompt input and message actions.
+Conversation actions surface must keep live product behavior send-only.
+
+`regenerate` and `cancel` may remain present as untouched legacy reference paths in runtime internals, but they are out of scope for the live app path and this refactor's completion criteria.
 
 Actions stay conversation-scoped and independent from message collection subscription mechanics.
 
@@ -150,17 +191,43 @@ It must support:
 
 Recommended model:
 
-- `ids: string[]`
-- `entities: Map<string, Message>`
-- per-entity version map
-- order version
-- listeners for order and for each message id
+- scoped `zustand/vanilla` store
+- merged `orderedIds`
+- merged `recordsById`
+- merged status snapshot
+
+Recommended public UI-facing state:
+
+- `orderedIds: string[]`
+- `recordsById: Record<string, MessageRecord>`
+- `status: ConversationStatus`
 
 Recommended React binding:
 
-- use `useSyncExternalStore`
-- one hook subscribes to order
-- one hook subscribes to a single message id
+- expose custom typed selector hooks over the scoped zustand store
+- list consumers select `orderedIds`
+- row consumers select one message record by id
+- sub-part consumers may later select narrower slices like `parts` or `metadata`
+
+Selector goal:
+
+- list rerenders only when visible order changes
+- row rerenders only when that record changes
+- future content/footer consumers can select narrower slices without store redesign
+
+### Reconciler contract
+
+The reconciler is private, pure TypeScript, and source-aware.
+
+It owns:
+
+- source truth for cache / persisted / optimistic / resumed / http
+- source precedence
+- dirty ids
+- microtask flush batching
+- generation of one merged patch for the view store
+
+It must not be collapsed into the public view store.
 
 ### Message source and merge logic
 
@@ -176,6 +243,10 @@ Rebuild equivalent merge behavior in a new message-source module, preserving cur
 
 Preserve current merge priorities and filtering rules so UX behavior does not change during the runtime refactor.
 
+Locked source precedence from grill history:
+
+- `hot > optimistic > persisted > cache`
+
 The message source module should return:
 
 - merged messages
@@ -188,10 +259,11 @@ The message source module should return:
 
 Target flow:
 
-1. message source computes merged `messages`
-2. provider diffs/applies them into stable message store
-3. conversation layout subscribes only to `messageIds`
-4. each message row subscribes only to its own message entity
+1. source adapters forward source truth into the reconciler
+2. reconciler computes one merged patch per microtask flush
+3. provider applies that patch into the scoped zustand view store
+4. conversation layout subscribes only to `orderedIds`
+5. each message row subscribes only to its own message record
 
 This means message streaming updates no longer force conversation state consumers to rerender.
 
@@ -224,9 +296,10 @@ Do not mount both old and new runtimes in parallel unless there is a proven need
 
 Prefer deep modules over shallow module sprawl:
 
-- conversation provider file owns provider wiring + convenience hooks
-- message store module owns diff/subscription mechanics behind a small api
-- message source module owns merge semantics behind a small api
+- conversation provider/runtime file owns provider wiring + convenience hooks
+- reconciler module owns source truth, precedence, dirty tracking, and flush logic behind a small api
+- zustand view store module owns merged UI-facing state only
+- source adapter modules own hook-to-reconciler binding only
 
 This should make future perf work, virtualization work, and correctness debugging easier.
 
@@ -240,7 +313,7 @@ Primary behaviors to validate:
 - single message row rerenders when its message changes
 - order subscribers rerender when ids/order change
 - older-history pagination still works
-- optimistic send/regenerate flows still produce correct visible message order/content
+- optimistic send flow still produces correct visible message order/content
 - resumed stream and http stream still converge to correct merged visible messages
 
 Modules worth direct testing:
@@ -262,7 +335,7 @@ Manual verification remains important for:
 - initial anchor behavior
 - load older
 - streaming smoothness
-- regenerate flow
+- optimistic send
 
 ## Out of Scope
 

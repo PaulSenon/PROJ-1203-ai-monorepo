@@ -3,10 +3,10 @@ import {
   type AlwaysRenderConfig,
   LegendList,
   type LegendListRef,
-  type LegendListRenderItemProps,
 } from "@legendapp/list/react";
-import { useCallback, useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import { ChatMessage } from "@/components/chat/message/message";
+import { useActiveConversationMessage } from "@/hooks/chat/conversation/active-conversation-message-store";
 import {
   ScrollEdgeProbe,
   useScrollEdges,
@@ -18,7 +18,8 @@ export type EnrichedLegendListRef = LegendListRef & {
 };
 
 export type MessagesListVirtualProps = {
-  messages: MyUIMessage[];
+  getMessageSnapshot: (messageId: string) => MyUIMessage | undefined;
+  messageIds: string[];
   shouldReserveLastAssistantSpace: boolean;
   onStartReached?: () => void;
   onEndReached?: () => void;
@@ -34,16 +35,51 @@ function SeparatorComponent() {
   return <div className="h-10" />;
 }
 
-function messageKeyExtractor(message: MyUIMessage) {
-  return message.id;
+function messageKeyExtractor(messageId: string) {
+  return messageId;
 }
 
-function messageTypeExtractor(message: MyUIMessage) {
-  return message.role;
+type MessageListItemProps = {
+  enableCodeHighlighting?: boolean;
+  isDynamic: boolean;
+  isFollowup: boolean;
+  messageId: string;
+};
+
+const MessageListItem = memo(function _MessageListItem({
+  messageId,
+  isDynamic,
+  isFollowup,
+  enableCodeHighlighting,
+}: MessageListItemProps) {
+  const message = useActiveConversationMessage(messageId);
+
+  if (!message) return null;
+
+  const shouldReserveForAssistant =
+    message.role === "assistant" && isDynamic && isFollowup;
+
+  return (
+    <div className={cn(shouldReserveForAssistant && "min-h-[calc(100vh-20rem)]")}>
+      <ChatMessage
+        consolidate={!isDynamic}
+        enableCodeHighlighting={enableCodeHighlighting}
+        message={message}
+      />
+    </div>
+  );
+});
+
+function getMessageType(
+  getMessageSnapshot: MessagesListVirtualProps["getMessageSnapshot"],
+  messageId: string
+) {
+  return getMessageSnapshot(messageId)?.role;
 }
 
 export function MessagesListVirtual({
-  messages,
+  messageIds,
+  getMessageSnapshot,
   shouldReserveLastAssistantSpace,
   onStartReached,
   onEndReached,
@@ -52,8 +88,8 @@ export function MessagesListVirtual({
 }: MessagesListVirtualProps) {
   const listRef = useRef<EnrichedLegendListRef | null>(null);
   const isReady = useRef(false);
-  const messagesRef = useRef(messages);
-  messagesRef.current = messages;
+  const messageIdsRef = useRef(messageIds);
+  messageIdsRef.current = messageIds;
 
   const handleStartReached = useCallback(() => {
     if (!isReady.current) return;
@@ -92,7 +128,7 @@ export function MessagesListVirtual({
       // when ready we notify last added item key when layout changes
       cancelAnimationFrame(raf.current);
       raf.current = requestAnimationFrame(() => {
-        onLastItemKeyUpdate?.(messagesRef.current.at(-1)?.id);
+        onLastItemKeyUpdate?.(messageIdsRef.current.at(-1));
       });
       return;
     }
@@ -117,50 +153,37 @@ export function MessagesListVirtual({
   }, [onLayoutReady]);
 
   const renderItem = useCallback(
-    ({ item, index }: LegendListRenderItemProps<MyUIMessage>) => {
-      const isLast = index === messagesRef.current.length - 1;
-      const isFollowup = messagesRef.current.length > 2;
+    ({ item, index }: { item: string; index: number }) => {
+      const isLast = index === messageIdsRef.current.length - 1;
+      const isFollowup = messageIdsRef.current.length > 2;
       const isDynamic = isLast && shouldReserveLastAssistantSpace;
-      const shouldReserveForAssistant =
-        item.role === "assistant" && isDynamic && isFollowup;
-
-      // DEBUG force slow message components render
-      // const startTime = performance.now();
-      // while (performance.now() - startTime < 100) {
-      //   // Do nothing for 5 ms per item to emulate extremely slow code
-      // }
 
       return (
-        <div
-          className={cn(
-            shouldReserveForAssistant && "min-h-[calc(100vh-20rem)]"
-          )}
-          key={item.id}
-        >
-          <ChatMessage
-            consolidate={!isDynamic}
-            enableCodeHighlighting={true} // TODO: how to handle isReady reactivity here ???
-            message={item}
-          />
-        </div>
+        <MessageListItem
+          enableCodeHighlighting={true} // TODO: how to handle isReady reactivity here ???
+          isDynamic={isDynamic}
+          isFollowup={isFollowup}
+          key={item}
+          messageId={item}
+        />
       );
     },
     [shouldReserveLastAssistantSpace]
   );
 
   // just a safety net
-  if (messages.length === 0) return null;
+  if (messageIds.length === 0) return null;
 
   return (
     <>
       <ScrollEdgeProbe ref={topRef} />
-      <LegendList<MyUIMessage>
+      <LegendList<string>
         alignItemsAtEnd={true}
         alwaysRender={ALWAYS_RENDER_CONFIG}
         // Important while we cannot handle initial window scroll to bottom natively with legendList:
         className={cn(!isReady.current && "opacity-0")}
-        data={messages}
-        getItemType={messageTypeExtractor}
+        data={messageIds}
+        getItemType={(messageId) => getMessageType(getMessageSnapshot, messageId)}
         ItemSeparatorComponent={SeparatorComponent}
         initialScrollAtEnd
         keyExtractor={messageKeyExtractor}
@@ -172,7 +195,6 @@ export function MessagesListVirtual({
         renderItem={renderItem}
         suggestEstimatedItemSize
         useWindowScroll
-        waitForInitialLayout={true}
       />
       <ScrollEdgeProbe ref={bottomRef} />
     </>

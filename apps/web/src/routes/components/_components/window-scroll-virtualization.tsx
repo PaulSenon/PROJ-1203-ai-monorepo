@@ -149,8 +149,7 @@ function WindowScrollExample() {
         onLoad={() => setIsLoaded(true)}
         ref={listRef}
         renderItem={renderItem}
-        useWindowScroll
-        waitForInitialLayout={true}
+        useWindowScroll={true}
       />
     </div>
   );

@@ -8,11 +8,13 @@ When assuming something not based on online verified proof, rate confidence scor
 Use context7 to fetch doc before using any library or doing important refactoring.
 We are using react19+ so forwardRef is not needed. Use ref as prop instead.
 We are using shadcn and tailwind
-Always start answer giving your name and version (e.g. "Claude Sonnet 4.5").
 Never run any dev commands apart from `pnpm run check-types` of `pnpm run test` (with -F for single target if needed like `pnpm -F web run test`). User will always run the dev server before asking you anything. If something isn't working as intended, ask the user to perform the action and stop answering. Only command allowed are non-destructive / readonly commands for searching content etc.
 Raise warning if you think user is asking something that is going to be a bad idea.
 When user ask technical question, do not implement anything and instead, gather all official documentation and resources to answer the question in educative way. (like a dev blog article with code examples and explanations)
 Never guess product/spec details. If ambiguity, ask and wait; update PRD/AGENTS before implementation.
+Never remove comments in code unless explicitly asked to do so.
+Never remove debug logs unless explicitly asked to do so.
+Never over-split code into too many files. I'm strongly against the "one file per feature" pattern. If things are tightly coupled, keep them in the same file. e.g. consumer hooks and providers of a react context should always be colocated. Helpers or consts or classes used in only one file should be kept in the same file...
 
 ## Code principles
 
