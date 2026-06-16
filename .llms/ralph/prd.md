@@ -1,174 +1,191 @@
+# PRD - Phase 1: Instant Chat Navigation Feedback With Deferred Conversation Rendering
+
 ## Problem Statement
 
-This PRD is a follow-up stabilization pass after the previous sidebar refactor PRD.
+When a user clicks a thread in the chat sidebar, the app does not acknowledge navigation instantly. The target URL, selected sidebar state, and conversation-area feedback are coupled to the render cost of the destination conversation. As thread complexity grows, the click interaction feels delayed even if data is already available.
 
-The previous work successfully split the sidebar into cleaner L2/L3 paths, moved app logic to L3, removed fake lazy mounting from the active path, and added dedicated demo routes. However, key follow-up issues remain:
+This is a core INP problem. The app must make navigation feel instant even when destination conversation rendering is expensive and treated as a black box.
 
-1. Legacy sidebar code still exists and is still edited in the refactor window, increasing confusion and accidental reuse risk.
-2. Pagination load-more cadence can feel delayed or trigger poorly under fast scrolling.
-3. Per-row context-menu force-mounting adds avoidable DOM/render overhead in long lists.
-4. Thread list rerender fanout is still higher than needed for active-row changes.
-5. L3 composition can be further aligned with complex feature conventions used by message components.
+The required UX for thread-link clicks is:
 
-From user perspective, this creates risk of subtle UX regression (scroll/pagination/menu behavior), and from maintainer perspective, it leaves architecture debt and unclear ownership.
+1. The URL changes immediately.
+2. The clicked sidebar item becomes selected immediately.
+3. The previously selected sidebar item becomes unselected immediately.
+4. The conversation area blacks out immediately.
+5. The input becomes disabled immediately.
+6. Heavy conversation rendering is allowed to catch up later, without blocking the feedback above.
+
+The current architecture relies heavily on current-thread-derived state and keyed resets. That creates too much synchronous work on navigation and makes shell reactivity depend on conversation complexity.
 
 ## Solution
 
-Finalize the sidebar refactor by hardening architecture and performance without expanding product scope:
+Introduce a two-lane navigation model for chat thread switches:
 
-- Remove unused legacy sidebar modules now (hard cleanup), so only canonical L2/L3 paths remain.
-- Keep and formalize current bug fix allowing mobile sheet + context-menu coexistence.
-- Tighten L3 composition boundaries to better match complex feature structure conventions.
-- Remove force-mounted per-row context menus and rely on default lazy mount behavior.
-- Implement pagination gating based on paginated query status (`CanLoadMore`, `LoadingMore`, `Exhausted`) to prevent duplicate calls while preserving fast-scroll responsiveness.
-- Reduce unnecessary list rerenders (memo boundaries + stable props/contracts at hot row boundaries).
-- Keep `useDeferredValue` strategy unchanged in this phase.
+1. **Urgent lane**
+   - Owns immediate UI feedback.
+   - Updates the target thread identity instantly on click.
+   - Updates URL instantly.
+   - Updates sidebar selected state instantly.
+   - Shows blackout instantly.
+   - Disables input instantly.
 
-This pass is intentionally scope-limited: no new product behavior, no full virtualization, no skeleton-prefill pagination strategy yet.
+2. **Deferred lane**
+   - Owns heavy conversation rendering.
+   - Lags behind the urgent target thread identity.
+   - Renders the destination conversation after urgent shell feedback has already committed.
+
+Phase 1 intentionally does **not** redesign the whole chat architecture. It introduces the smallest viable decoupling layer that makes navigation feedback instant while preserving the current routing model and most current provider boundaries.
+
+The baseline switching signal for this phase is derived, not separately stored:
+
+- `isSwitching = instantThreadId !== deferredThreadId`
+
+The heavy conversation path must consume the deferred thread identity only. The shell and sidebar must consume the instant thread identity only.
+
+The previous conversation stays mounted underneath a blackout overlay while the deferred conversation catches up. We do not change scroll position, do not reset scroll, and do not change overflow behavior in a way that would cause unnecessary virtualizer recomputation or costly re-layout of the previous conversation.
+
+The new-chat route is expected to remain effectively instant because it is cheap. Phase 1 should not add special complexity for it unless actual UX regression appears.
 
 ## User Stories
 
-1. As a chat user, I want sidebar behavior to stay consistent while internals are cleaned up, so my workflow is unchanged.
-2. As a chat user with many threads, I want load-more to keep up during fast scrolling, so I do not feel list stalls near the bottom.
-3. As a chat user, I want context menus to open instantly without hurting list responsiveness, so actions remain smooth in dense histories.
-4. As a mobile user, I want non-navigation context-menu actions to keep the sidebar open, so I can continue browsing actions safely.
-5. As a mobile user, I want overlay/outside tap dismiss behavior to still work normally, so drawer behavior stays native-feel.
-6. As a keyboard user, I want thread options to remain reachable and operable, so accessibility parity is preserved.
-7. As a product engineer, I want all active sidebar callsites to use canonical L2/L3 surfaces only, so architecture is unambiguous.
-8. As a product engineer, I want legacy unused sidebar modules removed, so accidental imports cannot reintroduce old patterns.
-9. As a product engineer, I want L2 sidebar modules to stay app-agnostic, so design-system reuse remains safe.
-10. As a product engineer, I want L3 to own routing/data/actions/autoclose concerns, so behavior changes stay localized.
-11. As a maintainer, I want complex sidebar composition organized like other complex features, so code navigation is predictable.
-12. As a maintainer, I want thread row rerenders minimized, so performance work remains measurable and maintainable.
-13. As a maintainer, I want pagination trigger logic explicit and state-driven, so duplicate fetch bugs are easy to reason about.
-14. As a reviewer, I want removal of legacy modules to be explicit and complete, so no transitional ambiguity remains.
-15. As a reviewer, I want architecture exceptions documented (mobile sheet/context-menu guard), so future edits do not undo critical fixes.
-16. As a QA engineer, I want demo routes to continue validating full sidebar and item stress paths, so regressions are easy to catch.
-17. As a QA engineer, I want clear parity checks for fast-scroll pagination cadence, so responsiveness issues are objectively evaluated.
-18. As a tech lead, I want this follow-up to avoid feature creep, so delivery stays focused and shippable.
-19. As a tech lead, I want deferred advanced ideas parked explicitly, so roadmap work does not leak into this refactor.
-20. As a future implementer, I want this PRD to be self-sufficient, so implementation requires no hidden conversation context.
+1. As a chat user, I want a thread click to acknowledge immediately, so that navigation feels responsive.
+2. As a chat user, I want the URL to update immediately on thread click, so that browser history and deep-linking stay truthful.
+3. As a chat user, I want the clicked sidebar thread to highlight immediately, so that I know my click was received.
+4. As a chat user, I want the previous sidebar highlight to clear immediately, so that selection state is never ambiguous.
+5. As a chat user, I want the conversation pane to black out immediately after thread click, so that I do not mistake stale content for the new thread.
+6. As a chat user, I want the input to disable immediately during a thread switch, so that I cannot type into the wrong conversation context.
+7. As a chat user, I want the previous conversation scroll position to remain untouched while switching, so that the app does not do unnecessary work or visual jumping.
+8. As a chat user, I want the previous conversation not to visibly reflow during the blackout phase, so that the transition feels stable.
+9. As a chat user, I want the destination conversation to appear only when ready to render, so that the app feels deliberate instead of glitchy.
+10. As a chat user, I want repeated fast thread clicks to remain responsive, so that I can change my mind without waiting for a prior heavy render to finish.
+11. As a chat user, I want the app to always reflect the latest clicked thread, so that abandoned intermediate renders do not confuse navigation state.
+12. As a chat user, I want mobile and desktop sidebar behavior to remain consistent after this change, so that navigation quality improves everywhere.
+13. As a chat user, I want keyboard and pointer interactions to keep the same semantics, so that performance work does not degrade usability.
+14. As a chat user, I want the new-chat entry path to remain instant, so that starting a fresh conversation feels lightweight.
+15. As a developer, I want shell feedback state separated from heavy conversation render state, so that navigation performance no longer depends on conversation complexity.
+16. As a developer, I want a single derived switching rule, so that phase 1 stays small and understandable.
+17. As a developer, I want the heavy conversation path to subscribe only to deferred thread identity, so that urgent shell updates stay cheap.
+18. As a developer, I want the sidebar path to subscribe only to instant thread identity, so that active-row feedback never waits on conversation work.
+19. As a maintainer, I want this phase to avoid a broad routing rewrite, so that risk stays controlled.
+20. As a maintainer, I want this phase to be reversible and easy to reason about, so that later architecture cleanup can build on it safely.
 
 ## 'Polishing' Requirements
 
-- Confirm no remaining runtime imports to removed legacy sidebar modules.
-- Confirm mobile context-menu action path keeps sidebar open for non-navigation actions.
-- Confirm mobile outside tap still closes sidebar sheet as expected.
-- Confirm fast-scroll bottom approach does not cause duplicate `loadMore` bursts.
-- Confirm fast-scroll bottom approach does not stall when sentinel stays intersecting after a page resolves.
-- Confirm thread active-state changes do not visibly jank the full list.
-- Confirm desktop hover/focus quick actions and menu trigger parity remain intact.
-- Confirm keyboard menu open/select/escape/focus-return flow still works.
-- Confirm `/components/sidebar` and `/components/sidebar-thread-item` still cover dense-list and interaction checks.
+1. A thread click must feel instant on desktop and mobile even when destination conversation render is heavy.
+2. No visible blank flash between click and destination reveal.
+3. No visible scroll jump in the previous conversation during switching.
+4. No overflow-mode flicker, scrollbar jump, or layout shift caused by blackout logic.
+5. Sidebar active-state visuals must remain stable during rapid repeated clicks.
+6. Input disabled styling must feel intentional, not broken or stuck.
+7. Overlay and disabled states must be visually minimal and coherent with current design.
+8. Temporary debug logs, instrumentation, and transition experiments must be removed before merge.
 
 ## Implementation Decisions
 
-- **Follow-up scope baseline**
-  - This PRD is a continuation of prior sidebar refactor completion work.
-  - Keep product behavior parity as default rule.
+1. **Two identities**
+   - Introduce an urgent thread identity for shell/sidebar/URL feedback.
+   - Introduce a deferred thread identity for heavy conversation rendering.
 
-- **Legacy cleanup (hard requirement)**
-  - Delete unused legacy sidebar modules that are no longer part of canonical architecture.
-  - Ensure all active imports use canonical surfaces only.
-  - Do not keep dual-path transitional exports after this pass.
+2. **Derived switching policy**
+   - Phase 1 uses a derived switching signal:
+     - `isSwitching = instantThreadId !== deferredThreadId`
+   - Do not introduce a second independent boolean unless phase 1 reveals a concrete gap.
 
-- **Canonical architecture after cleanup**
-  - L2 keeps exactly two sidebar-facing namespaces:
-    - `Sidebar.*` for shell/layout composition.
-    - `SidebarItem.*` for item-level composition primitives.
-  - L3 owns app-aware concerns:
-    - data acquisition/filtering/pagination orchestration,
-    - route-aware active state/navigation,
-    - thread action wiring,
-    - mobile auto-close behavior.
+3. **Deferral mechanism**
+   - Use `useDeferredValue` as the primary mechanism in phase 1.
+   - Do not start with a custom transition orchestration layer.
+   - This keeps the implementation smaller and easier to validate.
 
-- **L3 composition structure refinement**
-  - Keep adapter + layout split for sidebar feature root.
-  - Extract non-trivial layout sub-compositions into `_parts` where it improves readability and guideline compliance.
-  - Preserve file naming conventions (`[feature]-layout`, `_parts`, `_hooks`) and avoid barrel exports.
+4. **Navigation ownership**
+   - The chat navigation coordinator becomes responsible for exposing:
+     - instant thread identity,
+     - deferred thread identity,
+     - switching status,
+     - navigation helpers.
+   - Routing remains the canonical URL source.
+   - Shell feedback is allowed to lead heavy content.
 
-- **Mobile context-menu/sheet interaction guard**
-  - Keep existing mobile interaction guard that prevents sheet outside-close when interaction originates from context-menu content.
-  - Treat this as an approved fix, not a temporary hack.
-  - Preserve normal sheet dismiss behavior for true outside interactions.
+5. **Sidebar policy**
+   - Sidebar selected state must be derived from the urgent thread identity.
+   - Sidebar must not wait for deferred conversation render to reflect the user's click.
 
-- **Context-menu mount strategy**
-  - Remove per-row forced mounting from thread item context menus.
-  - Use default mount behavior to reduce hidden DOM cost in long lists.
+6. **Conversation policy**
+   - Heavy conversation providers and renderers must read the deferred thread identity only.
+   - The heavy path must not subscribe to urgent navigation state if that would re-couple shell feedback to render cost.
 
-- **Pagination cadence hardening (no feature creep)**
-  - Gate `loadMore` requests using paginated status.
-  - Request only when status is `CanLoadMore`.
-  - No-op when status is `LoadingMore`, `LoadingFirstPage`, or `Exhausted`.
-  - Implement cycle lock to avoid duplicate `loadMore` calls for same cycle.
-  - Rearm automatically after status leaves `LoadingMore` so if sentinel is still intersecting, next page request can fire without extra scroll jiggle.
-  - Keep current product behavior; no skeleton-prefill pagination in this PRD.
+7. **Blackout policy**
+   - Keep the previous conversation mounted under a blackout overlay while switching.
+   - Do not unmount immediately on click.
+   - Do not render both previous and next conversations as separate active panes at once.
 
-- **Rerender containment**
-  - Add memoization boundary at thread item root and keep row props stable.
-  - Prefer re-rendering only rows impacted by active-state or live-status/title change.
-  - Avoid expanding optimization into global virtualization in this pass.
+8. **Scroll stability policy**
+   - Do not change scroll position on switch.
+   - Do not reset viewport.
+   - Do not toggle scrolling behavior in ways that trigger unnecessary heavy recomputation of the previous conversation surface.
+   - Prefer a top overlay layer that blocks interaction without changing content geometry.
 
-- **Deferred strategy**
-  - Keep current `useDeferredValue` behavior unchanged in this PRD.
-  - Cross-app deferred-value strategy review is explicitly deferred.
+9. **Reveal policy**
+   - For phase 1, reveal is tied to deferred identity catch-up.
+   - If visual testing shows a flash or premature reveal, phase 2 or a phase-1.1 follow-up may add a stronger layout-ready handshake.
 
-- **Delivery constraints**
-  - No new unit/integration test suite in this pass (explicitly accepted).
-  - Keep existing demos as manual verification surfaces.
+10. **New chat policy**
+    - New-chat flow should continue to feel instant.
+    - Do not add a dedicated special-case implementation unless actual testing proves it necessary.
+
+11. **Scope discipline**
+    - Do not redesign draft, model, or message-session ownership in this phase.
+    - Do not rewrite route topology in this phase.
+    - Do not broadly remove all keyed resets in this phase.
+    - Only decouple immediate navigation feedback from heavy conversation rendering.
 
 ## Testing Decisions
 
-- **What makes a good test (when tests are added later)**
-  - Validate user-observable outcomes and interaction contracts.
-  - Avoid asserting implementation details such as internal refs/memo internals.
-  - Prioritize behavior-level assertions: menu behavior, pagination cadence, active-row transitions.
+1. **Test quality bar**
+   - Test externally visible navigation behavior.
+   - Do not test hook internals or implementation-specific state wiring.
+   - Good tests prove immediate feedback and stable reveal timing from the user's perspective.
 
-- **This PRD test policy**
-  - No new unit tests for this follow-up (explicit scope decision).
-  - Validation remains manual via component demo routes and targeted QA checklist.
+2. **Primary modules to test**
+   - Chat navigation coordinator behavior.
+   - Sidebar selection behavior during switching.
+   - Conversation shell blackout/disable behavior during switching.
+   - Deferred conversation reveal behavior after switching.
 
-- **Manual verification focus**
-  - Full sidebar route: mobile sheet/menu interaction parity, load-more cadence under fast scroll, active-row behavior.
-  - Thread-item demo route: dense-list interaction behavior and quick-action/menu responsiveness.
+3. **Behavioral scenarios to validate**
+   - Click a heavy thread from another heavy thread; confirm immediate URL, highlight, blackout, and input disable.
+   - Click multiple different threads rapidly; confirm latest click wins and sidebar feedback stays instant.
+   - Switch from heavy thread to new chat; confirm new chat remains effectively instant.
+   - Confirm previous conversation scroll position does not visibly move during switching.
+   - Confirm no overflow flicker or layout shift caused by blackout overlay.
+   - Confirm input re-enables when switching ends.
+   - Confirm browser history remains correct after thread switches.
+
+4. **Automated checks**
+   - Run `pnpm run check-types`.
+
+5. **Manual QA emphasis**
+   - Manual QA is critical because this work targets interaction feel and render coupling.
+   - QA should include desktop and mobile, slow machine simulation if available, and long-conversation threads.
+
+6. **Prior art**
+   - Prefer existing behavior-driven tests around chat navigation, sidebar selection, and shell state if present.
+   - Reuse existing testing style in the repo rather than introducing a new testing pattern.
 
 ## Out of Scope
 
-- Placeholder/skeleton-prefill pagination strategy (optimistic slot reservation while next page loads).
-- Full list virtualization implementation.
-- Global app-wide deferred rendering strategy redesign.
-- Broad INP optimization pass across unrelated demos/components.
-- New product features or action semantics changes.
-- Backend total-thread-count integration.
-- New automated test suite for sidebar in this iteration.
+1. Full redesign of chat routing.
+2. Full rewrite of thread/session/provider architecture.
+3. Full removal of all thread-keyed resets across the app.
+4. New data loading architecture.
+5. Deferred loader or `<Await>` based designs.
+6. Visual redesign of sidebar, conversation, or input.
+7. Scroll restoration across browser reloads or back/forward restore.
+8. General performance optimization unrelated to navigation feedback.
+9. Virtualizer redesign or list-rendering redesign outside what is necessary to preserve stability.
 
 ## Further Notes
 
-### Previous refactor recap (completed baseline)
-
-- L3 sidebar adapter/layout split implemented.
-- New L2 shell/item namespaces introduced.
-- Fake lazy mount path removed from active sidebar path.
-- Dedicated full sidebar and thread-item demo routes added.
-
-### Follow-up migration sequence
-
-1. Remove legacy sidebar modules and reconcile imports.
-2. Refine L3 layout decomposition to align with complex feature conventions.
-3. Remove row context-menu `forceMount` usage.
-4. Implement status-gated pagination cadence with rearm behavior.
-5. Add/confirm row-level memo boundaries and stable props.
-6. Re-run manual QA checklist across both demo routes.
-
-### Risks
-
-- Main risk: introducing pagination dead-zone when preventing duplicate load-more calls.
-- Mitigation: explicit status machine gating + rearm-on-status-transition behavior.
-
-### Explicitly deferred idea (valuable, not now)
-
-- Optimistic placeholder rows during pagination is intentionally deferred to backlog to avoid feature creep in this follow-up.
-
-### Unresolved questions
-
-- None.
+1. This phase intentionally optimizes for low-risk impact: instant feedback first, broader architecture later.
+2. The main success criterion is subjective feel backed by objective behavior: a click must acknowledge immediately even if destination conversation render is expensive.
+3. If phase 1 succeeds, it creates a safe seam for later cleanup rather than forcing a risky all-at-once refactor.
+4. If phase 1 reveals that deferred catch-up alone is not sufficient for elegant reveal timing, the next increment should add an explicit layout-ready handshake rather than expanding scope indiscriminately.

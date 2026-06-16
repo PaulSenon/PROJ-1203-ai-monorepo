@@ -209,3 +209,49 @@ Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` 
 - root cause: mobile sidebar uses `Sheet` (Dialog); context-menu content is portaled outside sheet subtree, so touch action selection was treated as dialog outside interaction and closed sheet
 - fix: mobile sidebar primitive now guards `SheetContent.onInteractOutside` and prevents close when target is inside `[data-slot="context-menu-content"]`
 - feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
+
+2026-02-25: completed deep reverse-engineered LegendList web beta documentation
+- path: `.llms/plan/virtualization/0-legendlist-documentation.md`
+- sources: legendlist local source + tests + example-web + git history only (no external docs)
+- focus: sidebar virtualization + window-scroll chat bottom-anchor + prepend infinite top + stability internals
+
+2026-02-25: drafted LegendList virtualization PRD v0 (sidebar first, conversation second)
+- path: `.llms/plan/virtualization/2-prd-legendlist.md`
+- decisions: real top-boundary pagination wiring for conversation (not mock), remove sidebar pseudo-virtual row gating, preserve existing shell UX
+- unresolved: final initial-open anchor policy (force-end vs restore alternate anchor)
+
+2026-02-23: app markdown code highlighting moved to worker-backed plugin
+- added worker bridge + protocol + worker entry under `apps/web/src/components/ui-custom/markdown/worker-code-highlighter*`
+- current shape after cleanup: simple per-key in-flight dedupe + sync cache hit + raw fallback when worker disabled
+
+2026-02-24: final worker-highlighting rethink doc written
+- path: `.llms/plan/wasm-worker-highlighter/2-final-takeaways-and-target-implementation.md`
+- decision: keep worker offload core + upstream minimal, drop cache-scan/debug/queue feature-creep, gate code plugin enablement using `isConversationVisible`
+
+2026-02-24: cleanup implementation applied from final takeaways
+- removed `code-fence-cache.ts` and dynamic `deferCodeBlocks` pre-scan from `SmoothMarkdown`
+- removed debug global API and queue feature-creep from worker plugin
+- added `enableCodeHighlighting` prop flow from `conversation-layout(isConversationVisible)` down to `SmoothMarkdown`
+- `SmoothMarkdown` now conditionally omits `code` plugin until conversation becomes visible after boot-anchor
+
+2026-02-24: streamdown contrib branch history cleaned
+- feature branch rewritten to 2 commits only: `perf(startTransition swap + changeset)` and `docs(worker-backed code plugin pattern)`
+- dropped prior `deferCodeBlocks` contribution from branch history; no `deferCodeBlocks` refs remain
+- backup branch kept: `backup/feat-codeblock-defer-transition-docs-before-clean`
+
+2026-03-02: paginated reactivity bug root-cause confirmed (sidebar + conversation)
+- convex WS showed reactive patches arriving; backend/query/core libs not culprit for this symptom
+- A/B check confirmed `useCvxPaginatedQueryAuthCached` reacts, while `useCvxPaginatedQueryStable` dropped updates after loadMore
+- fix in `apps/web/src/hooks/queries/convex/utils/use-convex-query-1-stable.ts`: memo output now tracks stable `results` ref (`stableResults`) in deps
+- no API change; hooks still wired to auth+cached query layer
+
+2026-03-03: sidebar virtualization prep slice (RALPH)
+- `useSidebarThreads` now exposes `loadMoreStatus`, `canLoadMore`, `isLoadingMore` in addition to existing `loadMore` + `threads`
+- purpose: let upcoming LegendList `onEndReached` wiring gate pagination with explicit hook status while keeping current dedupe queue behavior unchanged
+
+2026-03-03: sidebar virtualization S1.2 LegendList baseline + end-reached wiring (RALPH)
+- `ChatSidebarLayout` now renders sidebar threads with `LegendList` (`estimatedItemSize=44`, `drawDistance=180`, `recycleItems=false`, explicit `onEndReachedThreshold=1`)
+- load-more trigger moved from bottom observer sentinel to `LegendList.onEndReached`, gated by `canLoadMore` + `isLoadingMore`
+- overlay blur edge state now derives from list scroll metrics (`isAtTop`/`isAtBottom`) instead of probe refs
+- `ChatSidebar` now passes pagination gating flags into layout (`canLoadMore`, `isLoadingMore`)
+- feedback loop status unchanged: workspace `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305; `pnpm run check-types -F web` still blocked by pre-existing `messages-list.tsx` unused local `setMargin`

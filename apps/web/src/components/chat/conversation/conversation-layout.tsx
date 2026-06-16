@@ -1,44 +1,91 @@
 import type { MyUIMessage } from "@ai-monorepo/ai/types/uiMessage";
-import { useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { Conversation } from "@/components/ui-custom/chat/conversation";
+import {
+  useScrollToBottomActions,
+  useScrollToBottomState,
+} from "@/components/ui-custom/chat/hooks/use-scroll-to-bottom";
+import { useAppReadySignalAction } from "@/hooks/chat/app-ready/app-ready-visibility";
 import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
-import { useScrollToBottomState } from "../../ui-custom/chat/hooks/use-scroll-to-bottom";
-import { InitialScroll } from "./_parts/initial-scroll";
-import { ConversationMessagesList } from "./_parts/messages-list";
+import { yieldNextPaint } from "@/lib/schedule-work";
+import { cn } from "@/lib/utils";
+import { MessagesList } from "./_parts/messages-list/messages-list";
 
 export type ChatConversationLayoutProps = {
-  messages: MyUIMessage[];
-  isPending: boolean;
-  isThreadSettled: boolean;
   threadUuid: string;
+  messages: MyUIMessage[];
+  isThreadSettled: boolean;
+  isPending: boolean;
+  pendingAutoScrollMessageId: string | undefined;
+  onStartReached?: () => void;
 };
 
-export function ChatConversationLayout({
-  messages,
-  isPending,
-  isThreadSettled,
-  threadUuid,
-}: ChatConversationLayoutProps) {
-  const { bottomRef } = useScrollToBottomState();
-  const initialScroll = !isPending && messages.length > 0;
-  const shouldReserveLastAssistantSpace = useShouldReserveLastAssistantSpace({
+export const ChatConversationLayout = React.memo(
+  function _ChatConversationLayout({
+    messages,
     isThreadSettled,
-  });
+    pendingAutoScrollMessageId,
+    isPending,
+    threadUuid,
+    onStartReached,
+  }: ChatConversationLayoutProps) {
+    const { bottomRef } = useScrollToBottomState();
+    const { scrollToBottom } = useScrollToBottomActions();
+    const { markReady } = useAppReadySignalAction({
+      checkpoint: "conversation-layout",
+      runKey: threadUuid,
+    });
+    const pendingAutoScrollMessageIdRef = useRef(pendingAutoScrollMessageId);
+    pendingAutoScrollMessageIdRef.current = pendingAutoScrollMessageId;
+    const shouldReserveLastAssistantSpace = useShouldReserveLastAssistantSpace({
+      isThreadSettled,
+    });
 
-  return (
-    <Conversation.Root className="relative mx-auto w-full max-w-3xl flex-1 p-6">
-      <Conversation.List>
-        <ConversationMessagesList
-          messages={messages}
-          shouldReserveLastAssistantSpace={shouldReserveLastAssistantSpace}
-        />
-      </Conversation.List>
+    const lastHandledIntentIdRef = useRef<string | undefined>(undefined);
+    const handleLastItemKeyUpdate = useCallback(
+      async (lastItemKey?: string) => {
+        const pendingId = pendingAutoScrollMessageIdRef.current;
 
-      <ScrollEdgeProbe ref={bottomRef} />
-      {initialScroll ? <InitialScroll key={threadUuid} /> : null}
-    </Conversation.Root>
-  );
-}
+        if (pendingId === undefined) return;
+        if (pendingId === lastHandledIntentIdRef.current) return;
+        if (pendingId !== lastItemKey) return;
+
+        lastHandledIntentIdRef.current = pendingId;
+        await yieldNextPaint();
+        scrollToBottom("snappy");
+      },
+      [scrollToBottom]
+    );
+
+    const handleReady = useCallback(async () => {
+      await yieldNextPaint();
+      scrollToBottom("instant");
+      markReady();
+    }, [markReady, scrollToBottom]);
+
+    return (
+      <Conversation.Root
+        className={cn(
+          "relative mx-auto mb-[130px] w-full max-w-3xl flex-1 p-6 md:mb-0"
+        )}
+        id="overlay-conversation2"
+      >
+        <Conversation.List>
+          <MessagesList
+            isPending={isPending}
+            messages={messages}
+            onLastItemKeyUpdate={handleLastItemKeyUpdate}
+            onReady={handleReady}
+            onStartReached={onStartReached}
+            shouldReserveLastAssistantSpace={shouldReserveLastAssistantSpace}
+          />
+        </Conversation.List>
+
+        <ScrollEdgeProbe ref={bottomRef} />
+      </Conversation.Root>
+    );
+  }
+);
 
 /**
  * Business UI rule to latch the state when we should set a "space" bellow last assistant message or not.

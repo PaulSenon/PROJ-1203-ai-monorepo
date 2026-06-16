@@ -7,16 +7,15 @@ import {
 import {
   createContext,
   type ReactNode,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
+import { useChatSessionScope } from "@/components/providers/4-chat-session-scope";
 import type { Prettify } from "@/lib/utils";
-import { useActiveThreadQuery } from "./queries/use-chat-active-queries";
+import { useThread } from "./queries/use-chat-active-queries";
 import { useUserPreferencesQuery } from "./queries/use-user-preferences-queries";
-import { ChatNavRerenderTrigger, useChatNav } from "./use-chat-nav";
 
 type ModelSelectorState = {
   selectedModelId?: AllowedModelIds;
@@ -34,13 +33,11 @@ const ModelSelectorActionsContext = createContext<ModelSelectorActions | null>(
   null
 );
 
-function INTERNAL_ModelSelectorProvider({ children }: { children: ReactNode }) {
-  const chatNav = useChatNav();
+export function ModelSelectorProvider({ children }: { children: ReactNode }) {
+  const { isNew, sessionId } = useChatSessionScope();
   const [selectedModelId, setSelectedModelId] = useState<
     AllowedModelIds | undefined
   >(undefined);
-
-  const isNew = chatNav.isNew;
 
   // always pick from user preferences
   const userPreferences = useUserPreferencesQuery();
@@ -49,7 +46,7 @@ function INTERNAL_ModelSelectorProvider({ children }: { children: ReactNode }) {
   }, [userPreferences]);
 
   // if not new pick from thread config
-  const thread = useActiveThreadQuery({ skip: isNew });
+  const thread = useThread(isNew ? "skip" : sessionId);
 
   const isPending = isNew ? userPreferences.isPending : thread.isPending;
 
@@ -128,21 +125,4 @@ export function useModelSelectorActions() {
     );
   }
   return actions;
-}
-
-// TODO: perhaps there is a better way to handle this
-export function ModelSelectorProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const Outlet = useCallback(
-    () => (
-      <INTERNAL_ModelSelectorProvider>
-        {children}
-      </INTERNAL_ModelSelectorProvider>
-    ),
-    [children]
-  );
-  return <ChatNavRerenderTrigger Outlet={Outlet} />;
 }

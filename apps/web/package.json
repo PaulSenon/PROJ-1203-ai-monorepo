@@ -9,6 +9,7 @@
     "start": "vite",
     "dev:bare": "vite",
     "check-types": "tsc --noEmit",
+    "test": "vitest run",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "generate-pwa-assets": "pwa-assets-generator"
@@ -23,6 +24,7 @@
     "@clerk/themes": "catalog:clerk",
     "@convex-dev/agent": "catalog:convex",
     "@hookform/resolvers": "^5.2.2",
+    "@legendapp/list": "3.0.0-beta.47",
     "@orpc/client": "catalog:orpc",
     "@orpc/contract": "catalog:orpc",
     "@orpc/openapi-client": "catalog:orpc",
@@ -91,7 +93,7 @@
     "recharts": "2.15.4",
     "shiki": "^3.22.0",
     "sonner": "^2.0.7",
-    "streamdown": "^2.3.0",
+    "streamdown": "file:/app/.tmp/streamdown-2.3.0.tgz",
     "tailwind-merge": "^3.3.1",
     "tokenlens": "^1.3.1",
     "tw-animate-css": "^1.2.5",
@@ -117,6 +119,7 @@
     "typescript": "catalog:",
     "vite": "^6.2.2",
     "vite-bundle-analyzer": "^1.2.3",
-    "vite-plugin-inspect": "^11.3.3"
+    "vite-plugin-inspect": "^11.3.3",
+    "vitest": "^4.1.2"
   }
 }

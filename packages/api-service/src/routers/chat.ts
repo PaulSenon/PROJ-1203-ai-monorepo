@@ -159,14 +159,15 @@ export const chat = protectedProcedures.chat.handler(
     ]);
     const modelId = modelIdValidator.parse(input.selectedModelId);
     const isRegenerate = input.trigger === "regenerate-message";
-    if (isRegenerate && !input.messageUuid)
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Message UUID is required for regenerate",
-        data: {
-          messageUuid: input.messageUuid,
-        },
-      });
-    const newMessageUuid = nanoid();
+    //? no longer used ???
+    // if (isRegenerate && !input.messageUuid)
+    //   throw new ORPCError("BAD_REQUEST", {
+    //     message: "Message UUID is required for regenerate",
+    //     data: {
+    //       messageUuid: input.messageUuid,
+    //     },
+    //   });
+    const newMessageUuid = input.nextMessageUuid ?? nanoid();
 
     // 3. Build data
     const startedAt = Date.now();

@@ -2,26 +2,43 @@ import type { ComponentProps } from "react";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
-export type SidebarItemRootProps = ComponentProps<typeof SidebarMenuItem> & {
-  isMobile?: boolean;
+export type SidebarItemRootProps = Omit<
+  ComponentProps<typeof SidebarMenuItem>,
+  "ref"
+> & {
+  as?: "li" | "div";
 };
 
 function SidebarItemRoot({
+  as = "li",
   className,
   style,
-  isMobile = false,
   ...props
 }: SidebarItemRootProps) {
+  const mergedClassName = cn("min-h-10 select-none md:min-h-9", className);
+  const mergedStyle = {
+    contain: "layout style",
+    ...style,
+  };
+
+  if (as === "div") {
+    const divProps = props as unknown as ComponentProps<"div">;
+
+    return (
+      <div
+        {...divProps}
+        className={mergedClassName}
+        role={divProps.role ?? "listitem"}
+        style={mergedStyle}
+      />
+    );
+  }
+
   return (
     <SidebarMenuItem
-      className={cn("min-h-10 select-none md:min-h-9", className)}
-      style={{
-        contain: "layout style",
-        contentVisibility: "auto",
-        containIntrinsicBlockSize: `auto ${isMobile ? "40px" : "36px"}`,
-        ...style,
-      }}
       {...props}
+      className={mergedClassName}
+      style={mergedStyle}
     />
   );
 }

@@ -30,18 +30,16 @@
   "provider": {
     "openai": {
       "models": {
-        "gpt-5.2": {
+        "gpt-5.4": {
           "variants": {
             "minimal": { "disabled": true },
-            "low": { "disabled": true },
-            "medium": { "disabled": true }
+            "low": { "disabled": true }
           }
         },
-        "gpt-5.2-codex": {
+        "gpt-5.3-codex": {
           "variants": {
             "minimal": { "disabled": true },
-            "low": { "disabled": true },
-            "medium": { "disabled": true }
+            "low": { "disabled": true }
           }
         }
       }
@@ -51,22 +49,34 @@
 
   "agent": {
     "plan": {
-      "model": "openai/gpt-5.3-codex",
-      "reasoningEffort": "xhigh"
+      "model": "openai/gpt-5.4",
+      "reasoningEffort": "high"
     },
     "build": {
-      "model": "openai/gpt-5.3-codex",
+      "model": "openai/gpt-5.4",
       "reasoningEffort": "high"
     },
     "quick-question": {
       "description": "For any simple research tasks and question that already have clear context and need simple execution or deduction.",
       "prompt": "You are a helpful assistant that can help with simple tasks and questions. You can use skills and tools. You must always use prior context to answer and request for more information if needed. Your answer must be a self-sufficient recap of the takeaways you found during your research.",
       "mode": "subagent",
-      "model": "openai/gpt-5.3-codex",
+      "model": "openai/gpt-5.4",
       "reasoningEffort": "medium",
       "tools": {
         "write": false,
         "edit": false,
+        "bash": true
+      }
+    },
+    "implementation": {
+      "description": "For simple spec implementation task. Explain work, scope, decisions, goals, non-goals, etc. (like a mini prd) and this agent will implement it.",
+      "prompt": "You are a senior developer. You will implement the user's spec given to you. You will explain your work, scope, decisions, goals, non-goals, etc. (like a mini prd) and this agent will implement it. If something appears to be missing or ambiguous, ask the user for clarification before any implementation.",
+      "mode": "subagent",
+      "model": "openai/gpt-5.4",
+      "reasoningEffort": "medium",
+      "tools": {
+        "write": true,
+        "edit": true,
         "bash": true
       }
     },

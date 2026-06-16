@@ -5,10 +5,11 @@ import {
   type ButtonHTMLAttributes,
   type ElementType,
   memo,
+  type PointerEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
+  useCallback,
   useMemo,
-  useRef,
 } from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
@@ -20,13 +21,18 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Pulse2Icon } from "@/components/ui/icons/svg-spinners-pulse-2";
-import { SidebarItem } from "@/components/ui-custom/sidebar/sidebar-item";
+import {
+  SidebarItem,
+  type SidebarItemRootProps,
+} from "@/components/ui-custom/sidebar/sidebar-item";
 import { Tooltip } from "@/components/ui-custom/tooltip";
+import { useChatNavActions } from "@/hooks/chat/use-chat-nav";
 import { cn } from "@/lib/utils";
 import {
   type LiveStateIndicatorVariant,
   useThreadItemState,
 } from "../_hooks/use-thread-item-state";
+import { INP_DATA_ATTRIBUTE } from "../sidebar-layout";
 import {
   getThreadMenuActions,
   getThreadQuickActions,
@@ -102,6 +108,7 @@ function ThreadActionButton({
   className,
   variant = "default",
   isMobile,
+  ...props
 }: {
   icon: ElementType;
   label: string;
@@ -109,10 +116,11 @@ function ThreadActionButton({
   className?: string;
   variant?: "default" | "destructive";
   isMobile: boolean;
-}) {
+} & React.ComponentProps<"button">) {
   return (
     <Tooltip asChild isMobile={isMobile} tooltip={label}>
       <Button
+        {...props}
         className={cn(
           "h-7 w-7 rounded-md bg-transparent p-1.5 text-foreground hover:text-foreground",
           variant === "default" &&
@@ -146,6 +154,12 @@ function ThreadQuickActions({
   isMobile: boolean;
   className?: string;
 }) {
+  const dismissPointerDown = useCallback(
+    (e: PointerEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+    },
+    []
+  );
   if (actions.length === 0) {
     return null;
   }
@@ -162,6 +176,7 @@ function ThreadQuickActions({
           onClick={() => {
             action.callback();
           }}
+          onPointerDown={dismissPointerDown}
           variant={action.variant === "destructive" ? "destructive" : "default"}
         />
       ))}
@@ -169,16 +184,87 @@ function ThreadQuickActions({
   );
 }
 
+const MemoThreadQuickActions = memo(ThreadQuickActions);
+
+type ThreadLinkBodyProps = {
+  indicatorVariant: LiveStateIndicatorVariant | undefined;
+  isLoading: boolean;
+  isMobile: boolean;
+  quickActions: ThreadItemAction[];
+  text: string | undefined;
+  tooltip: string;
+};
+
+const ThreadLinkBody = memo(function ThreadLinkBody({
+  indicatorVariant,
+  isLoading,
+  isMobile,
+  quickActions,
+  text,
+  tooltip,
+}: ThreadLinkBodyProps) {
+  return (
+    <>
+      <LiveStateIndicatorIcon variant={indicatorVariant} />
+      <span className="mx-1 h-full min-w-0 flex-1 content-center">
+        {isMobile ? null : (
+          <Tooltip asChild isMobile={isMobile} tooltip={tooltip}>
+            <div className="absolute top-0 bottom-0 left-0 z-30 m-0 h-full w-[calc(100%-4rem)]" />
+          </Tooltip>
+        )}
+        <ThreadTitle isLoading={isLoading} text={text} />
+      </span>
+      {isMobile ? (
+        <div className="relative z-30 mr-1 ml-1 flex shrink-0 items-center justify-center">
+          <A11YContextMenuTriggerButton
+            aria-label="Thread options"
+            className={cn(
+              "sr-only h-7 w-7 shrink-0 rounded-md bg-transparent p-1.5 text-foreground hover:bg-sidebar-ring/50 hover:text-accent-foreground focus-visible:not-sr-only focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+            )}
+          >
+            <MoreVerticalIcon className="size-4" />
+            <span className="sr-only">Thread options</span>
+          </A11YContextMenuTriggerButton>
+        </div>
+      ) : (
+        <>
+          <div
+            className={cn(
+              "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 bg-sidebar-accent opacity-0 transition-[opacity;transform] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:opacity-100"
+            )}
+          >
+            {/* gradient to fade quick action bg */}
+            <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
+            <MemoThreadQuickActions
+              actions={quickActions}
+              isMobile={isMobile}
+            />
+          </div>
+          <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
+            <A11YContextMenuTriggerButton
+              aria-label="Thread options"
+              className={cn(
+                "pointer-events-none h-7 w-7 shrink-0 rounded-md bg-sidebar-accent p-1.5 text-foreground opacity-0 backdrop-blur-sm hover:bg-sidebar-ring/50 hover:text-accent-foreground focus:outline-none focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              )}
+            >
+              <MoreVerticalIcon className="size-4" />
+              <span className="sr-only">Thread options</span>
+            </A11YContextMenuTriggerButton>
+          </div>
+        </>
+      )}
+    </>
+  );
+});
+
 function ThreadContextMenu({
   actions,
   children,
   className,
-  onActionSelect,
 }: {
   actions: ThreadItemAction[];
   children: ReactNode;
   className?: string;
-  onActionSelect?: () => void;
 }) {
   return (
     <ContextMenu>
@@ -204,7 +290,6 @@ function ThreadContextMenu({
             key={item.id}
             onSelect={(event) => {
               event.stopPropagation();
-              onActionSelect?.();
               item.callback();
             }}
             variant={item.variant}
@@ -261,20 +346,23 @@ function A11YContextMenuTriggerButton(
 
 type ThreadItemRootProps = {
   thread: ThreadDoc;
-  isActive?: boolean;
   className?: string;
+  as?: SidebarItemRootProps["as"];
   isMobile?: boolean;
   actionHandlers?: ThreadItemActionHandlers;
+  isActive?: boolean;
 };
 
 function ThreadItemRootImpl({
   thread,
-  isActive = false,
   className,
+  as = "li",
   isMobile = false,
   actionHandlers,
+  isActive,
 }: ThreadItemRootProps) {
-  const suppressNavigationUntilRef = useRef(0);
+  // TODO: move this to props. No external hooks here
+  const { openExistingChat } = useChatNavActions();
   const { indicatorVariant, isLoading, tooltip } = useThreadItemState(thread);
 
   const quickActions = useMemo(
@@ -286,16 +374,24 @@ function ThreadItemRootImpl({
     [thread, actionHandlers]
   );
 
-  const handleContextMenuActionSelect = () => {
-    suppressNavigationUntilRef.current = Date.now() + 600;
-  };
+  const handleLinkClick = useCallback(
+    (event: ReactMouseEvent<HTMLAnchorElement>) => {
+      if (event.defaultPrevented) return;
+      if (event.button !== 0) return;
+      if (event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) {
+        return;
+      }
+
+      event.preventDefault();
+      // TODO: move this to props. No external hooks here
+      openExistingChat(thread.uuid);
+    },
+    [openExistingChat, thread.uuid]
+  );
 
   return (
-    <SidebarItem.Root className={className} isMobile={isMobile}>
-      <ThreadContextMenu
-        actions={menuActions}
-        onActionSelect={handleContextMenuActionSelect}
-      >
+    <SidebarItem.Root as={as} className={className}>
+      <ThreadContextMenu actions={menuActions}>
         <SidebarItem.Button asChild>
           <Link
             className={cn(
@@ -305,66 +401,20 @@ function ThreadItemRootImpl({
               "group-data-[state=open]/cm:bg-sidebar-accent",
               isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
             )}
-            onClick={(event) => {
-              if (!isMobile) {
-                return;
-              }
-              if (Date.now() >= suppressNavigationUntilRef.current) {
-                return;
-              }
-              event.preventDefault();
-              event.stopPropagation();
-            }}
+            onPointerDown={handleLinkClick}
             params={{ id: thread.uuid }}
             to="/chat/{-$id}"
+            // DEBUG
+            {...{ [INP_DATA_ATTRIBUTE]: thread.uuid }}
           >
-            <LiveStateIndicatorIcon variant={indicatorVariant} />
-            <span className="mx-1 h-full min-w-0 flex-1 content-center">
-              {isMobile ? null : (
-                <Tooltip asChild isMobile={isMobile} tooltip={tooltip}>
-                  <div className="absolute top-0 bottom-0 left-0 z-30 m-0 h-full w-[calc(100%-4rem)]" />
-                </Tooltip>
-              )}
-              <ThreadTitle isLoading={isLoading} text={thread.title} />
-            </span>
-            {isMobile ? (
-              <div className="relative z-30 mr-1 ml-1 flex shrink-0 items-center justify-center">
-                <A11YContextMenuTriggerButton
-                  aria-label="Thread options"
-                  className={cn(
-                    "sr-only h-7 w-7 shrink-0 rounded-md bg-transparent p-1.5 text-foreground hover:bg-sidebar-ring/50 hover:text-accent-foreground focus-visible:not-sr-only focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                  )}
-                >
-                  <MoreVerticalIcon className="size-4" />
-                  <span className="sr-only">Thread options</span>
-                </A11YContextMenuTriggerButton>
-              </div>
-            ) : (
-              <>
-                <div
-                  className={cn(
-                    "pointer-events-auto absolute top-0 right-0 bottom-0 z-30 flex translate-x-full items-center justify-end gap-1 opacity-0 transition-[size;opacity] duration-(--duration-fast) ease-(--ease-default) group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent group-hover/link:opacity-100"
-                  )}
-                >
-                  <div className="pointer-events-none absolute top-0 right-full bottom-0 h-full w-8 bg-linear-to-l from-sidebar-accent to-transparent" />
-                  <ThreadQuickActions
-                    actions={quickActions}
-                    isMobile={isMobile}
-                  />
-                </div>
-                <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-30 flex items-center justify-end gap-1 p-1 opacity-0 transition-opacity duration-(--duration-fast) ease-(--ease-default) focus-within:pointer-events-auto focus-within:opacity-100">
-                  <A11YContextMenuTriggerButton
-                    aria-label="Thread options"
-                    className={cn(
-                      "pointer-events-none h-7 w-7 shrink-0 rounded-md bg-sidebar-accent p-1.5 text-foreground opacity-0 backdrop-blur-sm hover:bg-sidebar-ring/50 hover:text-accent-foreground focus:outline-none focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                    )}
-                  >
-                    <MoreVerticalIcon className="size-4" />
-                    <span className="sr-only">Thread options</span>
-                  </A11YContextMenuTriggerButton>
-                </div>
-              </>
-            )}
+            <ThreadLinkBody
+              indicatorVariant={indicatorVariant}
+              isLoading={isLoading}
+              isMobile={isMobile}
+              quickActions={quickActions}
+              text={thread.title}
+              tooltip={tooltip}
+            />
           </Link>
         </SidebarItem.Button>
       </ThreadContextMenu>
@@ -376,8 +426,9 @@ const ThreadItemRoot = memo(
   ThreadItemRootImpl,
   (previousProps, nextProps) =>
     previousProps.className === nextProps.className &&
-    previousProps.isActive === nextProps.isActive &&
+    previousProps.as === nextProps.as &&
     previousProps.isMobile === nextProps.isMobile &&
+    previousProps.isActive === nextProps.isActive &&
     previousProps.actionHandlers === nextProps.actionHandlers &&
     previousProps.thread.uuid === nextProps.thread.uuid &&
     previousProps.thread.title === nextProps.thread.title &&

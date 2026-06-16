@@ -41,6 +41,25 @@ body {
   scrollbar-gutter: stable;
 }
 
+/**
+ * Used by conversation loading overlay to avoid scrollbar gutter jumps
+ * when stabilizing new conversation height (because virtualizer)
+
+ * ! IMPORTANT: 
+ * ! Must only use layout stable style because repaint is 
+ * ! both heavy and done at a critical cpu intensive time.
+ */
+html[data-app-ready-hide-viewport-scrollbar],
+html[data-app-ready-hide-viewport-scrollbar] body {
+  scrollbar-width: none;
+  overflow-y: clip;
+}
+html[data-app-ready-hide-viewport-scrollbar]::-webkit-scrollbar,
+html[data-app-ready-hide-viewport-scrollbar] body::-webkit-scrollbar {
+  display: none;
+  overflow-y: clip;
+}
+
 :root {
   --radius: 0.625rem;
   --background: oklch(0.145 0 0);
@@ -236,23 +255,19 @@ html body[data-scroll-locked][style] {
 
 @keyframes opacity-in {
   from {
-    opacity: 1%;
-    backdrop-filter: blur(0px);
+    opacity: 0%;
   }
   to {
     opacity: 100%;
-    backdrop-filter: blur(3px);
   }
 }
 
 @keyframes opacity-out {
   from {
     opacity: 100%;
-    backdrop-filter: blur(3px);
   }
   to {
     opacity: 0%;
-    backdrop-filter: blur(0px);
   }
 }
 
@@ -279,7 +294,7 @@ html body[data-scroll-locked][style] {
 }
 
 [data-streamdown="code-block"] {
-  contain: content;
+  contain: content paint;
   content-visibility: visible !important;
   contain-intrinsic-size: none !important;
 }

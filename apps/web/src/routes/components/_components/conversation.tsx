@@ -315,11 +315,12 @@ function RouteComponent() {
             >
               <ScrollToBottomProvider containerRef={previewScrollRef}>
                 <ChatConversationLayout
-                  isPending={isPending}
+                  isPending={false}
                   isThreadSettled={isThreadSettled}
                   key={`${threadUuid}:${layoutRemountKey}`}
                   messages={messages}
-                  threadUuid={threadUuid}
+                  pendingAutoScrollMessageId={undefined}
+                  threadUuid="123"
                 />
               </ScrollToBottomProvider>
             </div>

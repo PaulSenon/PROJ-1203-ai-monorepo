@@ -6,6 +6,7 @@ export type MessageContentPartsProps = {
   parts: MyUIMessagePart[];
   reasoningPreviewLines?: number;
   consolidate?: boolean;
+  enableCodeHighlighting?: boolean;
 };
 
 function getPartKey(part: MyUIMessagePart, index: number) {
@@ -20,6 +21,7 @@ export function MessageContentParts({
   parts,
   reasoningPreviewLines,
   consolidate,
+  enableCodeHighlighting,
 }: MessageContentPartsProps) {
   return (
     <>
@@ -27,13 +29,22 @@ export function MessageContentParts({
         const key = getPartKey(part, index);
 
         if (part.type === "text") {
-          return <TextPart consolidate={consolidate} key={key} part={part} />;
+          return (
+            <TextPart
+              consolidate={consolidate}
+              enableCodeHighlighting={enableCodeHighlighting}
+              key={key}
+              state={part.state}
+              text={part.text}
+            />
+          );
         }
 
         if (part.type === "reasoning") {
           return (
             <ReasoningPart
               consolidate={consolidate}
+              enableCodeHighlighting={enableCodeHighlighting}
               key={key}
               part={part}
               previewLines={reasoningPreviewLines}

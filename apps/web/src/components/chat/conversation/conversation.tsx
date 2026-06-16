@@ -1,19 +1,25 @@
-import { useActiveThreadState } from "@/hooks/use-chat-active";
-import { useActiveThreadUIReady } from "./_hooks/use-active-thread-ui-ready";
-import { useConversationDisplayMessages } from "./_hooks/use-conversation-display-messages";
-import { useScrollToBottomOnSubmit } from "./_hooks/use-scroll-to-bottom-on-submit";
+import { useCallback, useRef } from "react";
+import {
+  useActiveThreadMessages,
+  useActiveThreadState,
+} from "@/hooks/use-chat-active";
 import { ChatConversationLayout } from "./conversation-layout";
 
-export function ChatConversation() {
-  const { uuid, isThreadSettled, isDataPending, pendingAutoScrollMessageId } =
-    useActiveThreadState();
-  const messages = useConversationDisplayMessages();
+const LOAD_OLDER_PAGE_SIZE = 20;
 
-  useActiveThreadUIReady(isDataPending);
-  useScrollToBottomOnSubmit({
-    pendingAutoScrollMessageId,
-    messages,
-  });
+export function ChatConversation() {
+  const { uuid, isThreadSettled, pendingAutoScrollMessageId, isDataPending } =
+    useActiveThreadState();
+  const { loadOlder, olderHistoryStatus, messages } = useActiveThreadMessages();
+
+  const olderHistoryStatusRef = useRef(olderHistoryStatus);
+  olderHistoryStatusRef.current = olderHistoryStatus;
+
+  const handleStartReached = useCallback(() => {
+    if (olderHistoryStatusRef.current !== "CanLoadMore") return;
+
+    loadOlder(LOAD_OLDER_PAGE_SIZE);
+  }, [loadOlder]);
 
   return (
     <ChatConversationLayout
@@ -21,6 +27,8 @@ export function ChatConversation() {
       isThreadSettled={isThreadSettled}
       key={uuid}
       messages={messages}
+      onStartReached={handleStartReached}
+      pendingAutoScrollMessageId={pendingAutoScrollMessageId}
       threadUuid={uuid}
     />
   );

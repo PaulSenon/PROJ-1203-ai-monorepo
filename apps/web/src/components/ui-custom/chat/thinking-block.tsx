@@ -105,7 +105,7 @@ export const ThinkingBlock = memo(
           <CollapsibleTrigger
             aria-label="Toggle reasoning"
             className={cn(
-              "flex min-h-6 w-full items-center gap-2 text-muted-foreground text-sm",
+              "flex min-h-6 w-full gap-2 text-muted-foreground text-sm",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               "rounded-md"
             )}

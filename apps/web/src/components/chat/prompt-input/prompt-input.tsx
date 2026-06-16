@@ -4,10 +4,7 @@ import type {
   PromptInputSubmitProps,
 } from "@/components/ai-elements/prompt-input";
 import { ChatInput as Input } from "@/components/ui-custom/chat/chat-input";
-import {
-  useAppLoadStatus,
-  useAppLoadStatusActions,
-} from "@/hooks/use-app-load-status";
+import { useAppReadyState } from "@/hooks/chat/app-ready/app-ready-visibility";
 import { useActiveThreadActions } from "@/hooks/use-chat-active";
 import { useChatInputActions, useChatInputState } from "@/hooks/use-chat-input";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -17,12 +14,14 @@ import { ChatModelSelector } from "./_parts/model-selector";
 
 export function ChatInput() {
   const isMobile = useIsMobile();
-  const { isInitialUIStateReady } = useAppLoadStatus();
-  const appUiStatus = useAppLoadStatusActions();
   const inputState = useChatInputState();
   const inputActions = useChatInputActions();
   const { sendMessage } = useActiveThreadActions();
+  const { hidden: isSwitching } = useAppReadyState("conversation");
+  // const { markReady } = useAppReadySignalAction({checkpoint: 'prompt-input-data', runKey: })
   const { selectedModelId } = useModelSelectorState();
+  const isInputPending = inputState.isPending;
+  const isInputDisabled = inputState.disabled || isSwitching;
   const handleSubmit: PromptInputProps["onSubmit"] = (message, event) => {
     if (!message.text || message.text.trim() === "") return;
 
@@ -35,19 +34,20 @@ export function ChatInput() {
     });
   };
 
-  // TODO: perhaps we need better autofocus logic
+  // TODO(app-ready): connect input visibility/focus policy to app-ready phases later.
   useLayoutEffect(() => {
-    appUiStatus.setInputUIReady(!inputState.isPending);
-    if (inputState.isPending) return;
+    if (isInputPending) return;
     inputActions.focus();
-  }, [inputState.isPending, inputActions.focus, appUiStatus.setInputUIReady]);
+  }, [isInputPending, inputActions.focus]);
+
+  // useEffect(() => {}, [markReady]);
 
   // TODO: status not implemented yet
   const submitButtonStatus: PromptInputSubmitProps["status"] = "ready";
 
   return (
     <Input.Root
-      className={cn("relative mt-4", !isInitialUIStateReady && "opacity-0")}
+      className={cn("relative mt-4", isSwitching && "pointer-events-none")}
       inputClassName={cn(
         "h-full",
         "rounded-xl bg-background dark:border-initial dark:bg-initial",
@@ -65,7 +65,7 @@ export function ChatInput() {
       </Input.Header> */}
       <Input.Body>
         <Input.Textarea
-          disabled={inputState.isPending} // can type while disabled (as long as not initializing)
+          disabled={isInputPending}
           onChange={(e) => inputActions.setInput(e.target.value)}
           ref={inputState.inputRef}
           submitOnEnter={!isMobile}
@@ -75,10 +75,13 @@ export function ChatInput() {
       <Input.Footer>
         <Input.Tools>
           <Input.ToolsMore />
-          <ChatModelSelector onClose={() => inputActions.focus()} />
+          <ChatModelSelector
+            disabled={isSwitching}
+            onClose={() => inputActions.focus()}
+          />
         </Input.Tools>
         <Input.SubmitButton
-          disabled={inputState.disabled}
+          disabled={isInputDisabled}
           status={submitButtonStatus}
         />
       </Input.Footer>

@@ -219,6 +219,7 @@ async function InternalUpsertMessageParts(
   return messageParts._id;
 }
 
+// TODO: we need a createNewMessageWithParts that throw on duplicate uuid (for a thread & user). Then call this in upsertThreadWithNewMessagesAndReturnHistory so we handle uuid collision. Should never happen, but theoretically possible. Especially because uuid are user defined. So we gotta do that to have some form of server-side authority. When this is done, we must update orpc chat router to throw a custom rpc error on collision to retry with other ids.
 async function InternalUpsertMessageWithParts(
   ctx: MutationCtx,
   args: {
