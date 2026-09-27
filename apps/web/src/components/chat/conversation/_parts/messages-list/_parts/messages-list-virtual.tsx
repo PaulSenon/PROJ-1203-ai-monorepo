@@ -183,4 +183,5 @@ export function MessagesListVirtual({
  * LegendList wishlist:
  * - a feature to have initial scroll bottom of full page (when using window scroll) rather than final index.
  * - safari/ios scroll up fixes
+ * - found a suspicious bug whe using getItemType. In my case of user/assistant if clearly handle only one type weirdly. The assistant message are now rerendered more. Obvious if you are in safari, you auto load pages on a set timeout and you scroll up fast. Only assistant message are visible while all user message stop rendering. (render issue I guess, perhaps css virtualization issue)
  */

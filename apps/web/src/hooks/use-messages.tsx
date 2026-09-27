@@ -18,55 +18,12 @@ import { useCvxPaginatedQueryStable } from "./queries/convex/utils/use-convex-qu
 import { useUserCacheEntryOnce } from "./use-user-cache";
 import { useFpsThrottledValue } from "./utils/use-fps-throttled-state";
 
-// NormalizedMessages must be oldest -> newest for merge perf.
-declare const normalizedMessagesBrand: unique symbol;
-type NormalizedMessages = MyUIMessage[] & {
-  readonly [normalizedMessagesBrand]: true;
-};
-
-type NormalizeOptions = {
-  reverse?: boolean;
-  debugLabel?: string;
-};
-
-const emptyNormalizedMessages: NormalizedMessages =
-  [] as unknown as NormalizedMessages;
-
-function normalizeMessages(
-  messages: MyUIMessage[] | undefined,
-  options: NormalizeOptions = {}
-): NormalizedMessages {
-  if (!messages || messages.length === 0) return emptyNormalizedMessages;
-  const normalized = options.reverse ? [...messages].reverse() : messages;
-  warnIfNotNormalized(normalized, options.debugLabel);
-  return normalized as NormalizedMessages;
-}
-
-function warnIfNotNormalized(messages: MyUIMessage[], label?: string) {
-  if (!import.meta.env.DEV) return;
-  if (!label) return;
-  if (messages.length < 2) return;
-
-  const sampleCount = Math.min(messages.length - 1, 3);
-  for (let i = 0; i < sampleCount; i++) {
-    const prev = messages[i];
-    const next = messages[i + 1];
-    if (!(prev && next)) continue;
-    if ((prev.metadata?.createdAt ?? 0) > (next.metadata?.createdAt ?? 0)) {
-      console.warn(
-        `[useMessagesV2] ${label} not normalized (oldest -> newest).`
-      );
-      return;
-    }
-  }
-}
-
 function isOngoingLiveStatus(liveStatus: MyUIMessageMetadata["liveStatus"]) {
   return liveStatus === "pending" || liveStatus === "streaming";
 }
 
 type MessageLayer = {
-  messages: NormalizedMessages;
+  messages: MyUIMessage[];
   dataSource?: MessageDataSource;
 };
 
@@ -81,10 +38,8 @@ function mergeMessageLayers(
   if (layers.length === 0) return [];
 
   const [baseLayer, ...rest] = layers;
-  const baseMessages = baseLayer?.messages ?? emptyNormalizedMessages;
-  const list: MyUIMessage[] = baseLayer?.dataSource
-    ? baseMessages.map((msg) => withDataSource(msg, baseLayer.dataSource))
-    : [...baseMessages];
+  const baseMessages = baseLayer?.messages ?? [];
+  const list: MyUIMessage[] = [...baseMessages];
   const indexMap = new Map<string, number>();
 
   for (let i = 0; i < list.length; i++) {
@@ -96,16 +51,13 @@ function mergeMessageLayers(
   for (const layer of rest) {
     if (layer.messages.length === 0) continue;
     for (const msg of layer.messages) {
-      const nextMsg = layer.dataSource
-        ? withDataSource(msg, layer.dataSource)
-        : msg;
-      const existingIndex = indexMap.get(nextMsg.id);
+      const existingIndex = indexMap.get(msg.id);
       if (existingIndex !== undefined) {
-        list[existingIndex] = nextMsg;
+        list[existingIndex] = msg;
         continue;
       }
-      const newIndex = list.push(nextMsg) - 1;
-      indexMap.set(nextMsg.id, newIndex);
+      const newIndex = list.push(msg) - 1;
+      indexMap.set(msg.id, newIndex);
     }
   }
 
@@ -117,23 +69,6 @@ function mergeMessageLayers(
 
   if (options.sort === false || filtered.length <= 1) return filtered;
   return filtered.sort(compareMessages);
-}
-
-function withDataSource(message: MyUIMessage, dataSource?: MessageDataSource) {
-  if (!dataSource) return message;
-  const currentDataSource = message.metadata?.debug?.dataSource;
-  if (currentDataSource === dataSource) return message;
-
-  return {
-    ...message,
-    metadata: {
-      ...message.metadata,
-      debug: {
-        ...message.metadata?.debug,
-        dataSource,
-      } satisfies MyUIMessageMetadata["debug"],
-    } as MyUIMessageMetadata,
-  } satisfies MyUIMessage;
 }
 
 type UseMessagesParams = {
@@ -347,17 +282,10 @@ export function useMessages({
   const cacheKey = useMemo(() => createCacheKey(threadUuid), [threadUuid]);
   const cache = useUserCacheEntryOnce<MyUIMessage[]>(cacheKey);
 
-  const cacheLayerRaw = useMemo(
-    () => normalizeMessages(cache.snapshot ?? [], { debugLabel: "cache" }),
-    [cache.snapshot]
-  );
+  const cacheLayerRaw = useMemo(() => cache.snapshot ?? [], [cache.snapshot]);
 
   const persistedLayerRaw = useMemo(
-    () =>
-      normalizeMessages(paginatedMessages.results, {
-        reverse: true,
-        debugLabel: "persisted",
-      }),
+    () => [...paginatedMessages.results].reverse(),
     [paginatedMessages.results]
   );
 
@@ -379,9 +307,7 @@ export function useMessages({
     ) {
       // When resuming a stream, backend may emit an empty assistant shell in
       // persisted results; keep cache visible until resumed stream delivers.
-      return normalizeMessages(persistedLayerRaw.slice(0, -1), {
-        debugLabel: "persisted-trim",
-      });
+      persistedLayerRaw.slice(0, -1);
     }
 
     return persistedLayerRaw;
@@ -431,33 +357,27 @@ export function useMessages({
       newCacheLayer.push(...cacheLayerRaw.slice(newestIndexInCache + 1));
     }
 
-    return normalizeMessages(newCacheLayer, { debugLabel: "cache-trim" });
+    return newCacheLayer;
   }, [cacheLayerRaw, persistedLayerForMerge]);
 
   const optimisticLayer = useMemo(() => {
     if (optimisticPatchesArray.length === 0) {
-      return normalizeMessages([], { debugLabel: "optimistic" });
+      return [];
     }
     const list: MyUIMessage[] = [];
     for (const patch of optimisticPatchesArray) {
       for (const msg of patch) list.push(msg);
     }
-    return normalizeMessages(list, { debugLabel: "optimistic" });
+    return list;
   }, [optimisticPatchesArray]);
 
   const resumedLayer = useMemo(
-    () =>
-      normalizeMessages(resumedMessages.messages, {
-        debugLabel: "convex-stream",
-      }),
+    () => resumedMessages.messages,
     [resumedMessages.messages]
   );
 
   const httpLayer = useMemo(
-    () =>
-      normalizeMessages(httpStreamingMessages, {
-        debugLabel: "http-stream",
-      }),
+    () => httpStreamingMessages,
     [httpStreamingMessages]
   );
 
@@ -479,10 +399,7 @@ export function useMessages({
     [cacheLayerForMerge, persistedLayerForMerge, optimisticLayer]
   );
 
-  const baseLayer = useMemo(
-    () => normalizeMessages(baseMessages),
-    [baseMessages]
-  );
+  const baseLayer = useMemo(() => baseMessages, [baseMessages]);
 
   // 2. merge the layers that change frequently on top
   //  - resumed stream changes on every chunk received (very frequent)
