@@ -1,5 +1,271 @@
+2026-09-27: reboot Phase 0 executed (git cleanup) + PR 1 prepared
+- branch `chore/reboot` from 6b926f0 = docs-only on top of the last coherent commit; PR -> main (main was frozen at ece1a2c Feb 9, ancestor of base -> no conflict)
+- 20 annotated `archive/*` tags pushed (all former unique branch tips + stash + v4 WIP fdb9608); backups in ~/ai-monorepo-backups/2026-09-27-reboot/ (bundle --all, .env.enc, working state, cursor worktrees)
+- kept on origin because of OPEN PRs #8,#9,#10,#12,#13: conversation-ui-refactoring, feat/legendlist-v2, feat/messages-stability, opencode/{gentle-river,hidden-rocket,quick-circuit} -> close with comment after `gh auth login`, then delete
+- kept locally: 11 dirty Cursor worktrees (backed up) + their branches ios-drawer-fix-LCohy, responsive-dialog-fix-CyKGP
+- setup/run doc: .llms/plan/00-reboot-2026-09/5-setup-and-run.md (static read, nothing executed)
+- fixed .gitmodules: t3code gitlink had no mapping on base (broke `make llms-ref-fetch-all`)
+
+2026-09-27: project reboot after ~5 month pause (last code touch 2026-05-03)
+- full snapshot, plan, idea inventory, messages decisions: .llms/plan/00-reboot-2026-09/
+- branch-only planning docs (grill logs, PRDs of 5 messages-store attempts, virtualization attempts) copied to .llms/plan/00-reboot-2026-09/archive/
+- decision proposed: base = 6b926f0 (not Feb-9 main), upgrade all deps before resuming messages store v4
+- live bug in uncommitted v4 diff: use-messages.tsx:310 lost return on persisted tail trim
+
 message footer MVP refactor completed under apps/web/src/components/chat/message/_parts/footer/
 footer actions now use shared ui-custom primitives: IconActionButton and CopyActionButton
 copy action now animates copy->check on successful copy and uses app custom tooltip wrapper
 message footer action contract uses single dispatcher payload MessageFooterActionPayload
 use-message-actions copy path returns success boolean so UI animation only confirms on success
+conversation L2/L3 structure refactor completed under apps/web/src/components/chat/conversation/ (0 behavior-delta target)
+L2 ui-custom conversation now compound API: Conversation.Root + Conversation.List (still div-based, no StickToBottom adoption)
+L3 conversation split to _parts (initial-scroll, messages-list) + _hooks (use-active-thread-ui-ready)
+chat surface import updated: ChatFeed renamed to ChatConversation
+
+2026-02-09: drafted PRD for simplest optimistic assistant shell (render-derived, no data-layer patch)
+PRD path: .llms/plan/client-optimistic-assistant-shell/0-prd-simplest-solution
+Decision: generate shell with `createOptimisticStepStartMessage` in `use-chat-active.tsx` derived `displayMessages` (no `useEffect`, no cache mutation)
+
+2026-02-09: drafted final PRD for client-generated assistant message IDs + optimistic assistant shell + thread-level conversation error block
+PRD path: .llms/plan/client-optimistic-assistant-shell/1-prd-complexe-solution-client-side-id.md
+PRD includes: insert-only guard for message create path, UUID immutability guard on update, invisible one auto-retry for UUID collision, persisted thread error with retry payload, global conversation error block rendered after messages
+
+2026-02-09: drafted PRD for last assistant min-height reserve behavior (no effect-late class)
+PRD path: .llms/plan/ui-last-assistant-min-height/0-prd-last-assistant-min-height.md
+Decision: assistant row gets `last:min-h-[calc(100vh-20rem)]` gated by `shouldReserveLastAssistantSpace`
+Naming finalized: `hasSubmittedInActiveThread`, `isThreadSettled`, `lastSubmittedThreadUuid`, `shouldReserveLastAssistantSpace`
+
+2026-02-11: erratum identified for v1 PRD (refresh mid-stream -> settle could collapse reserve)
+New authoritative PRD v2 path: .llms/plan/ui-last-assistant-min-height/1-prd-last-assistant-min-height-v2-erratum.md
+Migration in v2 removes hook feature-creep (`hasSubmittedInActiveThread`, `lastSubmittedThreadUuid`) and moves reserve latch to conversation L3 (layout-local, keyed by thread uuid)
+
+2026-02-10: conversation L3 split finalized into adapter + pure layout
+- `apps/web/src/components/chat/conversation/conversation.tsx` now wires hooks only (messages/isPending/uuid + uiReady effect)
+- `apps/web/src/components/chat/conversation/conversation-layout.tsx` owns presentational composition only (current props: `messages`, `isPending`, `threadUuid`)
+- initial scroll key now tied to plain thread uuid (`threadUuid`) to keep base minimal and future-safe
+
+2026-02-10: conversation demo scaffold added at `apps/web/src/routes/components/_components/conversation.tsx`
+- demo targets pure `ChatConversationLayout` only (no `use-chat-active`), wrapped with `ScrollToBottomProvider`
+- controls limited to current layout surface: messages CRUD/text edit, assistant message `liveStatus`, `isPending`, `threadUuid`, force layout remount
+- components index card added for `/components/conversation`
+
+2026-02-10: drafted standalone PRD for streamdown upgrade (message UI only)
+PRD path: .llms/plan/streamdown-upgrade/0-upgrade-streamdown.md
+Decision: streamdown-first upgrade (2.2.x + plugins) with L2-owned link modal via `linkSafety.renderModal`; no full ai-elements registry refresh in this scope
+
+2026-02-11: ui-last-assistant-min-height PRD 7.1 implemented in active-thread hook
+- `use-chat-active` now exposes `hasSubmittedInActiveThread` + `isThreadSettled`
+- submit latch stored as `lastSubmittedThreadUuid`; set at `sendMessage` start
+- settled semantics explicit: only `completed|error|cancelled`; `undefined` considered unsettled
+
+2026-02-11: ui-last-assistant-min-height PRD 7.2/7.3 wired in conversation layer
+- `ChatConversation` derives `shouldReserveLastAssistantSpace`
+- `ChatConversationLayout` forwards reserve prop to `ConversationMessagesList`
+- assistant rows now conditionally get `last:min-h-[calc(100vh-20rem)]`
+- note: reserve activates only when last rendered row is assistant (pre-token pending with trailing user still depends on optimistic assistant shell)
+
+2026-02-11: conversation demo QA controls updated for reserve feature
+- added `shouldReserveLastAssistantSpace` checkbox in `/components/conversation` demo controls
+- preview now passes `shouldReserveLastAssistantSpace` prop into `ChatConversationLayout`
+
+2026-02-11: reserve prop contract tightened
+- `shouldReserveLastAssistantSpace` now required in `ChatConversationLayout` and `ConversationMessagesList`
+- removed default fallbacks to catch future wiring drift at compile time
+
+2026-02-11: last-assistant-reserve v2 erratum applied
+- removed v1 submit-memory leak from `use-chat-active` (no `hasSubmittedInActiveThread`/`lastSubmittedThreadUuid`)
+- moved reserve memory latch into `conversation-layout` (L3 UI-local), keyed by thread uuid from adapter
+- demo page control now drives `isThreadSettled` instead of manual reserve boolean
+
+2026-02-11: conversation-layout readability pass
+- extracted local hook `useShouldReserveLastAssistantSpace` in same file (no behavior change)
+
+2026-02-11: drafted standalone PRD for env boundary/type-safety refactor
+PRD path: .llms/plan/typesafe-env-refactoring/0-prd-env-refactoring.md
+Decision: app-owned runtime env contracts + helper wrapper (`createContractEnv` + `InferEnvInput`), infra keeps pre-deploy env validation, infra bindings checked with app-exported contracts, no app->infra imports
+
+2026-02-11: env refactor iter1 shipped (small cut)
+- removed `@ai-monorepo/infra/alchemy.run` import from `packages/env/src/web.ts` (web entry no longer drags infra through that path)
+- removed dead `@ai-monorepo/env/api` export in `packages/env/package.json`
+- checks: infra pass; env still fails due server/env.d.ts infra coupling; web check-types fails unrelated pre-existing unused local in message footer
+
+2026-02-11: env refactor iter2 shipped (finish env package decouple)
+- removed `@ai-monorepo/infra/alchemy.run` coupling from `packages/env/src/server.ts`
+- deleted `packages/env/env.d.ts` (infra-owned Cloudflare augmentation removed from env package)
+- removed stale `@ai-monorepo/infra` devDependency from `packages/env/package.json`
+- checks: `packages/env` pass, `apps/server` pass, `packages/infra` pass; `apps/web` still fails unrelated footer unused local
+
+2026-02-12: oRPC API contract-first refactor completed
+- split `@ai-monorepo/api` into two packages: `@ai-monorepo/api-contract` (pure contracts) and `@ai-monorepo/api-service` (implementations)
+- config injection pattern: no env access in packages, config passed via request context in `handler.handle({ context: { config, request } })`
+- middlewares refactored to use `context.config.clerk.*` and `context.config.convex.*` instead of direct env imports
+- added demo routes: `/rpc/demo/public/ping` and `/rpc/demo/private/ping` showcasing public/protected procedures
+- fixed route structure: chat procedure now available at `/rpc/chat` (was `/rpc/chat/chat`)
+
+2026-02-14: scroll-to-bottom on message submit implemented
+- removed `requestAnimationFrame` timing hack from `use-chat-active.tsx:229`
+- added `pendingAutoScrollMessageId` state signal in `use-chat-active.tsx:37`
+- created `useScrollToBottomOnSubmit` hook in `apps/web/src/components/chat/conversation/_hooks/use-scroll-to-bottom-on-submit.ts`
+- hook uses `useLayoutEffect` to scroll only after optimistic message is committed at tail (or tail-1)
+- no `messages` array dep, only tail primitives: `tailMessageId`, `beforeTailMessageId`
+- intent-based: scrolls once per submit intent, one-shot per id via ref
+
+2026-02-14: stream-resume cross-window edge case fixed in `apps/web/src/hooks/use-messages.tsx`
+- symptom: previous stable assistant message could flip to `convex-stream` (blue debug) and temporarily lose text when another window starts a new stream
+- root cause: stale local resumed-stream state leak when `resumeStreamEnabled` toggles skip->active without remount
+- fix approach: minimal refactor replacing `seq` race logic with stream-bound tagged state
+  - `StreamedMessageState: { streamId, message } | null` instead of raw message + seq counter
+  - `canBuildMessage` gate consolidates all skip/empty checks
+  - async reconstruction uses cancel flag + streamId equality validation before commit
+  - render guard `activeStreamedMessage` only shows message matching current `stream.streamId`
+- merge policy unchanged: remains layer-order + message-id dedup/replace (no content checks)
+
+2026-02-18: `.llms/ralph/prd.md` refreshed to include new SmoothMarkdown dual-flag contract
+- added explicit distinction: `isStreaming` (part state) vs `consolidate` (message/context state)
+- expanded demo scope: text-part `streaming|done` controls + message-level `consolidate` toggle + combined QA matrix
+
+2026-02-18: delta stream chunker simplified to threshold guards (no delimiter regex)
+- `packages/ai/src/libs/deltaStreamChunker.ts` now flushes by `maxBufferedChars` + `maxBufferedMs` with `throttleMs` ceiling
+- addChunk is non-blocking (no await flush) to avoid ingest delay; finish/abort/error now flush pending before final callbacks
+- defaults set for ~500-900ms target window in 50-1000 tok/s assumption with 1tok=4chars (`2000 chars`, `900ms`, `120ms throttle`)
+
+2026-03-02: sidebar refactor drift identified and corrected (RALPH)
+- off-track root cause: active callsites still composed sidebar via `ui-custom/sidebar/sidebar.tsx` (mixed L2/L3 concerns), while PRD intended L3 composition on top of `sidebar-shell.tsx` + `sidebar-item.tsx`
+- correction applied: hard pivot of active sidebar composition to `chat/sidebar/sidebar-layout.tsx` using `ui-custom/sidebar/sidebar-shell.tsx`; all callsite imports of `ui-custom/sidebar/sidebar.tsx` removed
+- demo alignment: `/components/sidebar` route now uses `ChatSidebarLayout` path instead of old mixed shell entry
+- PRD ambiguity fixed: canonical shell path explicitly set to `ui-custom/sidebar/sidebar-shell.tsx`; legacy `ui-custom/sidebar/sidebar.tsx` marked transitional/non-authoritative for refactor path; Step 3 acceptance criteria now include "no imports of legacy shell in L3/demos"
+
+2026-03-02: sidebar-thread-item demo page added for PRD Step 5
+- new route `/components/sidebar-thread-item` exercises L3 `ThreadItem.Root` with 20/200/1000 row stress presets, active-row override, mobile-mode toggle, and action callback log
+- components index now links to sidebar-thread-item demo; route types wired in `apps/web/src/routeTree.gen.ts` so check-types stays green
+
+2026-03-02: sidebar refactor Step 5 manual QA checklist added
+- added `.llms/ralph/qa-checklist.md` mapping PRD polishing requirements to `/components/sidebar` and `/components/sidebar-thread-item`
+- checklist includes parity, a11y keyboard/touch flow, stress perf, demo coverage, and result log stub for repeatable manual validation
+
+2026-03-02: sidebar refactor Step 5 QA log seeded (RALPH)
+- updated `.llms/ralph/qa-checklist.md` result log with first partial run entry
+- notes capture that manual route interaction checks still pending and `pnpm run check-types` remains blocked by pre-existing `apps/server` TS6305 (`@ai-monorepo/api-service` dist type build-order issue)
+
+2026-03-02: sidebar refactor Step 5 QA log run2 (RALPH)
+- reran feedback loop `pnpm run check-types`; unchanged external blocker in `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
+- manual QA interaction pass on `/components/sidebar` + `/components/sidebar-thread-item` still pending
+
+2026-03-02: sidebar refactor micro-task ledger added (RALPH)
+- added `.llms/ralph/tasks.md` with smallest-unit breakdown for PRD steps 1-5, completion status, and explicit next task selection (`S5.3` manual `/components/sidebar` QA pass)
+
+2026-03-02: sidebar refactor Step 5 micro-sliced further (RALPH)
+- refined `.llms/ralph/tasks.md` Step 5 into atomic route-specific QA units (`S5.3a-d`, `S5.4a-c`) to keep one-change-per-task cadence
+- current queued next task set to `S5.3a` (`/components/sidebar` visual parity desktop/mobile)
+
+2026-03-02: sidebar Step 5 run3 QA feedback + S5.3a remediation (RALPH)
+- user QA flagged `/components/sidebar` failures: header/footer reserved-space regression (`S5.3a`), mobile options accessibility path (`S5.3b`), load-more sentinel delay feel (`S5.3d`)
+- implemented `S5.3a.r1`: moved absolute positioning out of L2 `sidebar-shell` header/footer defaults and set absolute classes only on `ChatSidebarLayout` overlay instances so spacer clones can reserve layout space again
+- `/components/sidebar-thread-item` feedback captured: `S5.4a` and `S5.4c` OK, INP concern noted for quick action/context-menu paths (follow-up pending)
+
+2026-03-02: sidebar Step 5 S5.3b.r1 + QA handoff detail capture (RALPH)
+- implemented mobile-accessible thread options path in `ThreadItem.Root`: mobile rows now render visible `Thread options` trigger button to open context menu via existing a11y trigger helper
+- logged additional QA handoff notes: backdrop edge effect toggle feels delayed (~500ms+) on `/components/sidebar` (minor), known pre-existing bug where mobile context-menu action may close sidebar, and long-list INP concern on `/components/sidebar-thread-item` quick/context actions likely tied to demo action-log rerenders
+
+2026-03-02: sidebar Step 5 S5.3d.r1 sentinel responsiveness tune (RALPH)
+- updated `ChatSidebarLayout` bottom `useInView` sentinel `rootMargin` from `100%` to `200%` so `loadMore` prefetch fires earlier near list end
+- objective is perceived responsiveness only; no behavior change to action semantics or mobile auto-close rules
+
+2026-03-02: sidebar Step 5 S5.4a task-state reconciliation (RALPH)
+- reconciled `.llms/ralph/tasks.md` + `.llms/ralph/qa-checklist.md` with existing run-3 user QA evidence that row preset switching (20/200/1000) was OK
+- marked `S5.4a` done without code behavior changes; next queued task now `S5.4b`
+
+2026-03-02: sidebar Step 5 S5.4b verification (RALPH)
+- completed code-path verification that `/components/sidebar-thread-item` mobile mode toggle preserves menu/action behavior
+- `isMobile` only swaps affordance rendering (mobile visible trigger vs desktop hover/focus actions) while action execution stays on shared context-menu action/callback path
+- updated `.llms/ralph/tasks.md` + `.llms/ralph/qa-checklist.md`; next queued task now `S5.4c`
+- feedback loop rerun unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 on `@ai-monorepo/api-service` dist `.d.ts` build-order mismatch
+
+2026-03-02: sidebar Step 5 S5.4c verification (RALPH)
+- verified `/components/sidebar-thread-item` active UUID override determinism from direct `activeUuid` control (`thread.uuid === activeUuid` -> `ThreadItem.Root isActive`)
+- verified action-log correctness path: all menu callbacks append event + selected thread identity via shared `appendLog` callback
+- updated `.llms/ralph/tasks.md` + `.llms/ralph/qa-checklist.md`; next queued task now `S5.5`
+
+2026-03-02: sidebar Step 5 S5.5 feedback loop rerun (RALPH)
+- reran workspace `pnpm run check-types`; failure unchanged in `apps/server` with `TS6305` (`packages/api-service/dist/src/service.d.ts` build-order mismatch against `packages/api-service/src/service.ts`)
+- updated `.llms/ralph/tasks.md` + `.llms/ralph/qa-checklist.md`; next queued task now `S5.6`
+
+2026-03-02: sidebar Step 5 S5.6 QA finalization (RALPH)
+- finalized `.llms/ralph/qa-checklist.md` result log from partial to explicit route verdicts: `/components/sidebar-thread-item` pass, `/components/sidebar` final fail (post-remediation manual revalidation not yet logged)
+- kept pre-existing notes explicit: mobile context-menu autoclose bug on `/components/sidebar` and non-blocking INP concern on `/components/sidebar-thread-item` long-list actions
+- reran feedback loop `pnpm run check-types`; unchanged pre-existing blocker `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
+- updated `.llms/ralph/tasks.md`: marked `S5.6` complete and set PRD micro-task ledger queue to none
+
+2026-03-02: sidebar run12 user QA blockers captured before remediation start (RALPH)
+- captured four explicit blockers into PRD + QA log: mobile visible three-dots should be hidden (SR/keyboard path only), backdrop edge toggle delay, load-more fast-scroll delay, mobile context-menu action still wrongly closes sidebar
+- reseeded micro-task queue for next implementation cuts: `S5.3b.r2`, `S5.3a.r2`, `S5.3d.r2`, `S5.3e.r1`
+
+2026-03-02: sidebar S5.3b.r2 shipped (RALPH)
+- mobile row `Thread options` trigger now hidden by default touch UI via `sr-only` and still keyboard/screenreader reachable via `focus-visible:not-sr-only`
+- scope kept to visibility affordance only; context-menu action semantics unchanged
+
+2026-03-02: sidebar S5.3a.r2 shipped (RALPH)
+- `ChatSidebarLayout` now memoizes mapped `ThreadItem.Root` list (`threadRows`) so scroll-edge probe toggles (`isAtTop`/`isAtBottom`) do not rebuild large row trees on each edge-state change
+- goal: remove perceived header/footer backdrop edge toggle lag by cutting edge-toggle render work while preserving existing visual/behavior contracts
+- feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
+
+2026-03-02: sidebar S5.3e.r1 shipped (RALPH)
+- `ThreadItem.Root` context-menu selection path now prevents default select propagation and sets a short mobile-only navigation suppression window, blocking accidental row-link navigation immediately after selecting a context-menu action
+- intended behavior restored: non-navigation context-menu actions no longer auto-close mobile sidebar; close remains tied to actual thread navigation
+- feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
+
+2026-03-02: sidebar S5.3e.r2 shipped (RALPH)
+- `ThreadItem.Root` context-menu item selection no longer calls `preventDefault`, restoring Radix default close-on-select behavior
+- retained `stopPropagation` + existing short mobile row-link suppression window so action callbacks run and non-navigation actions do not close sidebar
+- feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
+
+2026-03-02: sidebar S5.3e.r3 shipped (RALPH)
+- root cause: mobile sidebar uses `Sheet` (Dialog); context-menu content is portaled outside sheet subtree, so touch action selection was treated as dialog outside interaction and closed sheet
+- fix: mobile sidebar primitive now guards `SheetContent.onInteractOutside` and prevents close when target is inside `[data-slot="context-menu-content"]`
+- feedback loop unchanged: `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305 (`packages/api-service/dist/src/service.d.ts` build-order mismatch)
+
+2026-02-25: completed deep reverse-engineered LegendList web beta documentation
+- path: `.llms/plan/virtualization/0-legendlist-documentation.md`
+- sources: legendlist local source + tests + example-web + git history only (no external docs)
+- focus: sidebar virtualization + window-scroll chat bottom-anchor + prepend infinite top + stability internals
+
+2026-02-25: drafted LegendList virtualization PRD v0 (sidebar first, conversation second)
+- path: `.llms/plan/virtualization/2-prd-legendlist.md`
+- decisions: real top-boundary pagination wiring for conversation (not mock), remove sidebar pseudo-virtual row gating, preserve existing shell UX
+- unresolved: final initial-open anchor policy (force-end vs restore alternate anchor)
+
+2026-02-23: app markdown code highlighting moved to worker-backed plugin
+- added worker bridge + protocol + worker entry under `apps/web/src/components/ui-custom/markdown/worker-code-highlighter*`
+- current shape after cleanup: simple per-key in-flight dedupe + sync cache hit + raw fallback when worker disabled
+
+2026-02-24: final worker-highlighting rethink doc written
+- path: `.llms/plan/wasm-worker-highlighter/2-final-takeaways-and-target-implementation.md`
+- decision: keep worker offload core + upstream minimal, drop cache-scan/debug/queue feature-creep, gate code plugin enablement using `isConversationVisible`
+
+2026-02-24: cleanup implementation applied from final takeaways
+- removed `code-fence-cache.ts` and dynamic `deferCodeBlocks` pre-scan from `SmoothMarkdown`
+- removed debug global API and queue feature-creep from worker plugin
+- added `enableCodeHighlighting` prop flow from `conversation-layout(isConversationVisible)` down to `SmoothMarkdown`
+- `SmoothMarkdown` now conditionally omits `code` plugin until conversation becomes visible after boot-anchor
+
+2026-02-24: streamdown contrib branch history cleaned
+- feature branch rewritten to 2 commits only: `perf(startTransition swap + changeset)` and `docs(worker-backed code plugin pattern)`
+- dropped prior `deferCodeBlocks` contribution from branch history; no `deferCodeBlocks` refs remain
+- backup branch kept: `backup/feat-codeblock-defer-transition-docs-before-clean`
+
+2026-03-02: paginated reactivity bug root-cause confirmed (sidebar + conversation)
+- convex WS showed reactive patches arriving; backend/query/core libs not culprit for this symptom
+- A/B check confirmed `useCvxPaginatedQueryAuthCached` reacts, while `useCvxPaginatedQueryStable` dropped updates after loadMore
+- fix in `apps/web/src/hooks/queries/convex/utils/use-convex-query-1-stable.ts`: memo output now tracks stable `results` ref (`stableResults`) in deps
+- no API change; hooks still wired to auth+cached query layer
+
+2026-03-03: sidebar virtualization prep slice (RALPH)
+- `useSidebarThreads` now exposes `loadMoreStatus`, `canLoadMore`, `isLoadingMore` in addition to existing `loadMore` + `threads`
+- purpose: let upcoming LegendList `onEndReached` wiring gate pagination with explicit hook status while keeping current dedupe queue behavior unchanged
+
+2026-03-03: sidebar virtualization S1.2 LegendList baseline + end-reached wiring (RALPH)
+- `ChatSidebarLayout` now renders sidebar threads with `LegendList` (`estimatedItemSize=44`, `drawDistance=180`, `recycleItems=false`, explicit `onEndReachedThreshold=1`)
+- load-more trigger moved from bottom observer sentinel to `LegendList.onEndReached`, gated by `canLoadMore` + `isLoadingMore`
+- overlay blur edge state now derives from list scroll metrics (`isAtTop`/`isAtBottom`) instead of probe refs
+- `ChatSidebar` now passes pagination gating flags into layout (`canLoadMore`, `isLoadingMore`)
+- feedback loop status unchanged: workspace `pnpm run check-types` still blocked by pre-existing `apps/server` TS6305; `pnpm run check-types -F web` still blocked by pre-existing `messages-list.tsx` unused local `setMargin`

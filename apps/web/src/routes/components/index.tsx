@@ -11,6 +11,10 @@ const components = [
     path: "/components/sidebar",
   },
   {
+    name: "Sidebar Thread Item",
+    path: "/components/sidebar-thread-item",
+  },
+  {
     name: "Button Group",
     path: "/components/button-group",
   },
@@ -21,6 +25,14 @@ const components = [
   {
     name: "Messages",
     path: "/components/messages",
+  },
+  {
+    name: "Conversation",
+    path: "/components/conversation",
+  },
+  {
+    name: "Window Scroll Virtualization",
+    path: "/components/window-scroll-virtualization",
   },
 ] as const;
 

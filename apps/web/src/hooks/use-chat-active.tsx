@@ -1,3 +1,4 @@
+import { createOptimisticStepStartMessage } from "@ai-monorepo/ai/helpers";
 import type { AllowedModelIds } from "@ai-monorepo/ai/model.registry";
 import type {
   MyUIMessage,
@@ -9,29 +10,38 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import { useChatSessionScope } from "@/components/providers/4-chat-session-scope";
 import { cvx } from "@/lib/convex/queries";
 import type { MaybePromise } from "@/lib/utils";
+import {
+  useAiSdkChatActions,
+  useAiSdkChatHandlers,
+  useAiSdkChatState,
+} from "./chat/use-ai-sdk-chat";
+import { useChatNavActions } from "./chat/use-chat-nav";
 import { useCvxMutationAuthV3 } from "./queries/convex/utils/use-convex-mutation-0-auth";
 import { useThread } from "./queries/use-chat-active-queries";
 import { useChatInputActions } from "./use-chat-input";
-import { useChatNav } from "./use-chat-nav";
 import { useMessages } from "./use-messages";
-import { useChatContext } from "./use-messages-legacy";
 import { getLiveStatusKind, useStreamOwnership } from "./use-stream-ownership";
 
 type ActiveThreadState = {
   uuid: string;
-  status: ActiveThreadStatus | undefined;
+  streamStatus: ActiveThreadStatus | undefined;
   messages: MyUIMessage[];
-  isPending: boolean;
-  isStale: boolean;
+  isDataPending: boolean;
+  isDataStale: boolean;
   isStreaming: boolean;
   messagesQueue: MyUIMessage[];
-  isStreamingOptimistic: boolean;
-  isWaitingForFirstToken: boolean;
+  // isStreamingOptimistic: boolean;
+  // isWaitingForFirstToken: boolean;
+  isThreadSettled: boolean;
+  pendingAutoScrollMessageId: string | undefined;
 };
 
 type SendMessageParams = {
@@ -57,20 +67,26 @@ type ActiveThreadActions = {
 
 type ActiveThreadMessagesType = Pick<
   ActiveThreadState,
-  "messages" | "isPending" | "isStale"
->;
+  "messages" | "isDataPending" | "isDataStale"
+> & {
+  isLoadingOlder: ReturnType<typeof useMessages>["isLoading"];
+  olderHistoryStatus: ReturnType<typeof useMessages>["paginatedStatus"];
+  loadOlder: ReturnType<typeof useMessages>["loadMore"];
+};
 const ActiveTheadMessagesContext =
   createContext<ActiveThreadMessagesType | null>(null);
 type ActiveThreadStateType = Pick<
   ActiveThreadState,
   | "messagesQueue"
-  | "status"
+  | "streamStatus"
   | "uuid"
-  | "isPending"
-  | "isStale"
+  | "isDataPending"
+  | "isDataStale"
   | "isStreaming"
-  | "isStreamingOptimistic"
-  | "isWaitingForFirstToken"
+  // | "isStreamingOptimistic"
+  // | "isWaitingForFirstToken"
+  | "isThreadSettled"
+  | "pendingAutoScrollMessageId"
 >;
 const ActiveTheadStateContext = createContext<ActiveThreadStateType | null>(
   null
@@ -119,115 +135,159 @@ type ActiveThreadStatus =
 
 export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const inputActions = useChatInputActions();
-  const chatNav = useChatNav();
-  const isSkip = chatNav.isNew;
+  const chatNavAction = useChatNavActions();
+  const scope = useChatSessionScope();
+  const isSkip = scope.isNew;
 
   const {
     data: thread,
-    isPending: isThreadPending,
-    isStale: isThreadStale,
-  } = useThread(isSkip ? "skip" : chatNav.id);
+    isPending: isThreadQueryPending,
+    isStale: isThreadQueryStale,
+  } = useThread(isSkip ? "skip" : scope.sessionId);
 
+  // TODO start: from here to "TODO end" should move this in a separate hook/function for readability
   const { isLocalOwned, markOwned, clearOwnership } = useStreamOwnership({
-    threadUuid: isSkip ? "skip" : chatNav.id,
+    threadUuid: isSkip ? "skip" : scope.sessionId,
     liveStatus: thread?.liveStatus,
-    isThreadPending,
+    isThreadQueryPending,
   });
-
+  // NB: This is normal to use thread.liveStatus here and not streamStatus aggregate
   const liveStatusKind = getLiveStatusKind(thread?.liveStatus);
   const resumeStreamEnabled =
-    !(isSkip || isThreadPending || isLocalOwned) &&
+    !(isSkip || isThreadQueryPending || isLocalOwned) &&
     liveStatusKind === "ongoing";
+  // TODO end
 
   const {
     messages,
-    isPending: isMessagesPending,
+    isPending: isMessagesQueryPending,
     isStale: isMessagesStale,
+    isLoading: isLoadingOlder,
+    loadMore,
+    paginatedStatus,
     applyOptimisticPatch,
     revertOptimisticPatch,
   } = useMessages({
-    threadUuid: isSkip ? "skip" : chatNav.id,
+    threadUuid: isSkip ? "skip" : scope.sessionId,
     resumeStreamEnabled,
   });
 
-  const isPending = isSkip ? false : isThreadPending || isMessagesPending;
-  const isStale = isSkip ? false : isThreadStale || isMessagesStale;
-  const isStreaming = thread?.liveStatus === "streaming";
-  const isWaitingForFirstToken =
-    thread?.liveStatus === "pending" && messages.at(-1)?.role === "user";
-  const isStreamingOptimistic = isStreaming || isWaitingForFirstToken;
-  const status: ActiveThreadStatus | undefined = useMemo(() => {
-    if (chatNav.isNew) return "new";
-    if (isThreadPending) return "pending";
-    if (thread?.liveStatus === "streaming") return "streaming";
-    if (thread?.liveStatus === "completed") return "completed";
+  const upsertPromiseRef = useRef<Promise<unknown>>(Promise.resolve());
+  const [messagesQueue, _setMessagesQueue] = useState<MyUIMessage[]>([]);
+  const {
+    sendMessage: sdkSendMessage,
+    regenerate: sdkRegenerate,
+    setMessages: sdkSetMessages,
+  } = useAiSdkChatActions();
+  const { status: sdkStatus } = useAiSdkChatState();
+  useAiSdkChatHandlers({
+    onError: async (error) => {
+      console.error("sdkChatError", error);
+      clearOwnership();
+
+      // upsertThread might throw if not allowed (because already streaming)
+      await upsertPromiseRef.current.catch((e) => {
+        console.error("Error in previous upsert", e);
+      });
+      await upsertThread({
+        threadUuid: scope.sessionId,
+        patch: {
+          liveStatus: "error",
+        },
+      }).catch((e) => {
+        console.error(
+          "Error attempting to update thread liveStatus to error from client",
+          e
+        );
+      });
+    },
+  });
+
+  const [pendingAutoScrollMessageId, setPendingAutoScrollMessageId] = useState<
+    string | undefined
+  >();
+
+  // Requests data status (pending -> stale -> fresh)
+  const isDataPending = isSkip
+    ? false
+    : isThreadQueryPending || isMessagesQueryPending;
+  const isDataStale = isSkip ? false : isThreadQueryStale || isMessagesStale;
+
+  // Streaming status (!== request data)
+  const streamStatus: ActiveThreadStatus | undefined = useMemo(() => {
+    // if (isThreadQueryPending) return undefined;
+
     if (thread?.liveStatus === "error") return "error";
     if (thread?.liveStatus === "cancelled") return "cancelled";
-  }, [chatNav.isNew, isThreadPending, thread?.liveStatus]);
+    if (thread?.liveStatus === "completed") return "completed";
+    if (sdkStatus === "streaming" || thread?.liveStatus === "streaming")
+      return "streaming";
+    if (sdkStatus === "submitted" || thread?.liveStatus === "pending")
+      return "pending";
+    if (scope.isNew) return "new";
+  }, [scope.isNew, thread?.liveStatus, sdkStatus]);
+  const streamStatusKing = getLiveStatusKind(streamStatus); // TODO: getLiveStatusKind was supposed to be used with liveStatus type not ActiveThreadStatus. Temp hack before we unify this "status" reducer we need everywhere.
+  const isStreaming = streamStatus === "streaming";
+  // TODO: perhaps no longer useful since we have optimistic agent response now.
+  // const isWaitingForFirstToken =
+  //   streamStatusKing === "ongoing" && messages.at(-1)?.role === "user";
+  // const isStreamingOptimistic = isStreaming || isWaitingForFirstToken;
 
   const upsertThread = useCvxMutationAuthV3(
     ...cvx.mutationV3.threads.upsert.options()
   );
 
-  const [messagesQueue, _setMessagesQueue] = useState<MyUIMessage[]>([]);
-
-  const {
-    sendMessage: sdkSendMessage,
-    regenerate: sdkRegenerate,
-    setMessages: sdkSetMessages,
-  } = useChatContext({
-    onFinish: () => {
-      console.log("DEBUG123: onFinish !!!!!!");
-    },
-    onError: () => {
-      clearOwnership();
-    },
-  });
+  // TODO: make a single shared reducer in ai packages for this (we already have a similar implementation on api side)
+  // TOTO NB: I think they miss-align on the "undefined" case though. Backend "undefined" handling change, might break things from what I vaguely remember. So if we ever need to change it, we gotta deeply analyze potential impacts.
+  const isThreadSettled = streamStatusKing === "settled";
+  // later remark linked to above todo, we should also handle undefined as settled to avoid having the last assistant min-height latching on pageload 100% of the time. Or we should also handle data loading state to only read when ready. To be defined.
 
   const __sendMessageInternal = useCallback(
-    async (uiMessage: MyUIMessage) => {
-      if (chatNav.isNew) chatNav.persistNewChatIdToUrl();
+    async (uiMessage: MyUIMessage, nextMessageId: string) => {
+      if (scope.isNew) chatNavAction.persistNewChatIdToUrl();
+
+      const optimisticNextMessage =
+        createOptimisticStepStartMessage(nextMessageId);
+
       // TODO: save cleared input to restore in case of error
       inputActions.clear();
       console.log("TOTO123: UPSERTING THREAD...");
-      const upsertPromise = upsertThread({
-        threadUuid: chatNav.id,
+      upsertPromiseRef.current = upsertThread({
+        threadUuid: scope.sessionId,
         patch: {
           liveStatus: "pending",
           lastUsedModelId: uiMessage?.metadata?.modelId,
         },
       });
       let patchId: string | undefined;
-      console.log("DEBUG123: __sendMessageInternal", chatNav.id);
+      console.log("DEBUG123: __sendMessageInternal", scope.sessionId);
       try {
-        console.log("TOTO123: APPLIED OPTIMISTIC PATCH", uiMessage);
-        patchId = applyOptimisticPatch(uiMessage);
+        const msgs = [uiMessage, optimisticNextMessage];
+        console.log("TOTO123: APPLIED OPTIMISTIC PATCH", msgs);
+        patchId = applyOptimisticPatch(msgs);
+        setPendingAutoScrollMessageId(optimisticNextMessage.id);
         console.log("TOTO123: SDK SET SDK MESSAGES []");
         sdkSetMessages([]);
         markOwned();
-        await sdkSendMessage(uiMessage);
+        await sdkSendMessage(uiMessage, {
+          metadata: {
+            nextMessageId,
+          },
+        });
       } catch (error) {
+        // TODO: This sucks so we need to fork useChat to handle this properly
+        //! IMPORTANT:
+        //! sdkSendMessage is almost never throwing (can only throw before request is sent)
+        //! for sdkSendMessage error handling, this must be implemented in onError.
         clearOwnership();
         console.error("error while sending message", error);
-
-        // upsertThread might throw if not allowed (because already streaming)
-        try {
-          await upsertPromise;
-          await upsertThread({
-            threadUuid: chatNav.id,
-            patch: {
-              liveStatus: "error",
-            },
-          });
-        } catch (_error) {
-          console.error("error while upserting thread", _error);
-        }
       } finally {
         console.log("TOTO123: REVERTING OPTIMISTIC PATCH", patchId);
         if (patchId) revertOptimisticPatch(patchId);
+        // TODO: This is not frame perfect. We should ultimately flush the stream messages when we have the persisted ones. Perhaps we need some abstraction on sendMessage or something to handle proper lifecycle. Or any better things That would allow handling when everything is fully done. Or at least a `await persisted(...)` before. Be careful with dead-lock and do not to mess around with stream ownership though.
         sdkSetMessages([]);
         // upsertThread might throw if not allowed (because already streaming)
-        await upsertPromise.catch((error) => {
+        await upsertPromiseRef.current.catch((error) => {
           console.error("error while upserting thread", error);
         });
 
@@ -236,11 +296,11 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     },
     [
       sdkSendMessage,
-      chatNav.isNew,
-      chatNav.persistNewChatIdToUrl,
+      scope.isNew,
+      chatNavAction.persistNewChatIdToUrl,
       inputActions.clear,
       upsertThread,
-      chatNav.id,
+      scope.sessionId,
       sdkSetMessages,
       applyOptimisticPatch,
       revertOptimisticPatch,
@@ -252,6 +312,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const sendMessage = useCallback(
     (params: SendMessageParams) => {
       const messageId = nanoid();
+      const nextMessageId = nanoid();
       const uiMessage: MyUIMessage = {
         role: "user",
         parts: [{ type: "text", text: params.text }],
@@ -271,7 +332,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
       // ) {
       //   setMessagesQueue((prev) => [...prev, uiMessage]);
       // } else {
-      return __sendMessageInternal(uiMessage);
+      return __sendMessageInternal(uiMessage, nextMessageId);
       // }
     },
     [__sendMessageInternal]
@@ -284,7 +345,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const regenerate = useCallback(
     async (messageId: string, options?: RegenerateMessageOptions) => {
       const upsertPromise = upsertThread({
-        threadUuid: chatNav.id,
+        threadUuid: scope.sessionId,
         patch: {
           liveStatus: "pending",
           lastUsedModelId: options?.selectedModelId,
@@ -348,7 +409,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
         console.error("error while regenerating message", error);
         await upsertPromise;
         await upsertThread({
-          threadUuid: chatNav.id,
+          threadUuid: scope.sessionId,
           patch: {
             liveStatus: "error",
           },
@@ -364,7 +425,7 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
     [
       sdkRegenerate,
       upsertThread,
-      chatNav.id,
+      scope.sessionId,
       messages,
       sdkSetMessages,
       applyOptimisticPatch,
@@ -387,35 +448,57 @@ export function ActiveThreadProvider({ children }: { children: ReactNode }) {
   const state = useMemo(
     () =>
       ({
-        uuid: chatNav.id,
-        status,
+        uuid: scope.sessionId,
+        streamStatus,
         messagesQueue,
-        isPending,
-        isStale,
+        isDataPending,
+        isDataStale,
         isStreaming,
-        isStreamingOptimistic,
-        isWaitingForFirstToken,
+        // isStreamingOptimistic,
+        // isWaitingForFirstToken,
+        isThreadSettled,
+        pendingAutoScrollMessageId,
       }) satisfies ActiveThreadStateType,
     [
-      chatNav.id,
-      status,
+      scope.sessionId,
+      streamStatus,
       messagesQueue,
-      isPending,
-      isStale,
+      isDataPending,
+      isDataStale,
       isStreaming,
-      isStreamingOptimistic,
-      isWaitingForFirstToken,
+      // isStreamingOptimistic,
+      // isWaitingForFirstToken,
+      isThreadSettled,
+      pendingAutoScrollMessageId,
     ]
   );
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.log("DEBUG: use-chat-active state", {
+      state,
+      messages: messages.slice(-4),
+    });
+  }, [state, messages]);
 
   const messagesState = useMemo(
     () =>
       ({
         messages,
-        isPending,
-        isStale,
+        isDataPending,
+        isDataStale,
+        isLoadingOlder,
+        olderHistoryStatus: paginatedStatus,
+        loadOlder: loadMore,
       }) satisfies ActiveThreadMessagesType,
-    [messages, isPending, isStale]
+    [
+      messages,
+      isDataPending,
+      isDataStale,
+      isLoadingOlder,
+      paginatedStatus,
+      loadMore,
+    ]
   );
 
   return (

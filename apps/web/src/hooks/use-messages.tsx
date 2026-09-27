@@ -1,5 +1,6 @@
 import { createUiMessageFromChunks } from "@ai-monorepo/ai/libs/createUiMessageFromChunks";
 import type {
+  MessageDataSource,
   MyUIMessage,
   MyUIMessageChunk,
   MyUIMessageMetadata,
@@ -8,22 +9,14 @@ import type { Id } from "@ai-monorepo/convex/convex/_generated/dataModel";
 import dedent from "dedent";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cvx } from "@/lib/convex/queries";
+import {
+  useAiSdkChatMessages,
+  useAiSdkChatState,
+} from "./chat/use-ai-sdk-chat";
 import { useCvxQueryAuthNoCache } from "./queries/convex/utils/use-convex-query-0-auth";
 import { useCvxPaginatedQueryStable } from "./queries/convex/utils/use-convex-query-1-stable";
-import { useChatContext } from "./use-messages-legacy";
 import { useUserCacheEntryOnce } from "./use-user-cache";
 import { useFpsThrottledValue } from "./utils/use-fps-throttled-state";
-
-type MessageDataSource =
-  | "cache"
-  | "convex-persisted"
-  | "optimistic"
-  | "convex-stream"
-  | "http-stream";
-
-export type MyUIMessageMetadataWithSource = MyUIMessageMetadata & {
-  dataSource?: MessageDataSource;
-};
 
 // NormalizedMessages must be oldest -> newest for merge perf.
 declare const normalizedMessagesBrand: unique symbol;
@@ -128,18 +121,19 @@ function mergeMessageLayers(
 
 function withDataSource(message: MyUIMessage, dataSource?: MessageDataSource) {
   if (!dataSource) return message;
-  const currentDataSource = (
-    message.metadata as MyUIMessageMetadataWithSource | undefined
-  )?.dataSource;
+  const currentDataSource = message.metadata?.debug?.dataSource;
   if (currentDataSource === dataSource) return message;
 
   return {
     ...message,
     metadata: {
-      ...(message.metadata as MyUIMessageMetadata),
-      dataSource,
-    },
-  } as MyUIMessage;
+      ...message.metadata,
+      debug: {
+        ...message.metadata?.debug,
+        dataSource,
+      } satisfies MyUIMessageMetadata["debug"],
+    } as MyUIMessageMetadata,
+  } satisfies MyUIMessage;
 }
 
 type UseMessagesParams = {
@@ -165,6 +159,13 @@ function useStreamingUiMessageChunks(threadUuid: string | "skip") {
 
   const isPending =
     result === undefined && uiMessageChunks.length === 0 && cursor === 0;
+
+  useEffect(() => {
+    if (!isSkip) return;
+    streamIdRef.current = null;
+    setUiMessageChunks([]);
+    setCursor(0);
+  }, [isSkip]);
 
   useEffect(() => {
     if (result === undefined) return;
@@ -231,43 +232,67 @@ function useStreamingUiMessage(threadUuid: string | "skip") {
   const stream = useStreamingUiMessageChunks(threadUuid);
 
   const throttledMessageChunks = useFpsThrottledValue(
-    stream.isPending ? "skip" : stream.messageChunks,
+    isSkip ? "skip" : stream.messageChunks,
     {
       maxFps: 5,
     }
   );
 
-  const [streamedMessage, setStreamedMessage] = useState<
-    MyUIMessage | undefined
-  >(undefined);
+  type StreamedMessageState = {
+    streamId: Id<"threadStreams">;
+    message: MyUIMessage;
+  };
 
-  const seq = useRef(0);
+  const [streamed, setStreamed] = useState<StreamedMessageState | null>(null);
+  const canBuildMessage =
+    !isSkip &&
+    stream.streamId !== null &&
+    throttledMessageChunks !== undefined &&
+    throttledMessageChunks.length > 0;
+
   useEffect(() => {
-    if (throttledMessageChunks === undefined) {
-      setStreamedMessage(undefined);
+    if (!canBuildMessage) {
+      setStreamed(null);
       return;
     }
 
-    const id = ++seq.current;
+    const streamIdAtStart = stream.streamId;
+    const chunks = throttledMessageChunks;
+    if (!streamIdAtStart || chunks === undefined) {
+      setStreamed(null);
+      return;
+    }
+
+    let cancelled = false;
+
     (async () => {
-      const msg = await createUiMessageFromChunks<MyUIMessage>(
-        throttledMessageChunks
-      );
-      if (id === seq.current) setStreamedMessage(msg);
+      const message = await createUiMessageFromChunks<MyUIMessage>(chunks);
+      if (!message) return;
+      if (cancelled) return;
+      if (stream.streamId !== streamIdAtStart) return;
+      setStreamed({ streamId: streamIdAtStart, message });
     })();
-  }, [throttledMessageChunks]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canBuildMessage, stream.streamId, throttledMessageChunks]);
+
+  const activeStreamedMessage =
+    streamed?.streamId === stream.streamId ? streamed.message : undefined;
 
   return useMemo(
     () => ({
       messages:
-        stream.isPending || streamedMessage === undefined || isSkip
+        stream.isPending || activeStreamedMessage === undefined || isSkip
           ? []
-          : [streamedMessage],
+          : [activeStreamedMessage],
       isPending: isSkip
         ? false
-        : stream.isPending || streamedMessage === undefined,
+        : stream.streamId !== null &&
+          (stream.isPending || activeStreamedMessage === undefined),
     }),
-    [stream.isPending, streamedMessage, isSkip]
+    [stream.isPending, activeStreamedMessage, isSkip, stream.streamId]
   );
 }
 
@@ -294,7 +319,8 @@ export function useMessages({
   const resumedMessages = useStreamingUiMessage(
     resumeStreamEnabled ? threadUuid : "skip"
   );
-  const httpStreamingMessages = useChatContext();
+  const httpStreamingMessages = useAiSdkChatMessages();
+  const httpStreamingState = useAiSdkChatState();
 
   type PatchId = string;
   const optimisticPatches = useRef<Map<PatchId, MyUIMessage[]>>(new Map());
@@ -429,10 +455,10 @@ export function useMessages({
 
   const httpLayer = useMemo(
     () =>
-      normalizeMessages(httpStreamingMessages.messages, {
+      normalizeMessages(httpStreamingMessages, {
         debugLabel: "http-stream",
       }),
-    [httpStreamingMessages.messages]
+    [httpStreamingMessages]
   );
 
   // For performance reasons, we merge layer in two steps:
@@ -471,17 +497,26 @@ export function useMessages({
     [baseLayer, resumedLayer, httpLayer]
   );
 
+  // query data are pending if any query is pending
   const isQueryPending = isSkip
     ? false
     : paginatedMessages.isPending || resumedMessages.isPending;
-  const isPending = isSkip ? false : cache.isPending;
-  const isStale = isSkip ? false : !cache.isPending && isQueryPending;
+  // data are pending is cache is pending, or if cache it empty, fallback on query pending
+  const isPending = isSkip
+    ? false
+    : cache.isPending || (cache.isEmpty && isQueryPending);
+  // data are stale if cache no longer pending and not empty while query is still pending
+  const isStale = isSkip
+    ? false
+    : !(cache.isPending || cache.isEmpty) && isQueryPending;
+  // data are loading only when data are loading (loading = subsequent load-more on paginated query)
   const isLoading = isSkip ? false : paginatedMessages.isLoading;
   const paginatedStatus = paginatedMessages.status;
 
   useEffect(() => {
     if (isSkip) return;
-    cache.set(messages);
+    if (messages.length === 0) return;
+    cache.set(messages.slice(-10));
   }, [isSkip, messages, cache.set]);
 
   return useMemo(
@@ -492,7 +527,7 @@ export function useMessages({
       isStale,
       loadMore: paginatedMessages.loadMore,
       paginatedStatus,
-      streamingStatus: httpStreamingMessages.status,
+      streamingStatus: httpStreamingState.status,
       applyOptimisticPatch,
       revertOptimisticPatch,
     }),
@@ -503,7 +538,7 @@ export function useMessages({
       isStale,
       paginatedMessages.loadMore,
       paginatedStatus,
-      httpStreamingMessages.status,
+      httpStreamingState.status,
       applyOptimisticPatch,
       revertOptimisticPatch,
     ]

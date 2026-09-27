@@ -1,9 +1,4 @@
-import {
-  chatRouter,
-  protectedRouter,
-  publicRouter,
-} from "@ai-monorepo/api/routers/index";
-import { env } from "@ai-monorepo/env/server";
+import { type ApiConfig, router } from "@ai-monorepo/api-service/service";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
@@ -12,6 +7,7 @@ import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { env } from "./env";
 
 const app = new Hono();
 app.use(logger());
@@ -23,7 +19,24 @@ app.use(
   })
 );
 
-export const rpcChat = new RPCHandler(chatRouter, {
+// Create API config from environment
+const apiConfig: ApiConfig = {
+  clerk: {
+    jwtKey: env.PUBLIC_CLERK_JWT_KEY,
+    publishableKey: env.PUBLIC_CLERK_PUBLISHABLE_KEY,
+    secretKey: env.CLERK_SECRET_KEY,
+  },
+  convex: {
+    url: env.PUBLIC_CONVEX_URL,
+  },
+  ai: {
+    googleApiKey: env.GOOGLE_API_KEY,
+    openaiApiKey: env.OPENAI_API_KEY,
+  },
+};
+
+// Main RPC handler for all routes
+export const rpcHandler = new RPCHandler(router, {
   interceptors: [
     onError((error) => {
       console.error(error);
@@ -32,9 +45,10 @@ export const rpcChat = new RPCHandler(chatRouter, {
 });
 
 app.use("/rpc/*", async (ctx, next) => {
-  const result = await rpcChat.handle(ctx.req.raw, {
+  const result = await rpcHandler.handle(ctx.req.raw, {
     prefix: "/rpc",
     context: {
+      config: apiConfig,
       request: ctx.req.raw.clone(),
     },
   });
@@ -45,7 +59,8 @@ app.use("/rpc/*", async (ctx, next) => {
   await next();
 });
 
-export const apiHandler = new OpenAPIHandler(publicRouter, {
+// OpenAPI handler for documentation
+export const apiHandler = new OpenAPIHandler(router, {
   plugins: [
     new OpenAPIReferencePlugin({
       schemaConverters: [new ZodToJsonSchemaConverter()],
@@ -58,25 +73,13 @@ export const apiHandler = new OpenAPIHandler(publicRouter, {
   ],
 });
 
-export const rpcHandlerPublic = new RPCHandler(publicRouter, {
-  interceptors: [
-    onError((error) => {
-      console.error(error);
-    }),
-  ],
-});
-export const rpcHandlerProtected = new RPCHandler(protectedRouter, {
-  interceptors: [
-    onError((error) => {
-      console.error(error);
-    }),
-  ],
-});
-
 app.use("/api-reference/*", async (ctx, next) => {
   const apiResult = await apiHandler.handle(ctx.req.raw, {
     prefix: "/api-reference",
-    context: {},
+    context: {
+      config: apiConfig,
+      request: ctx.req.raw.clone(),
+    },
   });
 
   if (apiResult.matched) {
@@ -86,33 +89,49 @@ app.use("/api-reference/*", async (ctx, next) => {
   await next();
 });
 
-app.use("/rpc/public/*", async (ctx, next) => {
-  const rpcResultPublic = await rpcHandlerPublic.handle(ctx.req.raw, {
-    prefix: "/rpc/public",
-    context: {},
+// Demo routes - public
+export const rpcHandlerDemoPublic = new RPCHandler(router, {
+  interceptors: [
+    onError((error) => {
+      console.error(error);
+    }),
+  ],
+});
+
+app.use("/rpc/demo/public/*", async (ctx, next) => {
+  const result = await rpcHandlerDemoPublic.handle(ctx.req.raw, {
+    prefix: "/rpc/demo/public",
+    context: {
+      config: apiConfig,
+      request: ctx.req.raw.clone(),
+    },
   });
-  if (rpcResultPublic.matched) {
-    return ctx.newResponse(
-      rpcResultPublic.response.body,
-      rpcResultPublic.response
-    );
+  if (result.matched) {
+    return ctx.newResponse(result.response.body, result.response);
   }
 
   await next();
 });
 
-app.use("/rpc/private/*", async (ctx, next) => {
-  const rpcResultProtected = await rpcHandlerProtected.handle(ctx.req.raw, {
-    prefix: "/rpc/private",
+// Demo routes - private (requires auth)
+export const rpcHandlerDemoPrivate = new RPCHandler(router, {
+  interceptors: [
+    onError((error) => {
+      console.error(error);
+    }),
+  ],
+});
+
+app.use("/rpc/demo/private/*", async (ctx, next) => {
+  const result = await rpcHandlerDemoPrivate.handle(ctx.req.raw, {
+    prefix: "/rpc/demo/private",
     context: {
+      config: apiConfig,
       request: ctx.req.raw.clone(),
     },
   });
-  if (rpcResultProtected.matched) {
-    return ctx.newResponse(
-      rpcResultProtected.response.body,
-      rpcResultProtected.response
-    );
+  if (result.matched) {
+    return ctx.newResponse(result.response.body, result.response);
   }
 
   await next();

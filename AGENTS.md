@@ -9,7 +9,7 @@ Use context7 to fetch doc before using any library or doing important refactorin
 We are using react19+ so forwardRef is not needed. Use ref as prop instead.
 We are using shadcn and tailwind
 Always start answer giving your name and version (e.g. "Claude Sonnet 4.5").
-Never run any dev commands. User will always run the dev server before asking you anything. If something isn't working as intended, ask the user to perform the action and stop answering. Only command allowed are non-destructive / readonly commands for searching content etc.
+Never run any dev commands apart from `pnpm run check-types` of `pnpm run test` (with -F for single target if needed like `pnpm -F web run test`). User will always run the dev server before asking you anything. If something isn't working as intended, ask the user to perform the action and stop answering. Only command allowed are non-destructive / readonly commands for searching content etc.
 Raise warning if you think user is asking something that is going to be a bad idea.
 When user ask technical question, do not implement anything and instead, gather all official documentation and resources to answer the question in educative way. (like a dev blog article with code examples and explanations)
 Never guess product/spec details. If ambiguity, ask and wait; update PRD/AGENTS before implementation.
@@ -17,6 +17,7 @@ Never guess product/spec details. If ambiguity, ask and wait; update PRD/AGENTS 
 ## Code principles
 
 - Simplicity over complexity: always prefer the simplest elegant solution instead of over-engineering. (You might even raise warning if something will lead to over-engineering because taking the wrong path)
+  - If choosing complex path, present simple alternative + tradeoff and wait for explicit approval.
 - Typesafety like you were Matt Pocock or Tanner Linsley. When needed, build strong type system isolated from runtime usage, allowing DX with almost no TS syntax outside of type core, but with best in class typesafety (inspiration: tanstack, oRPC/tRPC)
 - When designing React component, always keep in mind:
   - Accessibility and SEO (html and semantic structure, but also design and navigation)
@@ -82,6 +83,7 @@ You're in charge of reading and updating them.
 - .llms/memory/backlog.txt => deferred/off-scope work parking lot. Use this when a task is valuable but not on current goal path, or would create scope drift now. This is not for immediate follow-up items.
 
 Memory quality rules:
+
 - `core_facts` must stay useful for any dev months later.
 - `short_term` is where session/task details belong.
 - `mental_board` must reflect present strategy, not chronology.
@@ -92,6 +94,7 @@ Memory quality rules:
 - at session start: read `mental_board` first, then scan `backlog` only if relevant to current scope.
 
 Backlog entry format (llm-friendly):
+
 - `id`: stable slug
 - `status`: `pending | parked | dropped | done`
 - `captured_at`: date
@@ -105,3 +108,5 @@ Backlog entry format (llm-friendly):
 NB: if you want to manage your memory another way, fill free to do it but remember to write this done here otherwise you will forget...
 
 In all interactions, be extremely concise and sacrifice grammar for the sake of concision.
+When you need to research, implement, side-track anything where only the end result could benefit to the current conversation, you must use sub-agents wisely to avoid filling current context with side-track reasoning.
+User loves minimal code example over long technical explanation when this makes sense. So feel free to use this toward your goal of sacrificing grammar for the sake of concision.

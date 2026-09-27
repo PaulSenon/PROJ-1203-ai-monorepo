@@ -1,5 +1,5 @@
 import type { MyUIMessagePart } from "@ai-monorepo/ai/types/uiMessage";
-import { useDeferredValue } from "react";
+import { memo, useDeferredValue } from "react";
 import { Reasoning } from "@/components/ui-custom/chat/reasoning";
 import { SmoothMarkdown } from "@/components/ui-custom/markdown/smooth-markdown";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,8 @@ type ReasoningPartType = Extract<MyUIMessagePart, { type: "reasoning" }>;
 export type ReasoningPartProps = {
   part: ReasoningPartType;
   previewLines?: number;
+  consolidate?: boolean;
+  enableCodeHighlighting?: boolean;
 };
 
 const DEFAULT_PREVIEW_LINES = 2;
@@ -16,9 +18,11 @@ const NON_WHITESPACE_PATTERN = /\S/;
 const MARKDOWN_OVERFLOW_GUARDS =
   "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto";
 
-export function ReasoningPart({
+export const ReasoningPart = memo(function _ReasoningPart({
   part,
   previewLines = DEFAULT_PREVIEW_LINES,
+  consolidate,
+  enableCodeHighlighting,
 }: ReasoningPartProps) {
   const isStreaming = part.state === "streaming";
   const text = part.text ?? "";
@@ -40,6 +44,9 @@ export function ReasoningPart({
               "text-muted-foreground text-sm",
               MARKDOWN_OVERFLOW_GUARDS
             )}
+            consolidate={consolidate}
+            enableCodeHighlighting={enableCodeHighlighting}
+            isStreaming={isStreaming}
           >
             {deferredText}
           </SmoothMarkdown>
@@ -47,4 +54,4 @@ export function ReasoningPart({
       </Reasoning.Content>
     </Reasoning.Root>
   );
-}
+});

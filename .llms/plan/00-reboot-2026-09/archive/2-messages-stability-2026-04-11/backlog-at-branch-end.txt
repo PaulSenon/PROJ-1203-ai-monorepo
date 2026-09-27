@@ -1,0 +1,151 @@
+----
+[id] message-stability-hot-cold-metadata-selectors
+[status] parked
+[captured_at] 2026-04-11
+[context] While shipping message-stability ownership handoff stabilization, we discussed that one global metadata reuse rule may be too blunt for future metadata consumers.
+[why_deferred] Current simpler rule is enough for the active UI and keeps the stabilization slice bounded. Source-aware selectors would add meaningful architecture and policy complexity too early.
+[rough_spec]
+- Add explicit metadata selector policy by source class.
+- Hot sources: `http-stream` and `resumed-stream` ignore non-hot metadata during streaming merges.
+- Cold sources: `cache`, `convex-persisted`, and `optimistic` may refresh broader metadata without forcing avoidable row/parts churn.
+- Keep selector policy explicit and schema-aware; no generic deep diff.
+[decisions]
+- Do not implement in current stabilization slice.
+- Current shipped rule ignores `updatedAt`/`usage`/`timing` globally for reuse.
+- DEV `debug.dataSource` still breaks reuse when debug tagging is enabled.
+[open_questions]
+- Which exact metadata fields need cold-path freshness first?
+- Should cold-path metadata refresh preserve row ref while swapping only metadata ref, or intentionally replace the whole message row?
+- Do any future consumers need `usage` or `timing` hot during streaming, or only after settle/persist?
+[next_trigger] Revisit only if a real metadata consumer lands or profiling shows the global rule is too blunt.
+----
+[id] sidebar-pagination-placeholder-prefill
+[status] parked
+[captured_at] 2026-03-02
+[context] During sidebar follow-up PRD scoping, we discussed improving fast-scroll pagination UX by instantly reserving next-page space with placeholder rows while real rows load.
+[why_deferred] Valuable UX idea but adds state/render complexity and risk of feature creep during current stabilization pass (legacy cleanup + gating + rerender containment).
+[rough_spec]
+- When load-more is triggered, append temporary placeholder rows equal to page size (or bounded by known max once backend total count exists).
+- Replace placeholders progressively with real loaded rows when page resolves.
+- Keep placeholder generation bounded to avoid runaway growth when total count unknown.
+- Preserve accessibility and avoid confusing keyboard focus targets.
+[decisions]
+- Not part of current sidebar follow-up implementation.
+- Current follow-up uses status-gated loadMore cadence only.
+- Re-evaluate after backend provides total count / hasMore contract improvements.
+[open_questions]
+- Should placeholder count always equal requested page size, or adapt from observed API response sizes?
+- How to avoid visual jump when placeholders are replaced by rows with dynamic title/indicator widths?
+- Should placeholder rows be non-interactive or partially interactive during loading?
+[next_trigger] Revisit after current sidebar follow-up ships and pagination status-gating is validated in production-like usage.
+----
+[id] streamdown-code-worker-wasm-phase2
+[status] parked
+[captured_at] 2026-02-18
+[context] While scoping custom Streamdown worker highlighter for Vite CSR, we decided to ship JS-engine worker first and defer WASM engine rollout.
+[why_deferred] Current goal is lowest-risk main-thread offload with stable CSP posture. WASM adds policy/runtime/asset complexity and is not required for phase-1 objective.
+[rough_spec]
+- Use PRD `.llms/plan/wasm-worker-highlighter/0-prd-wasm-worker.md` as canonical design.
+- Keep phase 1 = JS engine in worker + scheduling/coalescing/stale guards + fallback.
+- Add optional phase 2 engine mode: Oniguruma WASM in worker behind explicit config flag.
+- Add CSP profile extension for WASM mode and browser/runtime validation matrix.
+[decisions]
+- App-local implementation only (no npm package work).
+- Keep Streamdown plugin contract unchanged.
+- WASM mode explicitly postponed.
+[open_questions]
+- Which exact CSP directives are required in target deploy environments for WASM mode?
+- Should WASM mode be disabled by default even after implementation lands?
+- What measurable win threshold (latency/fidelity) justifies enabling WASM mode?
+[next_trigger] Revisit after JS-worker phase is shipped and perf/security baselines are validated against production-like traffic.
+----
+[id] env-contract-v2-custom-builder
+[status] pending
+[captured_at] 2026-02-11
+[context] During env refactor, we identified limits in current `@t3-oss/env-core` wrapper for future policy needs (secret/public enforcement, build scope, richer contracts).
+[why_deferred] Current priority is finishing boundary-safe env refactor with minimal blast radius; custom env framework would expand scope significantly.
+[rough_spec]
+- Build custom `createEnv` replacement with explicit sections: `public`, `secret`, `server`, `shared`, `build`.
+- Enforce prefix policy for public keys and mandatory secret value policy at type level.
+- Preserve input vs output inference API (`InferInputContract`, `InferOutputContract`) and runtime parser ergonomics.
+- Provide infra-friendly binding contract projection with optional secret allowance mapping.
+[decisions]
+- Current implementation keeps `createContractEnv` wrapper around t3-env.
+- Secret/public enforcement remains infra-side only for now.
+[open_questions]
+- Migration path from current wrapper to custom API without breaking app env modules?
+- Should build-time contract be first-class in API, or a separate factory?
+- How to model resource bindings (R2/DO/Queue/service) alongside scalar envs elegantly?
+[next_trigger] Revisit after current env refactor is merged and stable across web/server/infra.
+----
+[id] ai-elements-full-registry-refresh
+[status] parked
+[captured_at] 2026-02-10
+[context] While planning Streamdown upgrade, we confirmed current message-ui objective can be completed without a full ai-elements registry update.
+[why_deferred] Full registry refresh has high blast radius and risks feature creep during chat MVP stabilization.
+[rough_spec]
+- Re-run ai-elements/shadcn registry updates for impacted components.
+- Diff local L1 overrides against upstream.
+- Reconcile custom local behavior (attachments, smooth text, design tokens).
+[decisions]
+- Current scope uses streamdown-first upgrade + selective handpick only if required.
+- Prompt-input/model-selector remain untouched in current PRD.
+[open_questions]
+- Which L1 components should be upgraded together to keep local API consistency?
+- Use interactive merge flow or overwrite+manual restore workflow?
+[next_trigger] Revisit after streamdown message-ui upgrade ships and stabilizes.
+----
+[id] client-assistant-id-complex-rollout
+[status] parked
+[captured_at] 2026-02-09
+[context] Complex assistant client-side ID rollout was fully specified but deferred to keep MVP path focused.
+[why_deferred] Must first execute the simpler path in `.llms/plan/client-optimistic-assistant-shell/0-prd-simplest-solution.md`. Only escalate to complex rollout if repeated issues show assistant client-side IDs are needed.
+[rough_spec]
+- Implement `.llms/plan/client-optimistic-assistant-shell/1-prd-complexe-solution-client-side-id.md`.
+- Include insert-only create guard, UUID immutability guard, invisible one-retry, and persisted conversation-level error block with retry payload.
+[decisions]
+- Deferred intentionally, not current MVP critical path.
+- Triggered after simplest solution ships, or earlier only on clear repeated need.
+[open_questions]
+- none
+[next_trigger] After `.llms/plan/client-optimistic-assistant-shell/0-prd-simplest-solution.md` is shipped, or if repeated friction confirms assistant client-side IDs are needed.
+----
+[id] thread-uuid-collision-recovery
+[status] parked
+[captured_at] 2026-02-09
+[context] While scoping message UUID collision handling for optimistic assistant shell, thread UUID collision/recovery was explicitly identified as related but out of current scope.
+[why_deferred] Current priority is message flow reliability and MVP chat UX. Thread-level collision handling expands protocol and persistence semantics unnecessarily for current deliverable.
+[rough_spec]
+- Define deterministic behavior when thread UUID collides on create/navigation/send.
+- Add typed error + optional auto-recovery path.
+- Ensure no data mix across threads/users and no UI route flicker.
+[decisions]
+- Not in current PRD scope.
+- Message-level UUID handling proceeds independently.
+[open_questions]
+- Should collision recover by server remap or client reroute?
+- Should existing thread be reopened or new thread forced?
+- How to preserve draft/input state across recovery?
+[next_trigger] Revisit after message UUID project ships and stabilizes in production. (and after `.llms/plan/client-optimistic-assistant-shell/1-prd-complexe-solution-client-side-id.md`)
+----
+[id] ui-primitives-button-tooltip-unification
+[status] pending
+[captured_at] 2026-02-08
+[context] While finishing chat message footer MVP, we introduced shared primitives (`IconActionButton`, `CopyActionButton`) and noticed button/tooltip design APIs are still duplicated across sidebar, code-block, ai-elements message actions, and other L2/L3 components.
+[why_deferred] Current goal is finishing chat MVP behavior/quality. Full primitive unification is cross-cutting refactor and would digress scope now.
+[rough_spec]
+- Define canonical L2 wrappers around shadcn L1 `Button` and `Tooltip` with app design defaults + API tweaks.
+- Make icon/action usage rely on these wrappers (single visual behavior baseline).
+- Ensure copy interaction pattern (copy -> check animation) comes from one shared primitive, not repeated logic.
+- Migrate existing usages progressively by domain (chat, sidebar, ai-elements wrappers), not big-bang.
+[decisions]
+- Footer now uses `IconActionButton` and `CopyActionButton` under `ui-custom/primitives/`.
+- App custom tooltip wrapper (`ui-custom/tooltip.tsx`) should be the tooltip style baseline.
+- This item is not a follow-up for current MVP closure; park until MVP-critical flows are done.
+[open_questions]
+- Should canonical button wrappers live in `ui-custom/primitives/` or domain folders too?
+- Keep `ai-elements/MessageAction` usages or fully replace with app wrappers?
+- Migration strategy: codemod + lint rule, or manual incremental conversion?
+- Which variants/sizes are truly canonical vs legacy support?
+[next_trigger] Start after chat MVP validation passes and no P0/P1 UX regressions remain.
+----

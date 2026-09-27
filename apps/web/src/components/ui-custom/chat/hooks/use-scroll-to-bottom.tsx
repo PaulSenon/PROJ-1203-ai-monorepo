@@ -43,9 +43,9 @@ type ScrollState = {
 
 type ScrollActions = {
   /** Scroll to make the bottom probe visible at top of viewport */
-  scrollToBottom: (behavior?: ScrollBehaviorMode) => void;
+  scrollToBottom: (behavior?: ScrollBehaviorMode | "snappy") => void;
   /** Scroll to make the checkpoint probe visible at top of viewport */
-  scrollToCheckpoint: (behavior?: ScrollBehaviorMode) => void;
+  scrollToCheckpoint: (behavior?: ScrollBehaviorMode | "snappy") => void;
   /** Check if probe is currently visible (without triggering scroll) */
   isProbeVisible: (probe: "bottom" | "checkpoint") => boolean;
 };
@@ -102,9 +102,51 @@ function isElementVisible(
   return elRect.top < containerRect.bottom && elRect.bottom > containerRect.top;
 }
 
+function isDocumentScrollContainer(container: Element): boolean {
+  return (
+    container === document.scrollingElement ||
+    container === document.documentElement
+  );
+}
+
+function getProbeScrollTarget(
+  element: HTMLElement,
+  container: Element,
+  topPadding: number
+): number {
+  const elRect = element.getBoundingClientRect();
+
+  if (isDocumentScrollContainer(container)) {
+    return Math.max(0, window.scrollY + elRect.top - topPadding);
+  }
+
+  const scrollContainer = container as HTMLElement;
+  const containerRect = scrollContainer.getBoundingClientRect();
+
+  return Math.max(
+    0,
+    scrollContainer.scrollTop + (elRect.top - containerRect.top) - topPadding
+  );
+}
+
+function scrollContainerTo(
+  container: Element,
+  top: number,
+  behavior: ScrollBehavior
+): void {
+  if (isDocumentScrollContainer(container)) {
+    window.scrollTo({ top, behavior });
+    return;
+  }
+
+  (container as HTMLElement).scrollTo({ top, behavior });
+}
+
 /**
- * Scroll an element to the top of the viewport (or as close as scroll allows).
- * Uses scrollIntoView with block: 'start' for maximum compatibility.
+ * Scroll an element toward the top of the viewport/container, applying `topPadding`
+ * when possible. Near the end of the scroll range, the browser clamps to the
+ * maximum scroll position so the requested offset cannot always be preserved.
+ * Uses scrollIntoView with block: 'start' for the document/no-padding fast path.
  */
 function scrollProbeToTop(
   element: HTMLElement,
@@ -116,37 +158,34 @@ function scrollProbeToTop(
 
   const scrollBehavior = behavior === "instant" ? "auto" : "smooth";
 
-  // For document scrolling with no padding, use native scrollIntoView
-  if (
-    topPadding === 0 &&
-    (container === document.scrollingElement ||
-      container === document.documentElement)
-  ) {
+  if (topPadding === 0 && isDocumentScrollContainer(container)) {
     element.scrollIntoView({ block: "start", behavior: scrollBehavior });
     return;
   }
 
-  // Calculate scroll position with padding
-  const elRect = element.getBoundingClientRect();
+  const targetTop = getProbeScrollTarget(element, container, topPadding);
+  scrollContainerTo(container, targetTop, scrollBehavior);
+}
 
-  if (
-    container === document.scrollingElement ||
-    container === document.documentElement
-  ) {
-    const currentScrollY = window.scrollY;
-    const targetTop = currentScrollY + elRect.top - topPadding;
-    window.scrollTo({ top: Math.max(0, targetTop), behavior: scrollBehavior });
-    return;
-  }
+/**
+ * Two-phase scroll used for bottom jumps: first move instantly near the target,
+ * then let the browser animate only the final small delta for a snappier feel.
+ */
+function scrollProbeToTopInTwoPhases(
+  element: HTMLElement,
+  container: Element | null,
+  topPadding: number,
+  smoothDistance = 900
+): void {
+  if (!container) return;
 
-  // Custom container
-  const containerRect = container.getBoundingClientRect();
-  const currentScrollTop = container.scrollTop;
-  const targetTop =
-    currentScrollTop + (elRect.top - containerRect.top) - topPadding;
-  container.scrollTo({
-    top: Math.max(0, targetTop),
-    behavior: scrollBehavior,
+  const targetTop = getProbeScrollTarget(element, container, topPadding);
+  const instantTop = Math.max(0, targetTop - smoothDistance);
+
+  scrollContainerTo(container, instantTop, "instant");
+
+  requestAnimationFrame(() => {
+    scrollContainerTo(container, targetTop, "smooth");
   });
 }
 
@@ -213,7 +252,8 @@ export function ScrollToBottomProvider({
           }
         }
       },
-      { root, threshold: 0 }
+      // TODO: margin shouldn't be hard-codded.
+      { root, threshold: 0, rootMargin: "200px" }
     );
 
     if (bottomEl) observer.observe(bottomEl);
@@ -235,21 +275,29 @@ export function ScrollToBottomProvider({
   );
 
   const scrollToBottom = useCallback(
-    (behavior: ScrollBehaviorMode = "smooth") => {
+    (behavior: ScrollBehaviorMode | "snappy" = "snappy") => {
       const el = bottomElRef.current;
       if (!el) return;
       const container = getScrollContainer(containerRef);
-      scrollProbeToTop(el, container, behavior, topPadding);
+      if (behavior === "snappy") {
+        scrollProbeToTopInTwoPhases(el, container, topPadding, 900);
+      } else {
+        scrollProbeToTop(el, container, behavior, topPadding);
+      }
     },
     [containerRef, topPadding]
   );
 
   const scrollToCheckpoint = useCallback(
-    (behavior: ScrollBehaviorMode = "smooth") => {
+    (behavior: ScrollBehaviorMode | "snappy" = "snappy") => {
       const el = checkpointElRef.current;
       if (!el) return;
       const container = getScrollContainer(containerRef);
-      scrollProbeToTop(el, container, behavior, topPadding);
+      if (behavior === "snappy") {
+        scrollProbeToTopInTwoPhases(el, container, topPadding, 900);
+      } else {
+        scrollProbeToTop(el, container, behavior, topPadding);
+      }
     },
     [containerRef, topPadding]
   );

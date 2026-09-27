@@ -1,11 +1,12 @@
-import { type ComponentProps, memo, useCallback, useState } from "react";
+import { type ComponentProps, memo } from "react";
 import { cn } from "@/lib/utils";
+import { CopyAction, RetryAction } from "./_parts/footer-actions";
 import {
-  CopyAction,
-  RetryAction,
-  UserFooterInlineEditor,
-} from "./_parts/footer-actions";
-import { CreatedAtInfo, ModelInfo, SpeedInfo } from "./_parts/footer-infos";
+  CreatedAtInfo,
+  DebugMessageId,
+  ModelInfo,
+  SpeedInfo,
+} from "./_parts/footer-infos";
 import type { MessageFooterActionHandler } from "./footer.types";
 
 const ROOT_CLASSNAME =
@@ -16,6 +17,7 @@ export type MessageFooterAssistantProps = ComponentProps<"div"> & {
   modelId?: string;
   mockedTokensPerSecond?: number;
   onAction: MessageFooterActionHandler;
+  messageId?: string;
 };
 
 export const MessageFooterAssistant = memo(function _MessageFooterAssistant({
@@ -24,6 +26,7 @@ export const MessageFooterAssistant = memo(function _MessageFooterAssistant({
   mockedTokensPerSecond,
   className,
   onAction,
+  messageId,
   ...props
 }: MessageFooterAssistantProps) {
   return (
@@ -35,6 +38,7 @@ export const MessageFooterAssistant = memo(function _MessageFooterAssistant({
       <div className="flex items-center gap-2 text-muted-foreground/80">
         <ModelInfo modelId={modelId} />
         <SpeedInfo mockedTokensPerSecond={mockedTokensPerSecond} />
+        <DebugMessageId messageId={messageId} />
       </div>
     </div>
   );
@@ -44,6 +48,7 @@ export type MessageFooterUserProps = ComponentProps<"div"> & {
   createdAt?: number;
   readEditInitialText: () => string;
   onAction: MessageFooterActionHandler;
+  messageId: string;
 };
 
 export const MessageFooterUser = memo(function _MessageFooterUser({
@@ -51,45 +56,47 @@ export const MessageFooterUser = memo(function _MessageFooterUser({
   readEditInitialText,
   className,
   onAction,
+  messageId,
   ...props
 }: MessageFooterUserProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editSeed, setEditSeed] = useState("");
+  // const [isEditing, setIsEditing] = useState(false);
+  // const [editSeed, setEditSeed] = useState("");
 
-  const handleStartEditing = useCallback(() => {
-    setEditSeed(readEditInitialText());
-    setIsEditing(true);
-  }, [readEditInitialText]);
+  // const handleStartEditing = useCallback(() => {
+  //   setEditSeed(readEditInitialText());
+  //   setIsEditing(true);
+  // }, [readEditInitialText]);
 
-  const handleCancelEditing = useCallback(() => {
-    setIsEditing(false);
-  }, []);
+  // const handleCancelEditing = useCallback(() => {
+  //   setIsEditing(false);
+  // }, []);
 
-  const handleSaveEdit = useCallback(
-    (text: string) => {
-      onAction({ type: "edit-retry", text });
-      setIsEditing(false);
-    },
-    [onAction]
-  );
+  // const handleSaveEdit = useCallback(
+  //   (text: string) => {
+  //     onAction({ type: "edit-retry", text });
+  //     setIsEditing(false);
+  //   },
+  //   [onAction]
+  // );
 
   return (
     <div className={cn(ROOT_CLASSNAME, className)} {...props}>
-      {isEditing ? (
+      {/* {isEditing ? (
         <UserFooterInlineEditor
           className="w-full max-w-sm"
           initialText={editSeed}
           onCancel={handleCancelEditing}
           onSave={handleSaveEdit}
         />
-      ) : (
-        <div className="flex items-center gap-1">
-          <CopyAction onAction={onAction} />
-          {/* <EditAction onClick={handleStartEditing} /> */}
-        </div>
-      )}
+      ) : ( */}
+      <div className="flex items-center gap-1">
+        <CopyAction onAction={onAction} />
+        {/* <EditAction onClick={handleStartEditing} /> */}
+      </div>
+      {/* )} */}
       <div className="flex items-center gap-2 text-muted-foreground/80">
         <CreatedAtInfo createdAt={createdAt} />
+        <DebugMessageId messageId={messageId} />
       </div>
     </div>
   );

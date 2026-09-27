@@ -33,7 +33,7 @@ function MessageContent({
 }: MessageContentProps) {
   return (
     <AIMessageContent
-      className={cn("min-w-0", contentStyles[variant], className)}
+      className={cn("min-h-6 min-w-0", contentStyles[variant], className)}
       {...props}
     />
   );
@@ -71,10 +71,7 @@ function MessageThinking({ className, ...props }: MessageThinkingProps) {
   return (
     <output
       aria-live="polite"
-      className={cn(
-        "flex min-h-6 items-center gap-2 text-muted-foreground text-sm",
-        className
-      )}
+      className={cn("flex gap-2 text-muted-foreground text-sm", className)}
       {...props}
     >
       <Shimmer as="span" duration={1}>

@@ -1,50 +1,35 @@
-import { useEffect } from "react";
-import { ChatMessage } from "@/components/chat/message/message";
-import { Conversation } from "@/components/ui-custom/chat/conversation";
-import { useAppLoadStatusActions } from "@/hooks/use-app-load-status";
+import { useCallback, useRef } from "react";
 import {
   useActiveThreadMessages,
   useActiveThreadState,
 } from "@/hooks/use-chat-active";
-import { ScrollEdgeProbe } from "@/hooks/utils/use-scroll-edges";
-import {
-  useScrollToBottomInit,
-  useScrollToBottomState,
-} from "../../ui-custom/chat/hooks/use-scroll-to-bottom";
+import { ChatConversationLayout } from "./conversation-layout";
 
-// TODO: move
-function InitialScroll() {
-  useScrollToBottomInit({
-    enabled: true,
-    target: "bottom",
-  });
+const LOAD_OLDER_PAGE_SIZE = 20;
 
-  return null;
-}
+export function ChatConversation() {
+  const { uuid, isThreadSettled, pendingAutoScrollMessageId, isDataPending } =
+    useActiveThreadState();
+  const { loadOlder, olderHistoryStatus, messages } = useActiveThreadMessages();
 
-export function ChatFeed() {
-  const appUiStatus = useAppLoadStatusActions();
-  const { messages, isPending } = useActiveThreadMessages();
-  const { uuid } = useActiveThreadState();
-  const { bottomRef } = useScrollToBottomState();
+  const olderHistoryStatusRef = useRef(olderHistoryStatus);
+  olderHistoryStatusRef.current = olderHistoryStatus;
 
-  // TODO: effect or layout effect ?
-  useEffect(() => {
-    appUiStatus.setActiveThreadUIReady(!isPending);
-  }, [isPending, appUiStatus.setActiveThreadUIReady]);
+  const handleStartReached = useCallback(() => {
+    if (olderHistoryStatusRef.current !== "CanLoadMore") return;
 
-  const initialScroll = !isPending && messages.length > 0;
+    loadOlder(LOAD_OLDER_PAGE_SIZE);
+  }, [loadOlder]);
 
   return (
-    <Conversation className="relative mx-auto w-full max-w-2xl flex-1 p-6">
-      <div className="flex flex-col gap-10">
-        {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
-        ))}
-      </div>
-
-      <ScrollEdgeProbe ref={bottomRef} />
-      {initialScroll ? <InitialScroll key={uuid} /> : null}
-    </Conversation>
+    <ChatConversationLayout
+      isPending={isDataPending}
+      isThreadSettled={isThreadSettled}
+      key={uuid}
+      messages={messages}
+      onStartReached={handleStartReached}
+      pendingAutoScrollMessageId={pendingAutoScrollMessageId}
+      threadUuid={uuid}
+    />
   );
 }

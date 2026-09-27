@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { Persisted } from "../../utils/persisted";
 
 const SIDEBAR_WIDTH_MOBILE = "18rem";
+const CONTEXT_MENU_CONTENT_SELECTOR = '[data-slot="context-menu-content"]';
 
 export function Sidebar({
   side = "left",
@@ -59,6 +60,12 @@ export function Sidebar({
             data-mobile="true"
             data-sidebar="sidebar"
             data-slot="sidebar"
+            onInteractOutside={(event) => {
+              const target = event.target;
+              if (!(target instanceof Element)) return;
+              if (!target.closest(CONTEXT_MENU_CONTENT_SELECTOR)) return;
+              event.preventDefault();
+            }}
             side={side}
             style={
               {

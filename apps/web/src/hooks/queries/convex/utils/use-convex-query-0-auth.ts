@@ -5,7 +5,10 @@ import type {
   RequestForQueries,
   UsePaginatedQueryReturnType,
 } from "convex/react";
-import { useQuery as useConvexQueryNoCache } from "convex/react";
+import {
+  usePaginatedQuery as useConvexPaginatedQueryNoCache,
+  useQuery as useConvexQueryNoCache,
+} from "convex/react";
 import type { FunctionReference, FunctionReturnType } from "convex/server";
 import {
   usePaginatedQuery as useConvexPaginatedQueryCached,
@@ -25,6 +28,26 @@ export function useCvxQueryAuthNoCache<
   const result = useConvexQueryNoCache(
     query,
     ...(isReadyToUseConvex ? queryArgs : ["skip"])
+  );
+
+  return result;
+}
+
+export function useCvxPaginatedQueryAuthNoCache<
+  Query extends PaginatedQueryReference,
+>(
+  query: Query,
+  args: PaginatedQueryArgs<Query> | "skip",
+  options: {
+    initialNumItems: number;
+    // latestPageSize?: "grow" | "fixed";
+  }
+): UsePaginatedQueryReturnType<Query> {
+  const { isReadyToUseConvex } = useAuth();
+  const result = useConvexPaginatedQueryNoCache(
+    query,
+    isReadyToUseConvex ? args : "skip",
+    options
   );
 
   return result;

@@ -2,6 +2,9 @@ SHELL := /bin/bash
 COMPOSE_PROJECT_NAME = ai-monorepo
 DOCKER_COMPOSE_FILE = ./docker/docker-compose.dev.yml
 COMPOSE = docker compose --file $(DOCKER_COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME)
+OPENCODE_ATTACH_URL ?= http://localhost:4096
+RALPH_ITERATIONS ?= 10
+RALPH_ALLOW_LOCAL_FALLBACK ?= 1
 
 # Smart container execution - runs in existing container or starts new one
 define run_in_container_smart
@@ -49,8 +52,29 @@ clean-install: ## Clean everything (containers, volumes, dependencies)
 	$(MAKE) pnpm-install
 	$(MAKE) convex-dev-once
 
+opencode-serve:
+	$(call run_in_container_smart,app,bash -lc 'npm i -g @openai/codex@latest && npx -y opencode-ai@latest web --port 4096 --hostname 0.0.0.0')
+
 opencode:
-	$(call run_in_container_smart,app,bash -c "pnpm exec opencode upgrade && pnpm exec opencode")
+	$(call run_in_container_smart,app,npx -y opencode-ai@latest attach $(OPENCODE_ATTACH_URL))
+
+t3-serve: ## Update Codex globally, then start latest T3 server
+	$(call run_in_container_smart,app,bash -lc 'npm i -g @openai/codex@latest && export T3CODE_NO_BROWSER=1; npx -y t3@latest')
+
+codex: ## Update and run Codex CLI inside container
+	$(call run_in_container_smart,app,bash -lc 'npm i -g @openai/codex@latest && codex')
+
+codex-login: ## Headless Codex login inside container volume
+	$(call run_in_container_smart,app,bash -lc 'npm i -g @openai/codex@latest && codex login --device-auth')
+
+ralph-once: ## Run one Ralph iteration via opencode run --attach
+	bash -lc "OPENCODE_ATTACH_URL='$(OPENCODE_ATTACH_URL)' RALPH_ALLOW_LOCAL_FALLBACK='$(RALPH_ALLOW_LOCAL_FALLBACK)' ./.llms/ralph/once.sh"
+
+ralph-afk: ## Run Ralph AFK loop (RALPH_ITERATIONS=10)
+	bash -lc "OPENCODE_ATTACH_URL='$(OPENCODE_ATTACH_URL)' RALPH_ALLOW_LOCAL_FALLBACK='$(RALPH_ALLOW_LOCAL_FALLBACK)' ./.llms/ralph/afk.sh $(RALPH_ITERATIONS)"
+
+opencode-upgrade:
+	$(call run_in_container_smart,app,pnpm up -D -w opencode-ai@latest)
 
 stop: ## Stop all containers
 	$(COMPOSE) down --remove-orphans

@@ -1,4 +1,3 @@
-import { env } from "@ai-monorepo/env/web";
 import {
   ClerkProvider,
   useClerk,
@@ -15,6 +14,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { env } from "@/env";
 import { createControllablePromise } from "@/helpers/controllable-promise-helper";
 
 const VITE_CLERK_PUBLISHABLE_KEY = env.VITE_CLERK_PUBLISHABLE_KEY;

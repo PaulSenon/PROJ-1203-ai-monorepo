@@ -1,0 +1,15 @@
+2026-02-11
+- Task: phase2-partial + AC1 path-unblock (remove web->infra transitive edge) + entropy-loop(1) [PRD 8.2, 11-AC1, 8.5-cleanup]
+- Decision: do smallest choke-point cut first in `@ai-monorepo/env/web`; keep runtime schema same; defer full helper/api redesign to next iter to reduce blast radius.
+- Entropy fix: removed dead export `./api` from env package (target file missing, no repo usage).
+- Files: `packages/env/src/web.ts`, `packages/env/package.json`, `.llms/plan/typesafe-env-refactoring/progress.txt`.
+- Feedback loops: `packages/env tsc --noEmit` FAIL (still infra-coupled via `src/server.ts` -> `@ai-monorepo/infra/alchemy.run` -> `./env.ts` TS5097); `apps/web check-types` FAIL (pre-existing unrelated `footer.tsx` unused local); `packages/infra check-types` PASS.
+- Next: cut remaining env->infra links (`packages/env/src/server.ts`, `packages/env/env.d.ts`) via app-owned contract/types; then rerun checks.
+
+2026-02-11
+- Task: phase2-partial + AC6 path-unblock (remove remaining env pkg -> infra links) [PRD 8.2, 4.1, 11-AC6]
+- Decision: fully decouple `packages/env` now; keep same runtime parse schema; use narrow cast for Cloudflare runtime object until app-owned binding augmentation lands.
+- Entropy fix: removed stale devDependency `@ai-monorepo/infra` from env package.
+- Files: `packages/env/src/server.ts`, `packages/env/env.d.ts`(deleted), `packages/env/package.json`, `.llms/plan/typesafe-env-refactoring/progress.txt`.
+- Feedback loops: `packages/env tsc --noEmit` PASS; `apps/server check-types` PASS; `packages/infra check-types` PASS; `apps/web check-types` FAIL (pre-existing unrelated `apps/web/src/components/chat/message/_parts/footer/footer.tsx:59` unused local).
+- Next: introduce app-owned Cloudflare env augmentation in `apps/server/src/env.cloudflare.d.ts`, then wire compile-time infra<->app `satisfies` lock without reverse imports.

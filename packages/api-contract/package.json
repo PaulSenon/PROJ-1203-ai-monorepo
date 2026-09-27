@@ -1,0 +1,25 @@
+{
+  "name": "@ai-monorepo/api-contract",
+  "exports": {
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
+  },
+  "devDependencies": {
+    "@ai-monorepo/config": "workspace:*",
+    "typescript": "catalog:"
+  },
+  "dependencies": {
+    "@ai-monorepo/ai": "workspace:^",
+    "@orpc/client": "^1.13.5",
+    "@orpc/contract": "catalog:orpc",
+    "ai": "catalog:",
+    "zod": "catalog:"
+  }
+}

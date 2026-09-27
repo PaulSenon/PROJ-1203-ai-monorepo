@@ -7,3 +7,27 @@
 [submodule ".llms/git-references/convex-agent-component"]
 	path = .llms/git-references/convex-agent-component
 	url = https://github.com/get-convex/agent.git
+[submodule ".llms/git-references/streamdown"]
+	path = .llms/git-references/streamdown
+	url = https://github.com/vercel/streamdown.git
+[submodule ".llms/git-references/alchemy"]
+	path = .llms/git-references/alchemy
+	url = https://github.com/alchemy-run/alchemy.git
+[submodule ".llms/git-references/t3-env"]
+	path = .llms/git-references/t3-env
+	url = https://github.com/t3-oss/t3-env.git
+[submodule ".llms/git-references/opencode"]
+	path = .llms/git-references/opencode
+	url = https://github.com/anomalyco/opencode.git
+[submodule ".llms/git-references/orpc"]
+	path = .llms/git-references/orpc
+	url = https://github.com/middleapi/orpc.git
+[submodule ".llms/git-references/orpc-monorepo-example"]
+	path = .llms/git-references/orpc-monorepo-example
+	url = https://github.com/middleapi/orpc-multiservice-monorepo-playground.git
+[submodule ".llms/git-references/legendlist"]
+	path = .llms/git-references/legendlist
+	url = https://github.com/LegendApp/legend-list.git
+[submodule ".llms/git-references/t3code"]
+	path = .llms/git-references/t3code
+	url = https://github.com/pingdotgg/t3code.git

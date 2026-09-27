@@ -9,11 +9,15 @@ import { MessageFooterUser } from "./_parts/footer/footer";
 
 export type ChatMessageUserProps = ComponentProps<"div"> & {
   message: MyUIMessage;
+  consolidate?: boolean;
+  enableCodeHighlighting?: boolean;
 };
 
 export function ChatMessageUser({
   message,
   className,
+  consolidate,
+  enableCodeHighlighting,
   ...props
 }: ChatMessageUserProps) {
   const readRawText = useMessageRawTextReader(message.parts);
@@ -30,11 +34,16 @@ export function ChatMessageUser({
     >
       <Message.Root className="w-fit max-w-[90%] sm:max-w-[80%]" from="user">
         <Message.Content variant="user">
-          <MessageContentParts parts={message.parts} />
+          <MessageContentParts
+            consolidate={consolidate}
+            enableCodeHighlighting={enableCodeHighlighting}
+            parts={message.parts}
+          />
         </Message.Content>
         <Message.Footer>
           <MessageFooterUser
             createdAt={message.metadata?.createdAt}
+            messageId={message.id}
             onAction={handleFooterAction}
             readEditInitialText={readRawText}
           />

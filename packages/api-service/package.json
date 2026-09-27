@@ -1,0 +1,38 @@
+{
+  "name": "@ai-monorepo/api-service",
+  "exports": {
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
+  },
+  "devDependencies": {
+    "@ai-monorepo/config": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "typescript": "catalog:"
+  },
+  "dependencies": {
+    "@ai-monorepo/ai": "workspace:^",
+    "@ai-monorepo/api-contract": "workspace:^",
+    "@ai-monorepo/convex": "workspace:^",
+    "@ai-sdk/anthropic": "catalog:ai",
+    "@ai-sdk/google": "catalog:ai",
+    "@ai-sdk/openai": "catalog:ai",
+    "@ai-sdk/provider": "catalog:ai",
+    "@clerk/backend": "catalog:clerk",
+    "@orpc/client": "catalog:orpc",
+    "@orpc/contract": "catalog:orpc",
+    "@orpc/openapi": "catalog:orpc",
+    "@orpc/server": "catalog:orpc",
+    "@orpc/zod": "catalog:orpc",
+    "ai": "catalog:ai",
+    "convex": "catalog:convex",
+    "nanoid": "catalog:",
+    "zod": "catalog:"
+  }
+}

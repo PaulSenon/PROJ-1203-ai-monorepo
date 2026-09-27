@@ -23,7 +23,7 @@ export const Route = createFileRoute("/components/_components/messages")({
 
 type DemoRole = "assistant" | "user";
 
-type ReasoningState = "streaming" | "done";
+type DemoPartState = "streaming" | "done";
 type ReasoningPreset =
   | "empty"
   | "streaming-underflow"
@@ -34,13 +34,14 @@ type DemoTextPart = {
   id: string;
   type: "text";
   text: string;
+  state: DemoPartState;
 };
 
 type DemoReasoningPart = {
   id: string;
   type: "reasoning";
   text: string;
-  state: ReasoningState;
+  state: DemoPartState;
 };
 
 type DemoPart = DemoTextPart | DemoReasoningPart;
@@ -60,20 +61,62 @@ const STREAMING_OVERFLOW_REASONING = [
   "Line 5: choose path",
   "Line 6: validate output",
 ].join("\n");
-const LONG_MARKDOWN = [
+const DEMO_MARKDOWN = [
+  "## Demo Markdown Fixture",
+  "",
+  "This fixture validates **bold**, *italic*, ~~strikethrough~~, and inline `code`.",
+  "",
+  "- Bullet item one",
+  "- Bullet item two",
+  "1. Ordered item one",
+  "2. Ordered item two",
+  "- [x] Completed task",
+  "- [ ] Pending task",
+  "",
+  "> Blockquote: markdown output must stay stable during streaming and done states.",
+  "",
+  "---",
+  "",
+  "Links:",
+  "- [Internal route sample](/components/messages)",
+  "- [External domain sample](https://example.com/security?ref=streamdown)",
+  "",
   "```ts",
-  "const config = {",
+  "const request = {",
   '  endpoint: "https://example.com/api/v1/streaming/super/long/path",',
   "  headers: {",
-  '    \\"x-long-header-name\\": \\"this-is-a-very-long-header-value-that-should-scroll\\",',
+  '    \\"x-demo-long-header\\": \\"this-is-a-very-long-header-value-that-should-scroll-horizontally\\",',
   "  },",
   "};",
   "```",
   "",
-  "| column-one | column-two | column-three | column-four | column-five | column-six |",
+  "```bash",
+  "curl https://example.com/v1/messages \\",
+  '  -H "Authorization: Bearer demo-token" \\',
+  '  -H "x-request-id: streamdown-demo-very-long-value-1234567890"',
+  "```",
+  "",
+  "| col-a | col-b | col-c | col-d | col-e | col-f |",
   "| --- | --- | --- | --- | --- | --- |",
   "| alpha | beta | gamma | delta | epsilon | zeta |",
-  "| supercalifragilisticexpialidocious | very-long-value-with-no-breaks | 1234567890 | 1234567890 | 1234567890 | 1234567890 |",
+  "| very-long-value-with-no-breaks-abcdefghijklmno | 1234567890 | 1234567890 | 1234567890 | 1234567890 | 1234567890 |",
+  "",
+  "![Fixture image](https://images.unsplash.com/photo-1518770660439-4636190af475?w=800)",
+  "",
+  "```mermaid",
+  "flowchart LR",
+  "  U[User message] --> P{Link policy}",
+  "  P -->|in_app| A[Open in app]",
+  "  P -->|external| M[Open safety modal]",
+  "```",
+  "",
+  "Inline math: $E = mc^2$ and $a^2 + b^2 = c^2$.",
+  "",
+  "$$",
+  "\\int_0^1 x^2 \\; dx = \\frac{1}{3}",
+  "$$",
+  "",
+  "CJK mixed language: English + 日本語 + 中文 + 한국어.",
 ].join("\n");
 const TEXT_APPEND_CHUNKS = [
   " Streaming chunk one.",
@@ -104,15 +147,19 @@ const ERROR_KIND_OPTIONS: Array<{ kind: MessageErrorKind; label: string }> = [
 
 let partCounter = 0;
 
-const createTextPart = (text: string): DemoTextPart => ({
+const createTextPart = (
+  text: string,
+  state: DemoPartState = "done"
+): DemoTextPart => ({
   id: `part-${partCounter++}`,
   type: "text",
   text,
+  state,
 });
 
 const createReasoningPart = (
   text: string,
-  state: ReasoningState
+  state: DemoPartState
 ): DemoReasoningPart => ({
   id: `part-${partCounter++}`,
   type: "reasoning",
@@ -202,7 +249,7 @@ type PartEditorProps = {
   total: number;
   onChange: (id: string, text: string) => void;
   onAppendChunk: (id: string) => void;
-  onStateChange: (id: string, state: ReasoningState) => void;
+  onStateChange: (id: string, state: DemoPartState) => void;
   onMove: (from: number, to: number) => void;
   onRemove: (id: string) => void;
 };
@@ -217,8 +264,6 @@ function PartEditor({
   onMove,
   onRemove,
 }: PartEditorProps) {
-  const isReasoning = part.type === "reasoning";
-
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-background p-3">
       <div className="flex items-start justify-between gap-2">
@@ -262,33 +307,31 @@ function PartEditor({
           </Button>
         </div>
       </div>
-      {isReasoning ? (
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground text-xs uppercase tracking-wide">
-            State
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              aria-pressed={part.state === "streaming"}
-              onClick={() => onStateChange(part.id, "streaming")}
-              size="sm"
-              type="button"
-              variant={part.state === "streaming" ? "default" : "outline"}
-            >
-              Streaming
-            </Button>
-            <Button
-              aria-pressed={part.state === "done"}
-              onClick={() => onStateChange(part.id, "done")}
-              size="sm"
-              type="button"
-              variant={part.state === "done" ? "default" : "outline"}
-            >
-              Done
-            </Button>
-          </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+          State
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            aria-pressed={part.state === "streaming"}
+            onClick={() => onStateChange(part.id, "streaming")}
+            size="sm"
+            type="button"
+            variant={part.state === "streaming" ? "default" : "outline"}
+          >
+            Streaming
+          </Button>
+          <Button
+            aria-pressed={part.state === "done"}
+            onClick={() => onStateChange(part.id, "done")}
+            size="sm"
+            type="button"
+            variant={part.state === "done" ? "default" : "outline"}
+          >
+            Done
+          </Button>
         </div>
-      ) : null}
+      </div>
       <div className="flex justify-end">
         <Button
           aria-label={`Append chunk to part ${index + 1}`}
@@ -326,6 +369,7 @@ function RouteComponent() {
   const [errorSuggestedModelIdsInput, setErrorSuggestedModelIdsInput] =
     useState(DEFAULT_ERROR_SUGGESTED_MODEL_IDS);
   const [isThreadStreaming, setIsThreadStreaming] = useState(false);
+  const [consolidate, setConsolidate] = useState(false);
   const [isMobilePreview, setIsMobilePreview] = useState(false);
   const [reasoningPreviewLines, setReasoningPreviewLines] = useState(
     DEFAULT_PREVIEW_LINES
@@ -383,7 +427,7 @@ function RouteComponent() {
         ? []
         : parts.map((part) =>
             part.type === "text"
-              ? { type: "text", text: part.text }
+              ? { type: "text", text: part.text, state: part.state }
               : { type: "reasoning", text: part.text, state: part.state }
           ),
     };
@@ -418,11 +462,9 @@ function RouteComponent() {
     );
   };
 
-  const updateReasoningState = (id: string, state: ReasoningState) => {
+  const updatePartState = (id: string, state: DemoPartState) => {
     setParts((prev) =>
-      prev.map((part) =>
-        part.id === id && part.type === "reasoning" ? { ...part, state } : part
-      )
+      prev.map((part) => (part.id === id ? { ...part, state } : part))
     );
   };
 
@@ -469,6 +511,7 @@ function RouteComponent() {
 
         return {
           ...part,
+          state: "streaming",
           text: `${part.text}${chunk}`,
         };
       })
@@ -477,16 +520,16 @@ function RouteComponent() {
     chunkCursorByPartIdRef.current[id] = cursor + 1;
   };
 
-  const insertLongContent = () => {
+  const insertDemoMarkdown = () => {
     setParts((prev) => {
       const index = prev.findIndex((part) => part.type === "text");
-      if (index === -1) return [...prev, createTextPart(LONG_MARKDOWN)];
+      if (index === -1) return [...prev, createTextPart(DEMO_MARKDOWN)];
 
       const next = [...prev];
       const part = next[index];
       if (part?.type !== "text") return prev;
 
-      next[index] = { ...part, text: LONG_MARKDOWN };
+      next[index] = { ...part, text: DEMO_MARKDOWN };
       return next;
     });
   };
@@ -703,6 +746,16 @@ function RouteComponent() {
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input
+                  checked={consolidate}
+                  className="h-4 w-4 rounded border-border"
+                  name="message-consolidate"
+                  onChange={(event) => setConsolidate(event.target.checked)}
+                  type="checkbox"
+                />
+                Consolidate markdown
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
                   checked={isMobilePreview}
                   className="h-4 w-4 rounded border-border"
                   name="preview-mobile"
@@ -813,15 +866,15 @@ function RouteComponent() {
 
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-xs uppercase tracking-wide">
-                Overflow
+                Markdown Fixture
               </span>
               <Button
-                onClick={insertLongContent}
+                onClick={insertDemoMarkdown}
                 size="sm"
                 type="button"
                 variant="outline"
               >
-                Insert Long Content
+                Insert Demo Markdown
               </Button>
             </div>
 
@@ -837,7 +890,7 @@ function RouteComponent() {
                   onChange={updatePart}
                   onMove={movePart}
                   onRemove={removePart}
-                  onStateChange={updateReasoningState}
+                  onStateChange={updatePartState}
                   part={part}
                   total={parts.length}
                 />
@@ -861,6 +914,7 @@ function RouteComponent() {
               )}
             >
               <ChatMessage
+                consolidate={consolidate}
                 message={message}
                 reasoningPreviewLines={reasoningPreviewLines}
               />

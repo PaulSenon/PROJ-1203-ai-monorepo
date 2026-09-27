@@ -4,7 +4,6 @@ import type {
 } from "@ai-monorepo/ai/types/uiMessage";
 import { type ComponentProps, useMemo } from "react";
 import { Message } from "@/components/ui-custom/chat/message";
-import type { MyUIMessageMetadataWithSource } from "@/hooks/use-messages";
 import { cn } from "@/lib/utils";
 import { useMessageActions } from "./_hooks/use-message-actions";
 import { useMessageRawTextReader } from "./_hooks/use-message-raw-text-reader";
@@ -15,6 +14,8 @@ import { StatusPart } from "./_parts/status/status";
 export type ChatMessageAssistantProps = ComponentProps<"div"> & {
   message: MyUIMessage;
   reasoningPreviewLines?: number;
+  consolidate?: boolean;
+  enableCodeHighlighting?: boolean;
 };
 
 function shouldShowThinking(message: MyUIMessage) {
@@ -53,8 +54,7 @@ function shouldShowThinking(message: MyUIMessage) {
 }
 
 function useMessageDatasourceDebugger(metadata?: MyUIMessageMetadata) {
-  const dataSource = (metadata as MyUIMessageMetadataWithSource | undefined)
-    ?.dataSource;
+  const dataSource = metadata?.debug?.dataSource;
 
   const className = useMemo(() => {
     if (dataSource === "cache") return "border-l border-yellow-500 p-2";
@@ -72,6 +72,8 @@ export function ChatMessageAssistant({
   message,
   reasoningPreviewLines,
   className,
+  consolidate,
+  enableCodeHighlighting,
   ...props
 }: ChatMessageAssistantProps) {
   const showThinking = shouldShowThinking(message);
@@ -101,6 +103,8 @@ export function ChatMessageAssistant({
         <Message.Content className={cn(debugClass)} variant="assistant">
           {showThinking ? <Message.Thinking /> : null}
           <MessageContentParts
+            consolidate={consolidate}
+            enableCodeHighlighting={enableCodeHighlighting}
             parts={message.parts}
             reasoningPreviewLines={reasoningPreviewLines}
           />
@@ -112,6 +116,7 @@ export function ChatMessageAssistant({
         <Message.Footer>
           <MessageFooterAssistant
             isStreaming={isStreaming}
+            messageId={message.id}
             modelId={message.metadata?.modelId}
             onAction={handleFooterAction}
           />

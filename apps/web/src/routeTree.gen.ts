@@ -18,10 +18,12 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ComponentsIndexRouteImport } from './routes/components/index'
 import { Route as ComponentsComponentsRouteImport } from './routes/components/_components'
-import { Route as ProtectedAiRouteImport } from './routes/_protected/ai'
+import { Route as ComponentsComponentsWindowScrollVirtualizationRouteImport } from './routes/components/_components/window-scroll-virtualization'
 import { Route as ComponentsComponentsTextareaRouteImport } from './routes/components/_components/textarea'
+import { Route as ComponentsComponentsSidebarThreadItemRouteImport } from './routes/components/_components/sidebar-thread-item'
 import { Route as ComponentsComponentsSidebarRouteImport } from './routes/components/_components/sidebar'
 import { Route as ComponentsComponentsMessagesRouteImport } from './routes/components/_components/messages'
+import { Route as ComponentsComponentsConversationRouteImport } from './routes/components/_components/conversation'
 import { Route as ComponentsComponentsButtonGroupRouteImport } from './routes/components/_components/button-group'
 import { Route as DebugDebugChar123IdChar125RouteImport } from './routes/_debug/debug.{-$id}'
 import { Route as ChatChatChar123IdChar125RouteImport } from './routes/_chat/chat.{-$id}'
@@ -65,15 +67,22 @@ const ComponentsComponentsRoute = ComponentsComponentsRouteImport.update({
   id: '/_components',
   getParentRoute: () => ComponentsRoute,
 } as any)
-const ProtectedAiRoute = ProtectedAiRouteImport.update({
-  id: '/ai',
-  path: '/ai',
-  getParentRoute: () => ProtectedRoute,
-} as any)
+const ComponentsComponentsWindowScrollVirtualizationRoute =
+  ComponentsComponentsWindowScrollVirtualizationRouteImport.update({
+    id: '/window-scroll-virtualization',
+    path: '/window-scroll-virtualization',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
 const ComponentsComponentsTextareaRoute =
   ComponentsComponentsTextareaRouteImport.update({
     id: '/textarea',
     path: '/textarea',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
+const ComponentsComponentsSidebarThreadItemRoute =
+  ComponentsComponentsSidebarThreadItemRouteImport.update({
+    id: '/sidebar-thread-item',
+    path: '/sidebar-thread-item',
     getParentRoute: () => ComponentsComponentsRoute,
   } as any)
 const ComponentsComponentsSidebarRoute =
@@ -86,6 +95,12 @@ const ComponentsComponentsMessagesRoute =
   ComponentsComponentsMessagesRouteImport.update({
     id: '/messages',
     path: '/messages',
+    getParentRoute: () => ComponentsComponentsRoute,
+  } as any)
+const ComponentsComponentsConversationRoute =
+  ComponentsComponentsConversationRouteImport.update({
+    id: '/conversation',
+    path: '/conversation',
     getParentRoute: () => ComponentsComponentsRoute,
   } as any)
 const ComponentsComponentsButtonGroupRoute =
@@ -119,7 +134,6 @@ const AuthSignInSplatRoute = AuthSignInSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/ai': typeof ProtectedAiRoute
   '/components': typeof ComponentsComponentsRouteWithChildren
   '/components/': typeof ComponentsIndexRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
@@ -127,22 +141,27 @@ export interface FileRoutesByFullPath {
   '/chat/{-$id}': typeof ChatChatChar123IdChar125Route
   '/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
   '/components/button-group': typeof ComponentsComponentsButtonGroupRoute
+  '/components/conversation': typeof ComponentsComponentsConversationRoute
   '/components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/sidebar': typeof ComponentsComponentsSidebarRoute
+  '/components/sidebar-thread-item': typeof ComponentsComponentsSidebarThreadItemRoute
   '/components/textarea': typeof ComponentsComponentsTextareaRoute
+  '/components/window-scroll-virtualization': typeof ComponentsComponentsWindowScrollVirtualizationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/ai': typeof ProtectedAiRoute
   '/components': typeof ComponentsIndexRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
   '/chat/{-$id}': typeof ChatChatChar123IdChar125Route
   '/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
   '/components/button-group': typeof ComponentsComponentsButtonGroupRoute
+  '/components/conversation': typeof ComponentsComponentsConversationRoute
   '/components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/sidebar': typeof ComponentsComponentsSidebarRoute
+  '/components/sidebar-thread-item': typeof ComponentsComponentsSidebarThreadItemRoute
   '/components/textarea': typeof ComponentsComponentsTextareaRoute
+  '/components/window-scroll-virtualization': typeof ComponentsComponentsWindowScrollVirtualizationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -150,8 +169,7 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/_chat': typeof ChatRouteWithChildren
   '/_debug': typeof DebugRouteWithChildren
-  '/_protected': typeof ProtectedRouteWithChildren
-  '/_protected/ai': typeof ProtectedAiRoute
+  '/_protected': typeof ProtectedRoute
   '/components': typeof ComponentsRouteWithChildren
   '/components/_components': typeof ComponentsComponentsRouteWithChildren
   '/components/': typeof ComponentsIndexRoute
@@ -160,15 +178,17 @@ export interface FileRoutesById {
   '/_chat/chat/{-$id}': typeof ChatChatChar123IdChar125Route
   '/_debug/debug/{-$id}': typeof DebugDebugChar123IdChar125Route
   '/components/_components/button-group': typeof ComponentsComponentsButtonGroupRoute
+  '/components/_components/conversation': typeof ComponentsComponentsConversationRoute
   '/components/_components/messages': typeof ComponentsComponentsMessagesRoute
   '/components/_components/sidebar': typeof ComponentsComponentsSidebarRoute
+  '/components/_components/sidebar-thread-item': typeof ComponentsComponentsSidebarThreadItemRoute
   '/components/_components/textarea': typeof ComponentsComponentsTextareaRoute
+  '/components/_components/window-scroll-virtualization': typeof ComponentsComponentsWindowScrollVirtualizationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/ai'
     | '/components'
     | '/components/'
     | '/sign-in/$'
@@ -176,22 +196,27 @@ export interface FileRouteTypes {
     | '/chat/{-$id}'
     | '/debug/{-$id}'
     | '/components/button-group'
+    | '/components/conversation'
     | '/components/messages'
     | '/components/sidebar'
+    | '/components/sidebar-thread-item'
     | '/components/textarea'
+    | '/components/window-scroll-virtualization'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/ai'
     | '/components'
     | '/sign-in/$'
     | '/sign-up/$'
     | '/chat/{-$id}'
     | '/debug/{-$id}'
     | '/components/button-group'
+    | '/components/conversation'
     | '/components/messages'
     | '/components/sidebar'
+    | '/components/sidebar-thread-item'
     | '/components/textarea'
+    | '/components/window-scroll-virtualization'
   id:
     | '__root__'
     | '/'
@@ -199,7 +224,6 @@ export interface FileRouteTypes {
     | '/_chat'
     | '/_debug'
     | '/_protected'
-    | '/_protected/ai'
     | '/components'
     | '/components/_components'
     | '/components/'
@@ -208,9 +232,12 @@ export interface FileRouteTypes {
     | '/_chat/chat/{-$id}'
     | '/_debug/debug/{-$id}'
     | '/components/_components/button-group'
+    | '/components/_components/conversation'
     | '/components/_components/messages'
     | '/components/_components/sidebar'
+    | '/components/_components/sidebar-thread-item'
     | '/components/_components/textarea'
+    | '/components/_components/window-scroll-virtualization'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -218,7 +245,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   ChatRoute: typeof ChatRouteWithChildren
   DebugRoute: typeof DebugRouteWithChildren
-  ProtectedRoute: typeof ProtectedRouteWithChildren
+  ProtectedRoute: typeof ProtectedRoute
   ComponentsRoute: typeof ComponentsRouteWithChildren
 }
 
@@ -280,18 +307,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComponentsComponentsRouteImport
       parentRoute: typeof ComponentsRoute
     }
-    '/_protected/ai': {
-      id: '/_protected/ai'
-      path: '/ai'
-      fullPath: '/ai'
-      preLoaderRoute: typeof ProtectedAiRouteImport
-      parentRoute: typeof ProtectedRoute
+    '/components/_components/window-scroll-virtualization': {
+      id: '/components/_components/window-scroll-virtualization'
+      path: '/window-scroll-virtualization'
+      fullPath: '/components/window-scroll-virtualization'
+      preLoaderRoute: typeof ComponentsComponentsWindowScrollVirtualizationRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
     }
     '/components/_components/textarea': {
       id: '/components/_components/textarea'
       path: '/textarea'
       fullPath: '/components/textarea'
       preLoaderRoute: typeof ComponentsComponentsTextareaRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
+    }
+    '/components/_components/sidebar-thread-item': {
+      id: '/components/_components/sidebar-thread-item'
+      path: '/sidebar-thread-item'
+      fullPath: '/components/sidebar-thread-item'
+      preLoaderRoute: typeof ComponentsComponentsSidebarThreadItemRouteImport
       parentRoute: typeof ComponentsComponentsRoute
     }
     '/components/_components/sidebar': {
@@ -306,6 +340,13 @@ declare module '@tanstack/react-router' {
       path: '/messages'
       fullPath: '/components/messages'
       preLoaderRoute: typeof ComponentsComponentsMessagesRouteImport
+      parentRoute: typeof ComponentsComponentsRoute
+    }
+    '/components/_components/conversation': {
+      id: '/components/_components/conversation'
+      path: '/conversation'
+      fullPath: '/components/conversation'
+      preLoaderRoute: typeof ComponentsComponentsConversationRouteImport
       parentRoute: typeof ComponentsComponentsRoute
     }
     '/components/_components/button-group': {
@@ -378,30 +419,26 @@ const DebugRouteChildren: DebugRouteChildren = {
 
 const DebugRouteWithChildren = DebugRoute._addFileChildren(DebugRouteChildren)
 
-interface ProtectedRouteChildren {
-  ProtectedAiRoute: typeof ProtectedAiRoute
-}
-
-const ProtectedRouteChildren: ProtectedRouteChildren = {
-  ProtectedAiRoute: ProtectedAiRoute,
-}
-
-const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
-  ProtectedRouteChildren,
-)
-
 interface ComponentsComponentsRouteChildren {
   ComponentsComponentsButtonGroupRoute: typeof ComponentsComponentsButtonGroupRoute
+  ComponentsComponentsConversationRoute: typeof ComponentsComponentsConversationRoute
   ComponentsComponentsMessagesRoute: typeof ComponentsComponentsMessagesRoute
   ComponentsComponentsSidebarRoute: typeof ComponentsComponentsSidebarRoute
+  ComponentsComponentsSidebarThreadItemRoute: typeof ComponentsComponentsSidebarThreadItemRoute
   ComponentsComponentsTextareaRoute: typeof ComponentsComponentsTextareaRoute
+  ComponentsComponentsWindowScrollVirtualizationRoute: typeof ComponentsComponentsWindowScrollVirtualizationRoute
 }
 
 const ComponentsComponentsRouteChildren: ComponentsComponentsRouteChildren = {
   ComponentsComponentsButtonGroupRoute: ComponentsComponentsButtonGroupRoute,
+  ComponentsComponentsConversationRoute: ComponentsComponentsConversationRoute,
   ComponentsComponentsMessagesRoute: ComponentsComponentsMessagesRoute,
   ComponentsComponentsSidebarRoute: ComponentsComponentsSidebarRoute,
+  ComponentsComponentsSidebarThreadItemRoute:
+    ComponentsComponentsSidebarThreadItemRoute,
   ComponentsComponentsTextareaRoute: ComponentsComponentsTextareaRoute,
+  ComponentsComponentsWindowScrollVirtualizationRoute:
+    ComponentsComponentsWindowScrollVirtualizationRoute,
 }
 
 const ComponentsComponentsRouteWithChildren =
@@ -426,7 +463,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   ChatRoute: ChatRouteWithChildren,
   DebugRoute: DebugRouteWithChildren,
-  ProtectedRoute: ProtectedRouteWithChildren,
+  ProtectedRoute: ProtectedRoute,
   ComponentsRoute: ComponentsRouteWithChildren,
 }
 export const routeTree = rootRouteImport

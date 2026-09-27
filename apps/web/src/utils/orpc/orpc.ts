@@ -1,10 +1,15 @@
-import type { ChatRouterContract } from "@ai-monorepo/api/contracts/chat.contract";
-import type { ExampleContract } from "@ai-monorepo/api/contracts/exampleContract";
-import { env } from "@ai-monorepo/env/web";
-import { createORPCClient, DynamicLink, ORPCError } from "@orpc/client";
+import type { AppContract } from "@ai-monorepo/api-contract/contract";
+import {
+  createORPCClient,
+  DynamicLink,
+  type InferClientErrors,
+  isDefinedError,
+  ORPCError,
+} from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { ContractRouterClient } from "@orpc/contract";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { env } from "@/env";
 import { asyncSession } from "@/hooks/use-auth";
 
 /**
@@ -31,25 +36,33 @@ const linkWithAuthHeader = new RPCLink({
 });
 
 /**
- * Simples rpc link to use when no auth needed
+ * Simple rpc link to use when no auth needed
  * (fast !)
  */
 const linkDefault = new RPCLink({
   url: `${env.VITE_SERVER_URL}/rpc`,
 });
 
-// TODO: perhaps we might route on tags ? might be better
+// Route based on path - auth required for certain paths
 const autoLink = new DynamicLink((_options, path, _inputs) => {
-  // console.log("autolink", { _options, path, _inputs });
-  if (path[0] === "private") return linkWithAuthHeader;
+  // Private routes require auth
+  if (path[0] === "demo" && path[1] === "private") return linkWithAuthHeader;
+  if (path[0] === "chat") return linkWithAuthHeader;
   return linkDefault;
 });
 
-const client =
-  createORPCClient<ContractRouterClient<ExampleContract>>(autoLink);
+const client = createORPCClient<ContractRouterClient<AppContract>>(autoLink);
 
 export const orpc = createTanstackQueryUtils(client);
 
-type ChatRouterClientContract = ContractRouterClient<ChatRouterContract>;
+// Specialized chat client
 export const chatRpc =
-  createORPCClient<ChatRouterClientContract>(linkWithAuthHeader);
+  createORPCClient<ContractRouterClient<AppContract>>(linkWithAuthHeader);
+
+type ChatRPCErrors = InferClientErrors<typeof chatRpc>["chat"];
+export function isChatRPCError(
+  error: unknown
+): error is Extract<ChatRPCErrors, ORPCError<string, unknown>> {
+  if (!(error instanceof Error)) return false;
+  return isDefinedError<ChatRPCErrors>(error);
+}

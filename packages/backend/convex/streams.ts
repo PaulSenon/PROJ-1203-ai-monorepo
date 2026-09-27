@@ -208,6 +208,19 @@ export const deleteStream = mutationWithRLS({
   },
 });
 
+export const deleteStreamInternal = internalMutation({
+  args: {
+    streamId: vv.id("threadStreams"),
+  },
+  async handler(ctx, args) {
+    const { streamId } = args;
+
+    await INTERNAL_DeleteStream(ctx, { streamId });
+
+    return;
+  },
+});
+
 export const pushStreamDelta = mutationWithRLS({
   args: {
     streamId: vv.id("threadStreams"),

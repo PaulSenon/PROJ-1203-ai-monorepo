@@ -3,7 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui-custom/tooltip";
 
 // TODO(ui-consistency): migrate sidebar/code-block icon actions to this primitive progressively.
-export type IconActionButtonProps = Omit<ComponentProps<typeof Button>, "children"> & {
+export type IconActionButtonProps = Omit<
+  ComponentProps<typeof Button>,
+  "children"
+> & {
   icon: ReactNode;
   label: string;
   tooltip?: string;
