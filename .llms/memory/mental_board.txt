@@ -1,32 +1,27 @@
-[GOAL] Ship chat MVP (strict scope, no feature creep)
+[GOAL] Reboot (2026-09): solid up-to-date base on main, zero lost ideas, then resume big tracks. Long-term goal unchanged: ship chat MVP as a showcase of best-quality code (readable, typesafe, perf, UX, low-end devices). User must understand/own every line.
 
-[MVP_MUST]
-- anonymous account
-- basic bot protection
-- finish message/conversation UI to target spec
-- fix input + draft lifecycle
-- fix sidebar live updates
-- close core TODOs impacting MVP behavior
-- high INP/perf on key interactions (mobile + desktop)
-- native-feel drawer on iOS/Android (if vaul insufficient, replace)
-- smooth loading strategy (no cascading skeletons/loaders)
-- perfect initial conversation anchor scroll on open (not forced bottom)
-
-[MVP_LATER]
-- sidebar list virtualization
-- conversation message virtualization
-- edit feature dropped
-- PRD done: client-side message UUID reliability track (client assistant IDs, invisible retry, conversation-level persisted error block)
+[READ_FIRST]
+- .llms/plan/00-reboot-2026-09/README.md (index) -> 1-plan.md (phases + checklists)
 
 [ACTIVE_TRACK]
-- now: stabilize chat surface + UX correctness first (input/draft/sidebar/scroll/loading)
-- conversation architecture pass done (L2/L3 parity w/ message)
-- conversation adapter/layout split + pure layout demo scaffold done (minimal props baseline)
-- PRD v2 done: last assistant min-height reserve erratum fixed (refresh-stream-settle no collapse, latch moved to conversation L3)
-- next: implement simplest optimistic assistant shell (render-derived displayMessages in use-chat-active, no data-layer ID refactor)
+- Phase 0 DONE 2026-09-27 (tags archive/*, backups, cleanup); leftovers: close PRs #8-#13, cursor worktrees
+- NOW Phase 1: user runs Docker + tests on chore/reboot (PR to main open), fix keys together, merge only after user validation
+- Phase 2 upgrade: one lib family per commit, no refactors, log in upgrade-log.md
+- Phase 3 PR to main + CI
+- Phase 4 re-research (t3code, LegendList stable, AI SDK) + one grill -> messages PRD
+- Phase 5 tracks: A messages store > B virtualization/scroll > C INP (context menu, model selector, code block) > D input/draft > E MVP gaps
+
+[RULES]
+- messages store before virtualization (churn confounds list bugs)
+- don't redesign store from zero: 3-messages-architecture.md = starting decisions
+
+[DECIDED 2026-09-27]
+- base = 6b926f0 (confirmed); dev Docker-only (never assume host tooling, ask); remove packages/tmp
+- all old branches dead (see 4-branch-triage.md): tag archive/* then delete; only main + chore/reboot remain
 
 [OPEN_DECISIONS]
-- bot protection vendor: Turnstile?
+- layers in public store (v4) vs private reconciler (v3)?
 - scroll anchor definition: last read vs last user msg?
-- drawer replacement lib choice?
-- exact "done" metrics per MVP must?
+- bot protection vendor: Turnstile?
+- drawer replacement lib?
+- virtualizer: LegendList stable vs TanStack+unvirtualized tail?

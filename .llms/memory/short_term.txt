@@ -1,3 +1,17 @@
+2026-09-27: reboot Phase 0 executed (git cleanup) + PR 1 prepared
+- branch `chore/reboot` from 6b926f0 = docs-only on top of the last coherent commit; PR -> main (main was frozen at ece1a2c Feb 9, ancestor of base -> no conflict)
+- 20 annotated `archive/*` tags pushed (all former unique branch tips + stash + v4 WIP fdb9608); backups in ~/ai-monorepo-backups/2026-09-27-reboot/ (bundle --all, .env.enc, working state, cursor worktrees)
+- kept on origin because of OPEN PRs #8,#9,#10,#12,#13: conversation-ui-refactoring, feat/legendlist-v2, feat/messages-stability, opencode/{gentle-river,hidden-rocket,quick-circuit} -> close with comment after `gh auth login`, then delete
+- kept locally: 11 dirty Cursor worktrees (backed up) + their branches ios-drawer-fix-LCohy, responsive-dialog-fix-CyKGP
+- setup/run doc: .llms/plan/00-reboot-2026-09/5-setup-and-run.md (static read, nothing executed)
+- fixed .gitmodules: t3code gitlink had no mapping on base (broke `make llms-ref-fetch-all`)
+
+2026-09-27: project reboot after ~5 month pause (last code touch 2026-05-03)
+- full snapshot, plan, idea inventory, messages decisions: .llms/plan/00-reboot-2026-09/
+- branch-only planning docs (grill logs, PRDs of 5 messages-store attempts, virtualization attempts) copied to .llms/plan/00-reboot-2026-09/archive/
+- decision proposed: base = 6b926f0 (not Feb-9 main), upgrade all deps before resuming messages store v4
+- live bug in uncommitted v4 diff: use-messages.tsx:310 lost return on persisted tail trim
+
 message footer MVP refactor completed under apps/web/src/components/chat/message/_parts/footer/
 footer actions now use shared ui-custom primitives: IconActionButton and CopyActionButton
 copy action now animates copy->check on successful copy and uses app custom tooltip wrapper

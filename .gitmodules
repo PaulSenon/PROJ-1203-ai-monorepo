@@ -28,3 +28,6 @@
 [submodule ".llms/git-references/legendlist"]
 	path = .llms/git-references/legendlist
 	url = https://github.com/LegendApp/legend-list.git
+[submodule ".llms/git-references/t3code"]
+	path = .llms/git-references/t3code
+	url = https://github.com/pingdotgg/t3code.git
